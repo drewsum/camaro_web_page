@@ -17,6 +17,9 @@ bpy.ops.export_scene.gltf(
     export_format="GLB",
     use_visible=True,
     export_apply=True,
+    # Custom properties -> glTF "extras" -> three.js userData. The rig metadata on
+    # the Camaro node and the lamp_* properties on Lamp_* materials live here.
+    export_extras=True,
     export_draco_mesh_compression_enable=True,
     export_draco_mesh_compression_level=6,
 )

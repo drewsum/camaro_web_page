@@ -37,3 +37,30 @@ canvas {
 .attribution a {
   color: inherit;
 }
+
+.controls {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(30, 33, 40, 0.75);
+  backdrop-filter: blur(6px);
+  font-size: 0.9rem;
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.controls input {
+  accent-color: #e0a030;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}

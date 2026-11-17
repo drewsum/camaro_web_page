@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Center, useGLTF } from "@react-three/drei";
-import { Mesh, type Material, type MeshStandardMaterial } from "three";
+import { Mesh, Object3D, SpotLight, type Material, type MeshStandardMaterial } from "three";
+import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 
 const MODEL_URL = "/models/camaro.glb";
 const DRACO_URL = "/draco/";
@@ -19,16 +20,41 @@ function fixTexturedBlending(material: Material) {
   m.needsUpdate = true;
 }
 
+// A headlight beam hung on one of the model's LightAnchor_Head_* empties,
+// aimed straight ahead (+Z in car space).
+// The GLTF scene is cached, so reuse a beam that's already attached.
+function makeBeam(anchor: Object3D): SpotLight {
+  const existing = anchor.children.find((c): c is SpotLight => c instanceof SpotLight);
+  if (existing) return existing;
+  const beam = new SpotLight("#ffe9c7", 0, 30, 0.42, 0.55, 2);
+  beam.target.position.set(0, -0.9, 7);
+  anchor.add(beam, beam.target);
+  return beam;
+}
+
+interface Props {
+  lightsOn?: boolean;
+}
+
 // Centered on the origin with the tires resting on y = 0.
-export default function CamaroModel() {
+export default function CamaroModel({ lightsOn = false }: Props) {
   const { scene } = useGLTF(MODEL_URL, DRACO_URL);
-  useMemo(() => {
+  const { rig, beams } = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
     });
+    const rig = findCarRig(scene);
+    const beams = ["Head_L", "Head_R"].flatMap((k) => (rig.anchors[k] ? [makeBeam(rig.anchors[k])] : []));
+    return { rig, beams };
   }, [scene]);
+
+  useEffect(() => {
+    applyLamps(rig, lightsOn ? LAMPS_DRIVING : LAMPS_OFF);
+    for (const b of beams) b.intensity = lightsOn ? 250 : 0;
+  }, [rig, beams, lightsOn]);
+
   return (
     <Center top>
       <primitive object={scene} />
