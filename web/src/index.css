@@ -92,3 +92,235 @@ canvas {
   margin: 0;
   cursor: pointer;
 }
+
+/* ---- Content pages over the viewer ---------------------------------------- */
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+/* Blurred and dimmed behind an open page; scaled up a touch so the blur
+   doesn't pull the dark page edge in around the borders. */
+.viewer.behind {
+  filter: blur(10px) brightness(0.6);
+  transform: scale(1.04);
+}
+
+.site-nav {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(30, 33, 40, 0.75);
+  backdrop-filter: blur(6px);
+  font-size: 0.9rem;
+}
+
+.site-nav a {
+  color: inherit;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+}
+
+.site-nav a:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.site-nav a[aria-current="page"] {
+  color: #f0c060;
+  border-left-color: #e0a030;
+  background: rgba(224, 160, 48, 0.1);
+}
+
+.site-nav a:focus-visible,
+.page-close:focus-visible {
+  outline: 2px solid #e0a030;
+  outline-offset: 1px;
+}
+
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 16px 48px 180px;
+  animation: page-in 0.25s ease;
+}
+
+.page {
+  position: relative;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 36px 36px;
+  border-radius: 12px;
+  background: rgba(14, 16, 20, 0.86);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  line-height: 1.6;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.page h1 {
+  margin: 0 0 20px;
+  font-size: 1.8rem;
+  color: #eef0f4;
+}
+
+.page h2 {
+  margin: 28px 0 8px;
+  font-size: 1.15rem;
+  color: #e0a030;
+}
+
+.page p {
+  margin: 0 0 12px;
+}
+
+.page-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.page-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.placeholder-text {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.photo {
+  margin: 0 0 16px;
+}
+
+.photo-slot {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #4a4f5a;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #6b707c;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.photo.wide .photo-slot {
+  aspect-ratio: 16 / 9;
+}
+
+.photo figcaption {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.photo-grid .photo {
+  margin: 0;
+}
+
+.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sheet th,
+.sheet td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #2a2e36;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sheet th {
+  width: 45%;
+  font-weight: 500;
+  color: #9a9ea8;
+}
+
+.sheet td {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* Phones: with a page open (and the scene controls hidden) the links become
+   a row along the top and the page fills the width beneath them. */
+@media (max-width: 700px) {
+  .site-nav.with-page {
+    flex-direction: row;
+    top: 12px;
+    left: 12px;
+    padding: 4px;
+  }
+
+  .site-nav.with-page a {
+    padding: 6px 8px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .site-nav.with-page a[aria-current="page"] {
+    border-bottom-color: #e0a030;
+  }
+
+  .page-backdrop {
+    padding: 64px 12px 32px;
+  }
+
+  .page {
+    padding: 20px 18px 24px;
+  }
+
+  .page h1 {
+    font-size: 1.5rem;
+    padding-right: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer,
+  .page-backdrop {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Out of the way while a page is open. */
+.controls[hidden],
+.attribution[hidden] {
+  display: none;
+}
