@@ -19,9 +19,10 @@ export default function App() {
       </Canvas>
       <Loader />
       <footer className="attribution">
+        Modified from the original model{" "}
         <a href="https://skfb.ly/pNoxx">"1967 Chevrolet Camaro SS 350 Coupe"</a> by Ddiaz Design,
         licensed under{" "}
-        <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>. Modified.
+        <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.
       </footer>
     </>
   );
