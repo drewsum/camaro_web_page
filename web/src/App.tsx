@@ -24,6 +24,7 @@ function savedSceneId() {
 export default function App() {
   const [sceneId, setSceneId] = useState(savedSceneId);
   const [lightsOn, setLightsOn] = useState(false);
+  const [domeOn, setDomeOn] = useState(false);
   const scene = SCENES.find((s) => s.id === sceneId) ?? SCENES[0];
   const lights = scene.night || lightsOn;
 
@@ -40,7 +41,7 @@ export default function App() {
     <>
       <Canvas shadows dpr={[1, 2]} camera={{ position: [5, 2, 6], fov: 40 }}>
         <Suspense fallback={null}>
-          <scene.Component key={scene.id} lightsOn={lights} />
+          <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} />
         </Suspense>
       </Canvas>
       <Loader />
@@ -60,6 +61,10 @@ export default function App() {
             onChange={(e) => setLightsOn(e.target.checked)}
           />
           Lights
+        </label>
+        <label>
+          <input type="checkbox" checked={domeOn} onChange={(e) => setDomeOn(e.target.checked)} />
+          Dome light
         </label>
       </div>
       <footer className="attribution">

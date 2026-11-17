@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
 import { Mesh, Object3D, SpotLight, type Material, type MeshStandardMaterial } from "three";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 import { useDrivingPose } from "../car/useDrivingPose";
+import { makeDomeLight, makeLampGlows, setDomeLight, updateLampGlows } from "../car/lampGlow";
 
-const MODEL_URL = "/models/camaro.glb";
-const DRACO_URL = "/draco/";
+export const MODEL_URL = "/models/camaro.glb";
+export const DRACO_URL = "/draco/";
 
 // Blender exports textured materials whose image has an alpha channel (Interior,
 // Chassis, Engine, ...) as alpha BLEND. Blended meshes are depth-sorted per object
@@ -35,13 +37,14 @@ function makeBeam(anchor: Object3D): SpotLight {
 
 interface Props {
   lightsOn?: boolean;
+  domeOn?: boolean;
 }
 
 // Centered on the origin with the tires resting on y = 0. Inside a
 // DriveProvider the wheels roll and the body rides over the road.
-export default function CamaroModel({ lightsOn = false }: Props) {
+export default function CamaroModel({ lightsOn = false, domeOn = false }: Props) {
   const { scene } = useGLTF(MODEL_URL, DRACO_URL);
-  const { rig, beams } = useMemo(() => {
+  const { rig, beams, glows, dome } = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
@@ -49,15 +52,18 @@ export default function CamaroModel({ lightsOn = false }: Props) {
     });
     const rig = findCarRig(scene);
     const beams = ["Head_L", "Head_R"].flatMap((k) => (rig.anchors[k] ? [makeBeam(rig.anchors[k])] : []));
-    return { rig, beams };
+    return { rig, beams, glows: makeLampGlows(rig, scene), dome: makeDomeLight(rig, scene) };
   }, [scene]);
 
   useDrivingPose(rig);
+  useFrame(() => updateLampGlows(glows));
 
   useEffect(() => {
     applyLamps(rig, lightsOn ? LAMPS_DRIVING : LAMPS_OFF);
     for (const b of beams) b.intensity = lightsOn ? 250 : 0;
   }, [rig, beams, lightsOn]);
+
+  useEffect(() => setDomeLight(dome, domeOn), [dome, domeOn]);
 
   return (
     <Center top>

@@ -3,6 +3,7 @@ import ShowroomScene from "./ShowroomScene";
 
 export interface SceneProps {
   lightsOn: boolean;
+  domeOn: boolean;
 }
 
 export interface SceneDef {
@@ -15,5 +16,7 @@ export interface SceneDef {
 // Environments offered in the scene dropdown. The first one is the default.
 export const SCENES: SceneDef[] = [
   { id: "showroom", label: "Showroom", Component: ShowroomScene, night: false },
+  { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false },
+  { id: "carshow", label: "Car show", Component: lazy(() => import("./CarShowScene")), night: false },
   { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true },
 ];

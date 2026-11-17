@@ -6,7 +6,7 @@ import { useCameraStart } from "./useCameraStart";
 // Default scene: the car on a neutral floor with studio-style reflections.
 // The environment is built from Lightformers so no HDR has to be fetched.
 // With the car's lights on the studio is dimmed so the lamps read.
-export default function ShowroomScene({ lightsOn }: SceneProps) {
+export default function ShowroomScene({ lightsOn, domeOn }: SceneProps) {
   useCameraStart(5, 2, 6);
   const studio = lightsOn ? 0.35 : 1;
   return (
@@ -20,7 +20,7 @@ export default function ShowroomScene({ lightsOn }: SceneProps) {
         <Lightformer form="rect" intensity={1} position={[0, 2, -6]} rotation-y={Math.PI} scale={[8, 2, 1]} />
       </Environment>
       <ambientLight intensity={0.2 * studio} />
-      <CamaroModel lightsOn={lightsOn} />
+      <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
       <mesh rotation-x={-Math.PI / 2} position-y={-0.001} receiveShadow>
         <circleGeometry args={[14, 64]} />
         <meshStandardMaterial color="#1b1d22" roughness={0.9} />

@@ -23,21 +23,22 @@ export function useDrivingPose(rig: CarRig) {
   useFrame(({ clock }) => {
     if (!moving) return;
     const d = driveDistance(drive, clock.elapsedTime);
+    const k = drive.roughness;
     applyPose(rig, {
       steer: 0,
       wheelSpin: (d / rig.wheelRadius) % (2 * Math.PI),
-      heave: bumps(d, [
-        [0.006, 7.3, 0],
-        [0.004, 3.1, 1.7],
-        [0.003, 17.9, 4.2],
+      heave: k * bumps(d, [
+        [0.0018, 7.3, 0],
+        [0.0010, 3.1, 1.7],
+        [0.0012, 17.9, 4.2],
       ]),
-      pitch: bumps(d, [
-        [0.0025, 5.3, 2.1],
-        [0.0015, 13.7, 0.4],
+      pitch: k * bumps(d, [
+        [0.0006, 5.3, 2.1],
+        [0.0004, 13.7, 0.4],
       ]),
-      roll: bumps(d, [
-        [0.0015, 9.1, 3.3],
-        [0.001, 4.3, 0.9],
+      roll: k * bumps(d, [
+        [0.0004, 9.1, 3.3],
+        [0.0002, 4.3, 0.9],
       ]),
     });
   });

@@ -2,10 +2,12 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
-import { BackSide, CanvasTexture, Color, Group, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from "three";
+import { BackSide, CanvasTexture, Color, PlaneGeometry, RepeatWrapping, SRGBColorSpace, type ShaderMaterial } from "three";
 import CamaroModel from "../components/CamaroModel";
 import { DriveProvider, driveDistance, useDrive } from "../car/driveClock";
+import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
+import { makePeriodicStrip, mulberry32, Scroll } from "./common/periodic";
 
 // Night cruise through an endless synthwave landscape. The car sits at the
 // origin facing +Z and the world scrolls toward -Z. Every scrolling layer is
@@ -125,6 +127,7 @@ const gridFragment = /* glsl */ `
 
 function Grid() {
   const drive = useDrive();
+  const material = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({
       uOffset: { value: 0 },
@@ -135,13 +138,14 @@ function Grid() {
     }),
     [],
   );
+  // R3F copies each uniform into the material, so update the material's own.
   useFrame(({ clock }) => {
-    uniforms.uOffset.value = driveDistance(drive, clock.elapsedTime) % GRID_CELL;
+    if (material.current) material.current.uniforms.uOffset.value = driveDistance(drive, clock.elapsedTime) % GRID_CELL;
   });
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0, 200]}>
       <planeGeometry args={[1400, 1400]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={gridVertex} fragmentShader={gridFragment} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={gridVertex} fragmentShader={gridFragment} />
     </mesh>
   );
 }
@@ -191,51 +195,23 @@ function Road() {
 
 // ---- Mountains ------------------------------------------------------------
 
-function mulberry32(seed: number) {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// A low-poly ridge, 4 periods long, whose heights repeat every RIDGE_PERIOD
-// metres so shifting it back by one period is invisible. Spans z in
-// [0, 4 * RIDGE_PERIOD] and x in [0, width] (mirror with scale-x for the
-// other side).
+// A low-poly ridge 100 m wide, peaking mid-way across. Mirror with scale-x
+// for the other side.
 function makeRidge(seed: number) {
-  const width = 100;
-  const cols = 10;
-  const perPeriod = RIDGE_PERIOD / RIDGE_SEGMENT;
-  const rows = perPeriod * 4;
   const rand = mulberry32(seed);
-  const heights = Array.from({ length: (cols + 1) * perPeriod }, rand);
-  const geo = new PlaneGeometry(width, RIDGE_PERIOD * 4, cols, rows);
-  geo.rotateX(-Math.PI / 2);
-  geo.translate(width / 2, 0, (RIDGE_PERIOD * 4) / 2);
-  const pos = geo.attributes.position;
-  for (let r = 0; r <= rows; r++) {
-    for (let i = 0; i <= cols; i++) {
-      // Rows run from -Z to +Z after the rotation; index the period by row.
-      const k = r % perPeriod;
-      const envelope = Math.pow(Math.sin((Math.PI * i) / cols), 0.9);
-      const h = envelope * (8 + 32 * heights[k * (cols + 1) + i]);
-      pos.setY(r * (cols + 1) + i, h);
-    }
-  }
-  geo.computeVertexNormals();
-  return geo;
+  const cols = 10;
+  return makePeriodicStrip({
+    width: 100,
+    cols,
+    period: RIDGE_PERIOD,
+    segment: RIDGE_SEGMENT,
+    copies: 4,
+    height: (i) => Math.pow(Math.sin((Math.PI * i) / cols), 0.9) * (8 + 32 * rand()),
+  });
 }
 
 function Mountains() {
-  const drive = useDrive();
-  const group = useRef<Group>(null);
   const [left, right] = useMemo(() => [makeRidge(68), makeRidge(1968)], []);
-  useFrame(({ clock }) => {
-    if (group.current) group.current.position.z = -120 - (driveDistance(drive, clock.elapsedTime) % RIDGE_PERIOD);
-  });
   const ridge = (geo: PlaneGeometry, side: 1 | -1) => (
     <group position-x={side * 80} scale-x={side}>
       <mesh geometry={geo}>
@@ -247,16 +223,16 @@ function Mountains() {
     </group>
   );
   return (
-    <group ref={group}>
+    <Scroll period={RIDGE_PERIOD} start={-120}>
       {ridge(left, 1)}
       {ridge(right, -1)}
-    </group>
+    </Scroll>
   );
 }
 
 // ---- Scene ----------------------------------------------------------------
 
-export default function OutrunScene() {
+export default function OutrunScene({ domeOn }: SceneProps) {
   useCameraStart(-4, 1.8, -8);
   return (
     <DriveProvider speed={SPEED}>
@@ -272,7 +248,7 @@ export default function OutrunScene() {
       <Grid />
       <Road />
       <Mountains />
-      <CamaroModel lightsOn />
+      <CamaroModel lightsOn domeOn={domeOn} />
       <ContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
       <EffectComposer multisampling={4}>
