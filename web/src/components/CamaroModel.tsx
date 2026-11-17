@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Center, useGLTF } from "@react-three/drei";
 import { Mesh, Object3D, SpotLight, type Material, type MeshStandardMaterial } from "three";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
+import { useDrivingPose } from "../car/useDrivingPose";
 
 const MODEL_URL = "/models/camaro.glb";
 const DRACO_URL = "/draco/";
@@ -36,7 +37,8 @@ interface Props {
   lightsOn?: boolean;
 }
 
-// Centered on the origin with the tires resting on y = 0.
+// Centered on the origin with the tires resting on y = 0. Inside a
+// DriveProvider the wheels roll and the body rides over the road.
 export default function CamaroModel({ lightsOn = false }: Props) {
   const { scene } = useGLTF(MODEL_URL, DRACO_URL);
   const { rig, beams } = useMemo(() => {
@@ -49,6 +51,8 @@ export default function CamaroModel({ lightsOn = false }: Props) {
     const beams = ["Head_L", "Head_R"].flatMap((k) => (rig.anchors[k] ? [makeBeam(rig.anchors[k])] : []));
     return { rig, beams };
   }, [scene]);
+
+  useDrivingPose(rig);
 
   useEffect(() => {
     applyLamps(rig, lightsOn ? LAMPS_DRIVING : LAMPS_OFF);

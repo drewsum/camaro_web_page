@@ -1,14 +1,13 @@
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import CamaroModel from "../components/CamaroModel";
-
-interface Props {
-  lightsOn: boolean;
-}
+import type { SceneProps } from ".";
+import { useCameraStart } from "./useCameraStart";
 
 // Default scene: the car on a neutral floor with studio-style reflections.
 // The environment is built from Lightformers so no HDR has to be fetched.
 // With the car's lights on the studio is dimmed so the lamps read.
-export default function ShowroomScene({ lightsOn }: Props) {
+export default function ShowroomScene({ lightsOn }: SceneProps) {
+  useCameraStart(5, 2, 6);
   const studio = lightsOn ? 0.35 : 1;
   return (
     <>

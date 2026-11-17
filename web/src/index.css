@@ -47,6 +47,34 @@ canvas {
   background: rgba(30, 33, 40, 0.75);
   backdrop-filter: blur(6px);
   font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controls select {
+  font: inherit;
+  color: inherit;
+  background: #1e2128;
+  border: 1px solid #3a3e48;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  accent-color: #e0a030;
+}
+
+.controls select:focus-visible {
+  outline: 2px solid #e0a030;
+  outline-offset: 1px;
+}
+
+.controls label:has(input:disabled) {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.controls input:disabled {
+  cursor: default;
 }
 
 .controls label {
