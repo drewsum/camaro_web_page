@@ -1,6 +1,6 @@
-# 1967 Camaro web viewer
+# 1968 Camaro web viewer
 
-Interactive 3D viewer for the Camaro model (React Three Fiber, served by nginx in Docker).
+Interactive 3D viewer for a 1968 Camaro SS model (React Three Fiber, served by nginx in Docker).
 
 ## Update the model
 
@@ -34,6 +34,9 @@ docker compose up -d --build
 Serves on port 8080 by default; set `PORT` to change the host port.
 
 ## Model license
+
+Based on a 1967 model, modified to 1968 specification (split tail lights, side marker lamps,
+no vent windows, wheel well trim, cowl hood, paint and trim changes).
 
 "1967 Chevrolet Camaro SS 350 Coupe" (https://skfb.ly/pNoxx) by Ddiaz Design, licensed under
 CC BY-NC-SA 4.0 — see `3d_model/LICENSE.txt`.
