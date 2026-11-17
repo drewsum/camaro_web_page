@@ -2,6 +2,7 @@ services:
   camaro-web:
     build: ./web
     image: camaro-web:latest
+    pull_policy: build
     ports:
       - "${PORT:-8080}:80"
     restart: unless-stopped
