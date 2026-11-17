@@ -1,18 +1,18 @@
-// Stand-ins until the real words and photos are written in.
+// A photo with a caption. Leave `src` empty to show a placeholder box; to use
+// a real picture, put the file in web/public/photos/ and set
+// src="/photos/<file name>".
 
-export function PhotoSlot({ caption, wide }: { caption?: string; wide?: boolean }) {
+export function Photo({ src, caption, wide }: { src?: string; caption?: string; wide?: boolean }) {
   return (
     <figure className={wide ? "photo wide" : "photo"}>
-      <div className="photo-slot" role="img" aria-label="Photo placeholder">
-        Photo
-      </div>
+      {src ? (
+        <img className="photo-img" src={src} alt={caption ?? ""} loading="lazy" />
+      ) : (
+        <div className="photo-slot" role="img" aria-label="Photo placeholder">
+          Photo
+        </div>
+      )}
       {caption && <figcaption>{caption}</figcaption>}
     </figure>
   );
-}
-
-export function Lorem({ lines = 3 }: { lines?: number }) {
-  const text =
-    "Placeholder text. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-  return <p className="placeholder-text">{lines > 2 ? `${text} ${text}` : text}</p>;
 }

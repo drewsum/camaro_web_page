@@ -210,9 +210,16 @@ canvas {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.placeholder-text {
-  opacity: 0.55;
-  font-style: italic;
+.photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.photo.wide .photo-img {
+  aspect-ratio: 16 / 9;
 }
 
 .photo {
@@ -272,10 +279,6 @@ canvas {
   color: #9a9ea8;
 }
 
-.sheet td {
-  opacity: 0.55;
-  font-style: italic;
-}
 
 /* Phones: with a page open (and the scene controls hidden) the links become
    a row along the top and the page fills the width beneath them. */
