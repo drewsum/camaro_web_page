@@ -23,7 +23,7 @@ import {
 
 const QUATERNIUS =
   "https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/0128ca510d653bb04d6d1e4885bd8890b5050b4f/public/glb/modular_men";
-export const onlookerModel = (name: "Casual" | "Farmer" | "Worker" | "Adventurer" | "Beach" | "Suit") =>
+export const onlookerModel = (name: "Casual" | "Casual2" | "Beach" | "Suit") =>
   `${QUATERNIUS}/${name}.glb`;
 
 export interface OnlookerProps {

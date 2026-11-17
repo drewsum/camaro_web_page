@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
+import { ContactShadows, OrbitControls } from "@react-three/drei";
 import {
   BoxGeometry,
   BufferAttribute,
@@ -33,6 +33,7 @@ import { useExposure, useFarPlane } from "./common/renderer";
 import { useHdriSky, polyHavenHdri, type HdriSky } from "./common/hdri";
 import { InstancedModel, polyHavenModel, useModelParts } from "./common/polyHaven";
 import { mulberry32 } from "./common/periodic";
+import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 
@@ -567,11 +568,11 @@ function CoastWorld({ lightsOn, domeOn }: SceneProps) {
   return (
     <DriveProvider profile={track}>
       <fog attach="fog" args={[sky.fog, FOG_NEAR, FOG_FAR]} />
-      <Environment map={sky.texture} background environmentRotation={sky.rotation} backgroundRotation={sky.rotation} />
+      <SkyReflections sky={sky} ground="#4a4a48" />
       <directionalLight
         ref={sun}
-        intensity={2.2}
-        color="#fff1dc"
+        intensity={sky.sunIntensity}
+        color={sky.sunColor}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}

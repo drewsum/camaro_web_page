@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
+import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { GroundedSkybox } from "three/examples/jsm/objects/GroundedSkybox.js";
 import { Vector3 } from "three";
 import CamaroModel from "../components/CamaroModel";
@@ -8,6 +8,7 @@ import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure } from "./common/renderer";
 import { polyHavenHdri, useHdriSky } from "./common/hdri";
+import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import Onlooker, { onlookerModel } from "./carshow/Onlooker";
@@ -122,7 +123,7 @@ const STRIPE = new Vector3(0, 0.9, 1.9);
 const QUARTER_R = new Vector3(-0.95, 0.7, -1.2);
 const CAR_CENTER = new Vector3(0, 0.6, 0.4);
 
-// Greyed and weathered: older guys, flannel and work clothes.
+// Greyed and weathered: older guys in jeans, a jacket and a short-sleeved shirt.
 const GREY_HAIR = "#b9b5ad";
 
 function Show({ lightsOn, domeOn }: SceneProps) {
@@ -130,12 +131,12 @@ function Show({ lightsOn, domeOn }: SceneProps) {
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <>
-      <Environment map={sky.texture} />
+      <SkyReflections sky={sky} background={false} />
       <ParkBackdrop texture={sky.texture} />
       <directionalLight
         position={sun}
-        intensity={2.4}
-        color="#fff3e2"
+        intensity={sky.sunIntensity}
+        color={sky.sunColor}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
@@ -175,19 +176,20 @@ function Show({ lightsOn, domeOn }: SceneProps) {
           phase={0}
         />
         <Onlooker
-          model={onlookerModel("Worker")}
+          model={onlookerModel("Casual2")}
           position={[-1.2, 3.6]}
           faceToward={CAR_CENTER}
           pointAt={[GRILLE, HOOD, FRONT_WHEEL_R]}
-          recolor={{ Moustache: GREY_HAIR, Worker_Yellow: "#6b6f3a", Worker_Vest: "#3a4a5a" }}
+          recolor={{ Hair: GREY_HAIR, Eyebrows: GREY_HAIR, LightBrown: "#5a4632" }}
           height={1.72}
           phase={3.1}
         />
         <Onlooker
-          model={onlookerModel("Farmer")}
+          model={onlookerModel("Beach")}
           position={[-2.2, -0.9]}
           faceToward={CAR_CENTER}
           pointAt={[QUARTER_R, FRONT_WHEEL_R]}
+          recolor={{ Hair: GREY_HAIR, Eyebrows: GREY_HAIR, Earrings: "#c99a7a", Red_Dark: "#2f5f7a" }}
           height={1.8}
           phase={5.7}
         />

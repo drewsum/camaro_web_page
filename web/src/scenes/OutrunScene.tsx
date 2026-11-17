@@ -237,11 +237,14 @@ export default function OutrunScene({ domeOn }: SceneProps) {
   return (
     <DriveProvider speed={SPEED}>
       <fog attach="fog" args={[HORIZON, FOG_NEAR, FOG_FAR]} />
-      <Environment resolution={256} environmentIntensity={0.6}>
-        <Lightformer form="rect" intensity={3} color="#ff2fd0" position={[-6, 2, 0]} rotation-y={Math.PI / 2} scale={[10, 2, 1]} />
-        <Lightformer form="rect" intensity={3} color="#29e3ff" position={[6, 2, 0]} rotation-y={-Math.PI / 2} scale={[10, 2, 1]} />
-        <Lightformer form="rect" intensity={4} color="#ff9a3c" position={[0, 2, 10]} rotation-y={Math.PI} scale={[12, 3, 1]} />
-        <Lightformer form="rect" intensity={0.5} color="#6a2bff" position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[10, 6, 1]} />
+      {/* Narrow neon strips over darkness, like the showroom's light panels:
+          crisp bands in the paint and chrome without flooding the red. */}
+      <Environment resolution={256}>
+        <Lightformer form="rect" intensity={6} color="#ff2fd0" position={[-6, 1.5, 0]} rotation-y={Math.PI / 2} scale={[12, 0.5, 1]} />
+        <Lightformer form="rect" intensity={6} color="#29e3ff" position={[6, 1.5, 0]} rotation-y={-Math.PI / 2} scale={[12, 0.5, 1]} />
+        <Lightformer form="circle" intensity={5} color="#ffb070" position={[0, 2.5, 12]} rotation-y={Math.PI} scale={3} />
+        <Lightformer form="rect" intensity={2.5} color="#d9b8ff" position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[10, 1.2, 1]} />
+        <Lightformer form="rect" intensity={1.2} color="#8a3cff" position={[0, 5, -6]} rotation-x={Math.PI / 4} scale={[10, 0.8, 1]} />
       </Environment>
       <ambientLight intensity={0.05} />
       <Sky />

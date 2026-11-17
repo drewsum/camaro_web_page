@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
+import { ContactShadows, OrbitControls } from "@react-three/drei";
 import {
   BackSide,
   CanvasTexture,
@@ -20,6 +20,7 @@ import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import { mulberry32 } from "./common/periodic";
+import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import { AMBER_STEP, finishTime, QUARTER_MILE, Race, STAGE_TIME, trapSpeed, type Runner } from "./drag/race";
@@ -345,11 +346,13 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
   return (
     <DriveProvider profile={race.heroProfile} roughness={0.6}>
       <fog attach="fog" args={[sky.fog, 200, 1400]} />
-      <Environment map={sky.texture} background environmentRotation={sky.rotation} backgroundRotation={sky.rotation} />
+      <SkyReflections sky={sky} ground="#44453f" />
       <directionalLight
         position={sun}
-        intensity={2.4}
-        color="#ffd9a8"
+        // This sky's sun is down in the haze, with nothing to clip: light the
+        // strip with a low evening sun of our own.
+        intensity={sky.sunIntensity || 2.4}
+        color={sky.sunIntensity ? sky.sunColor : "#ffd9a8"}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
