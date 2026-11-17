@@ -103,16 +103,15 @@ export default function Onlooker({ model, position, faceToward, pointAt, recolor
       o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
     });
     // These rigs come out of FBX lying down (Z-up). Stand each one up from its
-    // own bones (head above the feet), then turn him to face +Z. In these
-    // exports the ".L" bones sit on the character's right, so that side goes
-    // to -X.
+    // own bones (head above the feet), then turn him to face +Z: his left
+    // (the ".L" bones) goes to +X.
     const at = (n: string) => bone(body, n).getWorldPosition(new Vector3());
     body.updateMatrixWorld(true);
     const feet = at("Foot.L").add(at("Foot.R")).multiplyScalar(0.5);
     body.quaternion.premultiply(new Quaternion().setFromUnitVectors(at("Head").sub(feet).normalize(), new Vector3(0, 1, 0)));
     body.updateMatrixWorld(true);
     const leftward = at("UpperArm.L").sub(at("UpperArm.R")).setY(0).normalize();
-    body.quaternion.premultiply(new Quaternion().setFromUnitVectors(leftward, new Vector3(-1, 0, 0)));
+    body.quaternion.premultiply(new Quaternion().setFromUnitVectors(leftward, new Vector3(1, 0, 0)));
     body.updateMatrixWorld(true);
     const box = new Box3().setFromObject(body);
     const size = box.getSize(new Vector3());

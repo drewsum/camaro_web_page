@@ -2,7 +2,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
-import { BackSide, CanvasTexture, Color, PlaneGeometry, RepeatWrapping, SRGBColorSpace, type ShaderMaterial } from "three";
+import { ShaderPass } from "postprocessing";
+import { BackSide, CanvasTexture, Color, PlaneGeometry, RepeatWrapping, SRGBColorSpace, ShaderMaterial } from "three";
 import CamaroModel from "../components/CamaroModel";
 import { DriveProvider, driveDistance, useDrive } from "../car/driveClock";
 import type { SceneProps } from ".";
@@ -244,10 +245,49 @@ function Mountains() {
   );
 }
 
+// ---- Post-processing ------------------------------------------------------
+
+// Phone GPUs light in half precision, and a hot specular glint on the paint
+// can overflow to Inf or NaN in the scene buffer. Bloom's blur then spreads
+// that one pixel over the whole screen and the frame flashes black, so
+// replace them before the bloom sees them. Checked on the bits because
+// drivers may optimise isnan() away.
+const sanitizeFragment = /* glsl */ `
+  uniform sampler2D inputBuffer;
+  varying vec2 vUv;
+  bool finite(float x) {
+    return (floatBitsToUint(x) & 0x7f800000u) != 0x7f800000u;
+  }
+  void main() {
+    vec4 c = texture2D(inputBuffer, vUv);
+    for (int i = 0; i < 4; i++) c[i] = finite(c[i]) ? clamp(c[i], 0.0, 64.0) : 0.0;
+    gl_FragColor = c;
+  }
+`;
+
+function makeSanitizePass() {
+  return new ShaderPass(
+    new ShaderMaterial({
+      uniforms: { inputBuffer: { value: null } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = position.xy * 0.5 + 0.5;
+          gl_Position = vec4(position.xy, 1.0, 1.0);
+        }
+      `,
+      fragmentShader: sanitizeFragment,
+      depthTest: false,
+      depthWrite: false,
+    }),
+  );
+}
+
 // ---- Scene ----------------------------------------------------------------
 
 export default function OutrunScene({ domeOn }: SceneProps) {
   useCameraStart(-4, 1.8, -8);
+  const sanitize = useMemo(makeSanitizePass, []);
   return (
     <DriveProvider speed={SPEED}>
       <fog attach="fog" args={[HORIZON, FOG_NEAR, FOG_FAR]} />
@@ -269,6 +309,7 @@ export default function OutrunScene({ domeOn }: SceneProps) {
       <ContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
       <EffectComposer multisampling={4}>
+        <primitive object={sanitize} />
         <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.9} />
         <ToneMapping />
       </EffectComposer>
