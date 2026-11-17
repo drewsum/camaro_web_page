@@ -2,3 +2,8 @@
 *.blend@
 Thumbs.db
 .DS_Store
+
+# web app
+web/node_modules/
+web/dist/
+web/public/draco/

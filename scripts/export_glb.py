@@ -1,0 +1,24 @@
+"""Export camaro.blend to a Draco-compressed GLB for the web viewer.
+
+Run headless via Blender:
+    blender -b 3d_model/camaro.blend --python scripts/export_glb.py
+"""
+import os
+
+import bpy
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_PATH = os.path.join(REPO_ROOT, "web", "public", "models", "camaro.glb")
+
+os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+
+bpy.ops.export_scene.gltf(
+    filepath=OUT_PATH,
+    export_format="GLB",
+    use_visible=True,
+    export_apply=True,
+    export_draco_mesh_compression_enable=True,
+    export_draco_mesh_compression_level=6,
+)
+
+print(f"Exported {OUT_PATH} ({os.path.getsize(OUT_PATH) / 1e6:.1f} MB)")
