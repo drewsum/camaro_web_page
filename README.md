@@ -21,11 +21,17 @@ npm run dev
 
 ## Deploy
 
+Every push to `main` builds the image and publishes it to `ghcr.io/drewsum/camaro-web`
+(`.github/workflows/docker-publish.yml`). `docker-compose.yml` only pulls that image, so the
+server never builds (log in to ghcr.io with a token that has `read:packages`).
+
+To build and run locally instead (`docker-compose.override.yml` adds the build):
+
 ```sh
 docker compose up -d --build
 ```
 
-Serves on port 8080 by default; set `PORT` to change the host port (`PORT=3000 docker compose up -d --build`).
+Serves on port 8080 by default; set `PORT` to change the host port.
 
 ## Model license
 
