@@ -117,7 +117,7 @@ function Line({ z, checkered = false }: { z: number; checkered?: boolean }) {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, 0.006, z]}>
       <planeGeometry args={[LANE * 2 + 1.2, checkered ? 0.6 : 0.2]} />
-      <meshStandardMaterial color={texture ? "#ffffff" : "#f2f0ea"} map={texture} roughness={0.7} />
+      <meshStandardMaterial color={texture ? "#ffffff" : "#f2f0ea"} map={texture} roughness={0.7} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-4} />
     </mesh>
   );
 }
@@ -137,7 +137,8 @@ function Walls() {
       {/* Grass beyond the walls */}
       <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, -0.02, (STRIP_FROM + STRIP_TO) / 2]} receiveShadow>
         <planeGeometry args={[3000, 3000]} />
-        <meshStandardMaterial color="#5f6b3a" roughness={1} />
+        {/* Pushed back so it never shows through the strip in the distance. */}
+        <meshStandardMaterial color="#5f6b3a" roughness={1} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={4} />
       </mesh>
     </>
   );

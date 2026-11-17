@@ -21,7 +21,7 @@ export default function ShowroomScene({ lightsOn, domeOn }: SceneProps) {
       </Environment>
       <ambientLight intensity={0.2 * studio} />
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.001} receiveShadow>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} receiveShadow>
         <circleGeometry args={[14, 64]} />
         <meshStandardMaterial color="#1b1d22" roughness={0.9} />
       </mesh>

@@ -145,7 +145,7 @@ function Grid() {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0, 200]}>
       <planeGeometry args={[1400, 1400]} />
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={gridVertex} fragmentShader={gridFragment} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={gridVertex} fragmentShader={gridFragment} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={4} />
     </mesh>
   );
 }
@@ -188,7 +188,19 @@ function Road() {
     // Centred a quarter-width toward +X (driver side) so the car is in the right lane.
     <mesh rotation-x={-Math.PI / 2} position={[ROAD_WIDTH / 4, 0.005, ROAD_LENGTH / 2 - 200]} receiveShadow>
       <planeGeometry args={[ROAD_WIDTH, ROAD_LENGTH]} />
-      <meshStandardMaterial map={texture} emissiveMap={texture} emissive="#ffffff" emissiveIntensity={1.2} roughness={0.6} metalness={0.1} />
+      {/* Drawn over the grid by polygon offset, which counts in the depth buffer's
+          own steps; 5 mm alone is lost in a phone's 16-bit depth buffer. */}
+      <meshStandardMaterial
+        map={texture}
+        emissiveMap={texture}
+        emissive="#ffffff"
+        emissiveIntensity={1.2}
+        roughness={0.6}
+        metalness={0.1}
+        polygonOffset
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={-4}
+      />
     </mesh>
   );
 }
@@ -214,10 +226,12 @@ function Mountains() {
   const [left, right] = useMemo(() => [makeRidge(68), makeRidge(1968)], []);
   const ridge = (geo: PlaneGeometry, side: 1 | -1) => (
     <group position-x={side * 80} scale-x={side}>
+      {/* Pushed back so the wireframe on its surface always wins the depth
+          test (polygon offset doesn't apply to lines). */}
       <mesh geometry={geo}>
-        <meshStandardMaterial color="#14051f" roughness={0.9} flatShading />
+        <meshStandardMaterial color="#14051f" roughness={0.9} flatShading polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={4} />
       </mesh>
-      <mesh geometry={geo} position-y={0.05}>
+      <mesh geometry={geo}>
         <meshBasicMaterial color="#ff3cc8" wireframe />
       </mesh>
     </group>

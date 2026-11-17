@@ -39,7 +39,10 @@ export default function App() {
 
   return (
     <>
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [5, 2, 6], fov: 40 }}>
+      {/* The orbit never comes within 3 m of the car, so the near plane can sit
+          well out from the eye; depth precision scales with it, and phone GPUs
+          often give WebGL only a 16-bit depth buffer. */}
+      <Canvas shadows dpr={[1, 2]} camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}>
         <Suspense fallback={null}>
           <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} />
         </Suspense>
