@@ -4,3 +4,7 @@ services:
   camaro-web:
     build: ./web
     pull_policy: build
+
+  # Don't run Watchtower locally; it would swap the local build for the GHCR image.
+  watchtower:
+    profiles: [disabled]
