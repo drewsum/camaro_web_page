@@ -7,3 +7,4 @@ Thumbs.db
 web/node_modules/
 web/dist/
 web/public/draco/
+*.tsbuildinfo
