@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Quaternion, Vector3 } from "three";
 import { applyLamps, applyPose, LAMPS_DRIVING, LAMPS_OFF, type CarPose, type CarRig } from "./carRig";
@@ -30,7 +30,6 @@ const tmpQ = new Quaternion();
 // pose afterwards, since the GLTF scene is cached and shared with static scenes.
 export function useDrivingPose(rig: CarRig, lightsOn: boolean) {
   const drive = useDrive();
-  const rootRest = useMemo(() => rig.root.quaternion.clone(), [rig]);
 
   useFrame(({ clock }) => {
     if (!drive.moving) return;
@@ -60,15 +59,17 @@ export function useDrivingPose(rig: CarRig, lightsOn: boolean) {
         ]),
     });
     // Climbing tips the nose up: rotate about the car's lateral axis.
-    rig.root.quaternion.copy(rootRest).premultiply(tmpQ.setFromAxisAngle(X_AXIS, -Math.atan(s.grade)));
+    rig.root.quaternion.copy(rig.rootRest).premultiply(tmpQ.setFromAxisAngle(X_AXIS, -Math.atan(s.grade)));
     applyLamps(rig, { ...(lightsOn ? LAMPS_DRIVING : LAMPS_OFF), brake: s.braking ?? s.accel < -BRAKE_LIGHT_DECEL });
   });
 
-  useEffect(() => {
+  // A layout effect, so the car is level again before the next scene's
+  // <Center> measures it.
+  useLayoutEffect(() => {
     if (!drive.moving) return;
     return () => {
       applyPose(rig, REST);
-      rig.root.quaternion.copy(rootRest);
+      rig.root.quaternion.copy(rig.rootRest);
     };
-  }, [rig, drive.moving, rootRest]);
+  }, [rig, drive.moving]);
 }

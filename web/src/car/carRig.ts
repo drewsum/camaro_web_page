@@ -18,6 +18,7 @@ export const WHEELS: WheelId[] = ["FL", "FR", "RL", "RR"];
 
 export interface CarRig {
   root: Object3D;
+  rootRest: Quaternion;
   body: Object3D;
   bodyRestY: number;
   steeringWheel: Object3D;
@@ -39,10 +40,26 @@ function need(scene: Object3D, name: string): Object3D {
   return o;
 }
 
+// The pose the model was exported in. The GLTF scene is cached and shared by
+// every scene, and a driving scene may still be holding the car tilted on a
+// hill or mid-bump when the next one rigs it, so the rest pose is read once,
+// before anything has moved it.
+interface RestPose {
+  root: Quaternion;
+  bodyY: number;
+  steeringWheel: Quaternion;
+}
+const restPoses = new WeakMap<Object3D, RestPose>();
+
 export function findCarRig(scene: Object3D): CarRig {
   const root = need(scene, "Camaro");
   const body = need(scene, "Body");
   const steeringWheel = need(scene, "SteeringWheel");
+  let rest = restPoses.get(root);
+  if (!rest) {
+    rest = { root: root.quaternion.clone(), bodyY: body.position.y, steeringWheel: steeringWheel.quaternion.clone() };
+    restPoses.set(root, rest);
+  }
   const meta = root.userData as Record<string, number>;
   const lampSet = new Set<MeshStandardMaterial>();
   const anchors: Record<string, Object3D> = {};
@@ -61,10 +78,11 @@ export function findCarRig(scene: Object3D): CarRig {
     Object.fromEntries(WHEELS.map((w) => [w, need(scene, prefix + w)])) as Record<WheelId, Object3D>;
   return {
     root,
+    rootRest: rest.root,
     body,
-    bodyRestY: body.position.y,
+    bodyRestY: rest.bodyY,
     steeringWheel,
-    steeringWheelRest: steeringWheel.quaternion.clone(),
+    steeringWheelRest: rest.steeringWheel,
     hubs: byId("Hub_"),
     wheels: byId("Wheel_"),
     lamps,
