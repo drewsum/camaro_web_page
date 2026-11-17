@@ -12,6 +12,7 @@ export interface DriveState {
   accel: number; // m/s², + = speeding up
   curvature: number; // 1/m of the path at the car, + = turning left
   grade: number; // rise over run of the road at the car, + = uphill
+  braking?: boolean; // foot on the brake regardless of accel (e.g. waiting at a light)
 }
 
 // Where the car is t seconds after the drive started.

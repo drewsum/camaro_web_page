@@ -61,7 +61,7 @@ export function useDrivingPose(rig: CarRig, lightsOn: boolean) {
     });
     // Climbing tips the nose up: rotate about the car's lateral axis.
     rig.root.quaternion.copy(rootRest).premultiply(tmpQ.setFromAxisAngle(X_AXIS, -Math.atan(s.grade)));
-    applyLamps(rig, { ...(lightsOn ? LAMPS_DRIVING : LAMPS_OFF), brake: s.accel < -BRAKE_LIGHT_DECEL });
+    applyLamps(rig, { ...(lightsOn ? LAMPS_DRIVING : LAMPS_OFF), brake: s.braking ?? s.accel < -BRAKE_LIGHT_DECEL });
   });
 
   useEffect(() => {

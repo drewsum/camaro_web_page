@@ -18,5 +18,7 @@ export const CREDITS = {
   challenger: { title: "1970 Dodge Challenger R/T", href: "https://sketchfab.com/ddiaz-design", author: "Ddiaz Design", license: "CC BY-NC-SA 4.0", licenseUrl: CC_BY_NC_SA },
   mustang: { title: "'67 Mustang (High poly)", href: "https://sketchfab.com/nickbroad", author: "Nick Broad", license: "CC BY 4.0", licenseUrl: CC_BY },
   polyHaven: { title: "Skies, plants and rocks", href: "https://polyhaven.com", author: "Poly Haven", license: "CC0" },
+  osm: { title: "Map data", href: "https://www.openstreetmap.org/copyright", author: "OpenStreetMap contributors", license: "ODbL", licenseUrl: "https://opendatacommons.org/licenses/odbl/" },
+  elevation: { title: "Elevation", href: "https://registry.opendata.aws/terrain-tiles/", author: "USGS 3DEP via AWS Terrain Tiles", license: "Public domain" },
   quaternius: { title: "Ultimate Modular Men", href: "https://quaternius.com", author: "Quaternius", license: "CC0" },
 } satisfies Record<string, Credit>;

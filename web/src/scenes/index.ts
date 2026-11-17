@@ -21,6 +21,13 @@ export const SCENES: SceneDef[] = [
   { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, credits: [CREDITS.polyHaven] },
   { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, credits: [CREDITS.mustang, CREDITS.polyHaven] },
   {
+    id: "capitol",
+    label: "Capitol Square",
+    Component: lazy(() => import("./CapitolScene")),
+    night: false,
+    credits: [CREDITS.osm, CREDITS.elevation, CREDITS.polyHaven],
+  },
+  {
     id: "carshow",
     label: "Car show",
     Component: lazy(() => import("./CarShowScene")),
