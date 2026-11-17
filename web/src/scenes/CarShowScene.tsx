@@ -1,136 +1,28 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
-import { Center, ContactShadows, Environment, OrbitControls, Sky, useGLTF } from "@react-three/drei";
-import {
-  CanvasTexture,
-  Light,
-  Mesh,
-  MeshPhysicalMaterial,
-  RepeatWrapping,
-  SRGBColorSpace,
-  Vector3,
-  type InstancedMesh,
-  type Material,
-  type Object3D,
-} from "three";
-import CamaroModel, { DRACO_URL, MODEL_URL } from "../components/CamaroModel";
+import { useEffect, useMemo } from "react";
+import { useThree } from "@react-three/fiber";
+import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
+import { GroundedSkybox } from "three/examples/jsm/objects/GroundedSkybox.js";
+import { Vector3 } from "three";
+import CamaroModel from "../components/CamaroModel";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure } from "./common/renderer";
-import { fillInstances, mulberry32 } from "./common/periodic";
-import Onlooker from "./carshow/Onlooker";
+import { polyHavenHdri, useHdriSky } from "./common/hdri";
+import Optional from "./common/Optional";
+import { ClassicCar } from "./common/classicCars";
+import Onlooker, { onlookerModel } from "./carshow/Onlooker";
 
-// Parked on the grass at a summer car show, between a couple of other
-// first-gen Camaros, while a few old guys with beers look it over.
+// Parked on the grass at a summer car show among other muscle cars (a
+// Chevelle SS, a Challenger R/T and a '67 Mustang, fetched from public repos),
+// while a few old guys with beers look it over. The field,
+// tree line and sky are a real photo (Poly Haven's "je_gray_park" HDRI)
+// projected onto the ground around the cars.
 
-const SUN = new Vector3(0.45, 0.75, 0.35).normalize();
-const PAINT = "Matador_Red";
+const PARK = polyHavenHdri("je_gray_park", "4k");
+const EXPOSURE = 0.85;
+const CAMERA_HEIGHT = 1.8; // roughly how high the HDRI was shot from
 
-// ---- Other show cars ------------------------------------------------------
-
-// A repainted copy of the hero model. Real lights (and the dome lens, which
-// shares the hero's material) are stripped so the copies stay dark and don't
-// add to the per-pixel light count.
-function ShowCar({ paint, position, rotationY }: { paint: string; position: [number, number]; rotationY: number }) {
-  const { scene } = useGLTF(MODEL_URL, DRACO_URL);
-  const car = useMemo(() => {
-    const copy = scene.clone(true);
-    const lights: Object3D[] = [];
-    let repainted: Material | null = null;
-    copy.traverse((o) => {
-      if (o instanceof Light || o.name === "DomeLens") lights.push(o);
-      if (!(o instanceof Mesh)) return;
-      const mats: Material[] = Array.isArray(o.material) ? o.material : [o.material];
-      const swapped = mats.map((m) => {
-        if (m.name !== PAINT) return m;
-        if (!repainted) {
-          repainted = (m as MeshPhysicalMaterial).clone();
-          (repainted as MeshPhysicalMaterial).color.set(paint);
-        }
-        return repainted;
-      });
-      o.material = Array.isArray(o.material) ? swapped : swapped[0];
-    });
-    for (const l of lights) l.removeFromParent();
-    return copy;
-  }, [scene, paint]);
-  return (
-    <group position={[position[0], 0, position[1]]} rotation-y={rotationY}>
-      <Center top>
-        <primitive object={car} />
-      </Center>
-    </group>
-  );
-}
-
-// ---- Grounds --------------------------------------------------------------
-
-function makeGrassTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const g = c.getContext("2d")!;
-  g.fillStyle = "#4f7a2e";
-  g.fillRect(0, 0, 256, 256);
-  const rand = mulberry32(3);
-  for (let n = 0; n < 14000; n++) {
-    const h = 80 + rand() * 30;
-    const l = 22 + rand() * 18;
-    g.fillStyle = `hsl(${h}, 45%, ${l}%)`;
-    g.fillRect(rand() * 256, rand() * 256, 1, 2 + rand() * 3);
-  }
-  const t = new CanvasTexture(c);
-  t.colorSpace = SRGBColorSpace;
-  t.wrapS = t.wrapT = RepeatWrapping;
-  t.repeat.set(120, 120);
-  t.anisotropy = 8;
-  return t;
-}
-
-function Grounds() {
-  const grass = useMemo(makeGrassTexture, []);
-  return (
-    <mesh rotation-x={-Math.PI / 2} position-y={-0.002} receiveShadow>
-      <circleGeometry args={[400, 64]} />
-      <meshStandardMaterial map={grass} roughness={1} />
-    </mesh>
-  );
-}
-
-// A ring of round-topped shade trees around the field.
-function Trees() {
-  const trunks = useRef<InstancedMesh>(null);
-  const crowns = useRef<InstancedMesh>(null);
-  const count = 70;
-  useLayoutEffect(() => {
-    const rand = mulberry32(42);
-    const spots = Array.from({ length: count }, () => {
-      const a = rand() * Math.PI * 2;
-      const r = 45 + rand() * 50;
-      return { x: Math.cos(a) * r, z: Math.sin(a) * r, s: 0.8 + rand() * 0.7 };
-    });
-    fillInstances(trunks.current!, count, (n, m) => {
-      const { x, z, s } = spots[n];
-      m.makeScale(s, s, s).setPosition(x, 2 * s, z);
-      return true;
-    });
-    fillInstances(crowns.current!, count, (n, m) => {
-      const { x, z, s } = spots[n];
-      m.makeScale(4.5 * s, 3.8 * s, 4.5 * s).setPosition(x, 6 * s, z);
-      return true;
-    });
-  }, []);
-  return (
-    <>
-      <instancedMesh ref={trunks} args={[undefined, undefined, count]} castShadow>
-        <cylinderGeometry args={[0.25, 0.35, 4, 8]} />
-        <meshStandardMaterial color="#5a4632" roughness={1} />
-      </instancedMesh>
-      <instancedMesh ref={crowns} args={[undefined, undefined, count]} castShadow>
-        <icosahedronGeometry args={[1, 1]} />
-        <meshStandardMaterial color="#3e6b2a" roughness={1} flatShading />
-      </instancedMesh>
-    </>
-  );
-}
+// ---- Props ----------------------------------------------------------------
 
 // White pop-up canopy with a table, folding chairs and a cooler.
 function Canopy({ position, rotationY }: { position: [number, number]; rotationY: number }) {
@@ -153,7 +45,7 @@ function Canopy({ position, rotationY }: { position: [number, number]; rotationY
         <coneGeometry args={[(size / 2) * Math.SQRT2 * 1.05, 0.7, 4, 1, true]} />
         <meshStandardMaterial color="#f4f4f1" roughness={0.9} side={2} />
       </mesh>
-      <mesh position-y={2.15}>
+      <mesh position-y={2.15} castShadow>
         <boxGeometry args={[size * 1.02, 0.25, size * 1.02]} />
         <meshStandardMaterial color="#f4f4f1" roughness={0.9} />
       </mesh>
@@ -204,6 +96,23 @@ function Canopy({ position, rotationY }: { position: [number, number]; rotationY
 
 // ---- Scene ----------------------------------------------------------------
 
+// The park photo wrapped onto a dome with a flat floor, so the grass reads as
+// ground under the cars rather than a backdrop.
+function ParkBackdrop({ texture }: { texture: GroundedSkybox["material"]["map"] }) {
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    const dome = new GroundedSkybox(texture!, CAMERA_HEIGHT, 120);
+    dome.position.y = CAMERA_HEIGHT - 0.01;
+    scene.add(dome);
+    return () => {
+      scene.remove(dome);
+      dome.geometry.dispose();
+      dome.material.dispose();
+    };
+  }, [scene, texture]);
+  return null;
+}
+
 // Points on the hero car (centred at the origin, nose toward +Z). The
 // onlookers stand on its passenger side (-X), facing the default camera.
 const HOOD = new Vector3(0, 0.95, 1.4);
@@ -213,60 +122,88 @@ const STRIPE = new Vector3(0, 0.9, 1.9);
 const QUARTER_R = new Vector3(-0.95, 0.7, -1.2);
 const CAR_CENTER = new Vector3(0, 0.6, 0.4);
 
-export default function CarShowScene({ lightsOn, domeOn }: SceneProps) {
-  useCameraStart(6.5, 2.4, 7.5);
-  useExposure(0.5);
-  const sunPosition = useMemo(() => SUN.clone().multiplyScalar(1000), []);
+// Greyed and weathered: older guys, flannel and work clothes.
+const GREY_HAIR = "#b9b5ad";
+
+function Show({ lightsOn, domeOn }: SceneProps) {
+  const sky = useHdriSky(PARK, null, EXPOSURE);
+  const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <>
-      <fog attach="fog" args={["#cfdbe4", 60, 260]} />
-      <Sky sunPosition={sunPosition} turbidity={4} rayleigh={1} mieCoefficient={0.004} mieDirectionalG={0.8} />
-      <Environment resolution={256} environmentIntensity={0.6}>
-        <Sky sunPosition={sunPosition} turbidity={4} rayleigh={1} mieCoefficient={0.004} mieDirectionalG={0.8} />
-      </Environment>
-      <hemisphereLight args={["#d6e6f5", "#5d6b3a", 0.5]} />
-      <directionalLight position={SUN.clone().multiplyScalar(50)} intensity={2.8} color="#fff1dc" />
+      <Environment map={sky.texture} />
+      <ParkBackdrop texture={sky.texture} />
+      <directionalLight
+        position={sun}
+        intensity={2.4}
+        color="#fff3e2"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
+        shadow-camera-left={-14}
+        shadow-camera-right={14}
+        shadow-camera-top={14}
+        shadow-camera-bottom={-14}
+        shadow-camera-far={100}
+      />
+      {/* Catches the sun's shadows on the photographed grass. */}
+      <mesh rotation-x={-Math.PI / 2} position-y={0.005} receiveShadow>
+        <planeGeometry args={[60, 60]} />
+        <shadowMaterial opacity={0.35} />
+      </mesh>
 
-      <Grounds />
-      <Trees />
       <Canopy position={[-1.5, -7]} rotationY={0.15} />
       <Canopy position={[6, -9]} rotationY={-0.1} />
 
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <ShowCar paint="#1f3f7a" position={[4.4, -0.4]} rotationY={-0.06} />
-      <ShowCar paint="#e2b33c" position={[-4.5, 0.3]} rotationY={0.08} />
-      <ShowCar paint="#1d4a32" position={[9.2, -1.2]} rotationY={-0.12} />
+      <Optional>
+        <ClassicCar id="chevelle" position={[4.5, -0.4]} rotationY={-0.06} />
+      </Optional>
+      <Optional>
+        <ClassicCar id="challenger" position={[-4.6, 0.3]} rotationY={0.08} />
+      </Optional>
+      <Optional>
+        <ClassicCar id="mustang" position={[9.3, -1.2]} rotationY={-0.12} />
+      </Optional>
 
-      <Onlooker
-        position={[-2.1, 1.7]}
-        faceToward={CAR_CENTER}
-        pointAt={[HOOD, FRONT_WHEEL_R, STRIPE]}
-        shirt={["#9e1f1f", "#1b1b1b"]}
-        cap="#2f6b2f"
-        skin="#d9a98b"
-        phase={0}
-      />
-      <Onlooker
-        position={[-1.2, 3.6]}
-        faceToward={CAR_CENTER}
-        pointAt={[GRILLE, HOOD, FRONT_WHEEL_R]}
-        shirt="#8b8f94"
-        pants="#4a4237"
-        cap="#b72a2a"
-        skin="#c98e6d"
-        phase={3.1}
-      />
-      <Onlooker
-        position={[-2.2, -0.9]}
-        faceToward={CAR_CENTER}
-        pointAt={[QUARTER_R, FRONT_WHEEL_R]}
-        shirt={["#2a4f7a", "#1c2c3c"]}
-        cap="#f2f0ea"
-        skin="#e2b79a"
-        phase={5.7}
-      />
+      <Optional>
+        <Onlooker
+          model={onlookerModel("Casual")}
+          position={[-2.1, 1.7]}
+          faceToward={CAR_CENTER}
+          pointAt={[HOOD, FRONT_WHEEL_R, STRIPE]}
+          recolor={{ Purple: "#8e2a24", Hair: GREY_HAIR, LightBlue: "#3d4f6b" }}
+          phase={0}
+        />
+        <Onlooker
+          model={onlookerModel("Worker")}
+          position={[-1.2, 3.6]}
+          faceToward={CAR_CENTER}
+          pointAt={[GRILLE, HOOD, FRONT_WHEEL_R]}
+          recolor={{ Moustache: GREY_HAIR, Worker_Yellow: "#6b6f3a", Worker_Vest: "#3a4a5a" }}
+          height={1.72}
+          phase={3.1}
+        />
+        <Onlooker
+          model={onlookerModel("Farmer")}
+          position={[-2.2, -0.9]}
+          faceToward={CAR_CENTER}
+          pointAt={[QUARTER_R, FRONT_WHEEL_R]}
+          height={1.8}
+          phase={5.7}
+        />
+      </Optional>
 
-      <ContactShadows position={[2, 0.005, 0]} opacity={0.7} scale={30} resolution={1024} blur={2} far={4} />
+      <ContactShadows position={[2, 0.006, 0]} opacity={0.5} scale={30} resolution={1024} blur={2} far={2} />
+    </>
+  );
+}
+
+export default function CarShowScene(props: SceneProps) {
+  useCameraStart(6.5, 2.4, 7.5);
+  useExposure(EXPOSURE);
+  return (
+    <>
+      <Show {...props} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={16} maxPolarAngle={Math.PI / 2.05} />
     </>
   );

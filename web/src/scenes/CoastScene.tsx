@@ -1,51 +1,172 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, OrbitControls, Sky } from "@react-three/drei";
+import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
 import {
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
   CanvasTexture,
   Color,
   CylinderGeometry,
-  IcosahedronGeometry,
-  InstancedMesh,
+  DoubleSide,
+  Euler,
+  Matrix4,
   MeshStandardMaterial,
+  Quaternion,
   QuadraticBezierCurve3,
   RepeatWrapping,
   SRGBColorSpace,
   TubeGeometry,
   Vector3,
+  type DirectionalLight,
+  type Group,
+  type InstancedMesh,
   type ShaderMaterial,
 } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import CamaroModel from "../components/CamaroModel";
-import { DriveProvider, driveDistance, useDrive } from "../car/driveClock";
+import { DriveProvider, driveState, useDrive } from "../car/driveClock";
+import type { TrackPoint } from "../car/track";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
-import { fillInstances, makePeriodicStrip, mulberry32, paintByHeight, Scroll } from "./common/periodic";
+import { useHdriSky, polyHavenHdri, type HdriSky } from "./common/hdri";
+import { InstancedModel, polyHavenModel, useModelParts } from "./common/polyHaven";
+import { mulberry32 } from "./common/periodic";
+import Optional from "./common/Optional";
+import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 
-// Afternoon cruise down a two-lane California coast road: cliffs dropping to
-// the Pacific on the passenger side (-X), golden hills on the driver side (+X).
-// The car sits at the origin facing +Z; every scrolling layer is periodic.
+// A cruise down a winding two-lane California coast road: cliffs dropping to
+// the Pacific on the passenger side (-u), golden hills with scrub on the
+// driver side (+u). The road repeats every lap (see coastTrack), and all
+// scenery is generated from (distance mod lap), so the loop never shows.
+//
+// The car stays at the origin facing +Z; each frame the world (and the sky
+// with it) is moved so the car's spot on the road lands there.
 
-const SPEED = 24; // m/s, about 54 mph
-const SUN = new Vector3(-0.55, 0.28, 0.78).normalize();
-const HAZE = new Color("#c9d6e0");
-const FOG_NEAR = 150;
-const FOG_FAR = 1300;
-const SEA_LEVEL = -35;
+const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
+const EXPOSURE = 0.9;
+const SEA = 0;
+const FOG_NEAR = 250;
+const FOG_FAR = 2200;
 
-// Across X: ocean-side shoulder [-4, -2], road [-2, 6], land-side shoulder [6, 8].
+// Scenery is built from S0 to S1 along the road; the car is always within
+// the first lap, so this covers what's behind it and what's in view ahead.
+const S0 = -300;
+const S1 = L + 1700;
+
+// Across the road (u, + = driver's side): ocean-side shoulder [-4.5, -2],
+// road [-2, 6] (the car drives in the right lane at u = 0), land-side
+// shoulder [6, 8.5], then hills; cliff from -4.5 down to the sea.
 const ROAD_LEFT = -2;
 const ROAD_WIDTH = 8;
-const NEAR_Z = -150; // how far behind the car the scenery starts
-const LENGTH = 1500; // static strips run from NEAR_Z for this far
+const ROAD_TILE = 8;
 
-// ---- Road -----------------------------------------------------------------
+const TAU = Math.PI * 2;
+const UP = new Vector3(0, 1, 0);
+const mod = (a: number, n: number) => ((a % n) + n) % n;
+const smooth = (e0: number, e1: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+};
+// Stable [0, 1) per integer pair, so a lap's scenery repeats exactly.
+const hash = (a: number, b: number) => {
+  const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return v - Math.floor(v);
+};
 
-const ROAD_TILE = 8; // metres of road per texture repeat
+// Where the car is this frame, shared by everything that follows it.
+const here = { s: 0, lap: 0, heading: 0 };
+
+// ---- Terrain shape --------------------------------------------------------
+
+function cliffY(s: number, u: number, road: number, noise = 0) {
+  const t = Math.min(1, Math.max(0, (-u - 4.5) / 47.5));
+  const recess = 0.1 * Math.sin((TAU * 5 * s) / L) + 0.07 * Math.sin((TAU * 13 * s) / L + 1);
+  const drop = smooth(0.03, 0.7, t + recess);
+  return road + (SEA - 5 - road) * drop + noise * 6 * t * (1 - t);
+}
+
+function hillY(s: number, u: number, road: number) {
+  const r = Math.min(1, Math.max(0, (u - 8.5) / 231));
+  const roll =
+    0.5 * Math.sin((TAU * 4 * s) / L + u * 0.031) +
+    0.3 * Math.sin((TAU * 9 * s) / L + 1.3 + u * 0.05) +
+    0.2 * Math.sin((TAU * 17 * s) / L - u * 0.02);
+  return road - 0.4 + smooth(0, 0.03, r) * (3.4 + 110 * Math.pow(r, 1.5) + (5 + 28 * r) * roll);
+}
+
+// ---- Geometry along the road ---------------------------------------------
+
+interface RibbonOptions {
+  ds: number; // row spacing along the road; must divide the lap length
+  us: number[]; // lateral positions of the columns
+  y: (s: number, p: TrackPoint, u: number, j: number, key: number) => number;
+  uv?: (s: number, u: number) => [number, number];
+  color?: (y: number, p: TrackPoint, u: number, j: number, key: number) => Color;
+}
+
+// A grid of rows across the road from S0 to S1, positioned in track space.
+// `key` identifies the row within a lap, for scenery that repeats per lap.
+function ribbon({ ds, us, y, uv, color }: RibbonOptions) {
+  const rows = Math.round((S1 - S0) / ds) + 1;
+  const cols = us.length;
+  const pos = new Float32Array(rows * cols * 3);
+  const uvs = uv ? new Float32Array(rows * cols * 2) : null;
+  const tint = color ? new Float32Array(rows * cols * 3) : null;
+  for (let r = 0; r < rows; r++) {
+    const s = S0 + r * ds;
+    const p = track.at(s);
+    const key = Math.round(mod(s, L) / ds);
+    us.forEach((u, j) => {
+      const i = r * cols + j;
+      const h = y(s, p, u, j, key);
+      const [x, , z] = track.offset(p, u);
+      pos.set([x, h, z], i * 3);
+      if (uvs && uv) uvs.set(uv(s, u), i * 2);
+      if (tint && color) color(h, p, u, j, key).toArray(tint, i * 3);
+    });
+  }
+  const index: number[] = [];
+  for (let r = 0; r < rows - 1; r++) {
+    for (let j = 0; j < cols - 1; j++) {
+      const a = r * cols + j;
+      const b = a + cols;
+      // Columns run toward +u (left) and rows toward +s (ahead), so this
+      // winding faces up.
+      index.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const geo = new BufferGeometry();
+  geo.setAttribute("position", new BufferAttribute(pos, 3));
+  if (uvs) geo.setAttribute("uv", new BufferAttribute(uvs, 2));
+  if (tint) geo.setAttribute("color", new BufferAttribute(tint, 3));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function noiseTexture(seed: number, base: string, spread: number) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d")!;
+  g.fillStyle = base;
+  g.fillRect(0, 0, 256, 256);
+  const rand = mulberry32(seed);
+  for (let n = 0; n < 12000; n++) {
+    const v = Math.floor(255 * (1 - spread / 2 + rand() * spread));
+    g.fillStyle = `rgba(${v},${v},${v},0.5)`;
+    g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 2, 1 + rand() * 2);
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
 
 // 32 px per metre: asphalt grain, white edge lines, double yellow centre.
-function makeRoadTexture() {
+function roadTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = 256;
   const g = c.getContext("2d")!;
@@ -66,217 +187,260 @@ function makeRoadTexture() {
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = t.wrapT = RepeatWrapping;
-  t.repeat.set(1, LENGTH / ROAD_TILE);
   t.anisotropy = 8;
   return t;
 }
 
 function Road() {
-  const drive = useDrive();
-  const texture = useMemo(makeRoadTexture, []);
-  useFrame(({ clock }) => {
-    texture.offset.y = -((driveDistance(drive, clock.elapsedTime) % ROAD_TILE) / ROAD_TILE);
-  });
-  const strip = (x0: number, x1: number, color: string) => (
-    <mesh rotation-x={-Math.PI / 2} position={[(x0 + x1) / 2, -0.01, NEAR_Z + LENGTH / 2]} receiveShadow>
-      <planeGeometry args={[x1 - x0, LENGTH]} />
-      <meshStandardMaterial color={color} roughness={1} />
-    </mesh>
-  );
+  const { road, shoulders, rail } = useMemo(() => {
+    const flat = (lift: number) => (_s: number, p: TrackPoint) => p.y + lift;
+    return {
+      road: ribbon({
+        ds: 2,
+        us: [ROAD_LEFT, ROAD_LEFT + ROAD_WIDTH],
+        y: flat(0),
+        uv: (s, u) => [(u - ROAD_LEFT) / ROAD_WIDTH, s / ROAD_TILE],
+      }),
+      shoulders: mergeGeometries([
+        ribbon({ ds: 2, us: [-4.5, ROAD_LEFT], y: flat(-0.02), uv: (s, u) => [u / 3, s / 3] }),
+        ribbon({ ds: 2, us: [ROAD_LEFT + ROAD_WIDTH, 8.5], y: flat(-0.02), uv: (s, u) => [u / 3, s / 3] }),
+      ]),
+      // Guardrail beam: a vertical strip just inside the ocean-side shoulder.
+      rail: ribbon({ ds: 2, us: [-4.2, -4.2], y: (_s, p, _u, j) => p.y + (j ? 0.45 : 0.8) }),
+    };
+  }, []);
+  const asphalt = useMemo(roadTexture, []);
+  const gravel = useMemo(() => noiseTexture(5, "#6f685d", 0.45), []);
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position={[ROAD_LEFT + ROAD_WIDTH / 2, 0, NEAR_Z + LENGTH / 2]} receiveShadow>
-        <planeGeometry args={[ROAD_WIDTH, LENGTH]} />
-        <meshStandardMaterial map={texture} roughness={0.85} />
+      <mesh geometry={road} receiveShadow>
+        <meshStandardMaterial map={asphalt} roughness={0.85} />
       </mesh>
-      {strip(-4, ROAD_LEFT, "#8d8474")}
-      {strip(ROAD_LEFT + ROAD_WIDTH, 8, "#8d8474")}
+      <mesh geometry={shoulders} receiveShadow>
+        <meshStandardMaterial map={gravel} roughness={1} />
+      </mesh>
+      <mesh geometry={rail} castShadow>
+        <meshStandardMaterial color="#b9bec2" metalness={0.7} roughness={0.35} side={DoubleSide} />
+      </mesh>
     </>
   );
 }
 
-// ---- Guardrail and telephone poles ---------------------------------------
+// An instance transform at distance s, offset u from the road centreline and
+// turned to follow it.
+function placeAlong(s: number, u: number, y: number, scale: Vector3, extraYaw = 0, tilt?: Euler) {
+  const p = track.at(s);
+  const [x, , z] = track.offset(p, u);
+  const q = new Quaternion().setFromEuler(new Euler(0, p.heading + extraYaw, 0));
+  if (tilt) q.multiply(new Quaternion().setFromEuler(tilt));
+  return new Matrix4().compose(new Vector3(x, y, z), q, scale);
+}
 
 const POST_SPACING = 2.5;
 const POLE_SPACING = 50;
+const POLE_U = 11;
 
-function Guardrail() {
+function spotsEvery(spacing: number) {
+  const out: number[] = [];
+  for (let s = Math.ceil(S0 / spacing) * spacing; s <= S1; s += spacing) out.push(s);
+  return out;
+}
+
+const poleBase = (s: number) => hillY(s, POLE_U, track.at(s).y);
+
+function RoadFurniture() {
   const posts = useRef<InstancedMesh>(null);
-  const count = Math.ceil(900 / POST_SPACING);
+  const poles = useRef<InstancedMesh>(null);
+  const arms = useRef<InstancedMesh>(null);
+  const postSpots = useMemo(() => spotsEvery(POST_SPACING), []);
+  const poleSpots = useMemo(() => spotsEvery(POLE_SPACING), []);
+  const { pole, arm, wood, wires } = useMemo(() => {
+    const spans: BufferGeometry[] = [];
+    for (let i = 0; i < poleSpots.length - 1; i++) {
+      const [sa, sb] = [poleSpots[i], poleSpots[i + 1]];
+      for (const side of [-0.95, 0.95]) {
+        const end = (s: number) => new Vector3(...track.offset(track.at(s), POLE_U + side)).setY(poleBase(s) + 9.3);
+        const a = end(sa);
+        const b = end(sb);
+        const mid = end((sa + sb) / 2).setY((a.y + b.y) / 2 - 1.2);
+        // A quadratic's midpoint sits halfway to its control point, so double the sag.
+        mid.y -= 1.2;
+        spans.push(new TubeGeometry(new QuadraticBezierCurve3(a, mid, b), 12, 0.012, 4));
+      }
+    }
+    return {
+      pole: new CylinderGeometry(0.11, 0.14, 10, 8).translate(0, 4.6, 0),
+      arm: new BoxGeometry(0.12, 0.12, 2.2).rotateY(Math.PI / 2).translate(0, 9.25, 0),
+      wood: new MeshStandardMaterial({ color: "#5b4632", roughness: 0.9 }),
+      wires: mergeGeometries(spans),
+    };
+  }, [poleSpots]);
   useLayoutEffect(() => {
-    fillInstances(posts.current!, count, (n, m) => {
-      m.setPosition(-3.62, 0.38, n * POST_SPACING);
-      return true;
+    const one = new Vector3(1, 1, 1);
+    postSpots.forEach((s, i) => posts.current!.setMatrixAt(i, placeAlong(s, -4.32, track.at(s).y + 0.38, one)));
+    poleSpots.forEach((s, i) => {
+      const m = placeAlong(s, POLE_U, poleBase(s), one);
+      poles.current!.setMatrixAt(i, m);
+      arms.current!.setMatrixAt(i, m);
     });
-  }, [count]);
+    for (const m of [posts.current!, poles.current!, arms.current!]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
+  }, [postSpots, poleSpots]);
   return (
     <>
-      <mesh position={[-3.5, 0.62, NEAR_Z + LENGTH / 2]} castShadow>
-        <boxGeometry args={[0.06, 0.32, LENGTH]} />
-        <meshStandardMaterial color="#b9bec2" metalness={0.7} roughness={0.35} />
+      <instancedMesh ref={posts} args={[undefined, undefined, postSpots.length]} castShadow>
+        <boxGeometry args={[0.15, 0.76, 0.15]} />
+        <meshStandardMaterial color="#8f9497" metalness={0.5} roughness={0.5} />
+      </instancedMesh>
+      <instancedMesh ref={poles} args={[pole, wood, poleSpots.length]} castShadow />
+      <instancedMesh ref={arms} args={[arm, wood, poleSpots.length]} />
+      <mesh geometry={wires}>
+        <meshStandardMaterial color="#1d1d1d" roughness={0.6} />
       </mesh>
-      <Scroll period={POST_SPACING} start={NEAR_Z}>
-        <instancedMesh ref={posts} args={[undefined, undefined, count]} castShadow>
-          <boxGeometry args={[0.15, 0.76, 0.15]} />
-          <meshStandardMaterial color="#8f9497" metalness={0.5} roughness={0.5} />
-        </instancedMesh>
-      </Scroll>
     </>
   );
 }
 
-function TelephonePoles() {
-  const count = Math.ceil((LENGTH - 300) / POLE_SPACING);
-  const { pole, arm, wire } = useMemo(() => {
-    const wireCurve = (x: number) =>
-      new QuadraticBezierCurve3(
-        new Vector3(x, 9.3, 0),
-        new Vector3(x, 8.0, POLE_SPACING / 2),
-        new Vector3(x, 9.3, POLE_SPACING),
-      );
-    return {
-      pole: new CylinderGeometry(0.11, 0.14, 10, 8).translate(0, 4.5, 0),
-      arm: new BoxGeometry(2.2, 0.12, 0.12).translate(0, 9.2, 0),
-      wire: [-0.95, 0.95].map((x) => new TubeGeometry(wireCurve(x), 16, 0.012, 4)),
-    };
-  }, []);
-  const wood = useMemo(() => new MeshStandardMaterial({ color: "#5b4632", roughness: 0.9 }), []);
-  const cable = useMemo(() => new MeshStandardMaterial({ color: "#1d1d1d", roughness: 0.6 }), []);
-  return (
-    <Scroll period={POLE_SPACING} start={NEAR_Z}>
-      {Array.from({ length: count }, (_, n) => (
-        <group key={n} position={[10, -0.4, n * POLE_SPACING]}>
-          <mesh geometry={pole} material={wood} castShadow />
-          <mesh geometry={arm} material={wood} />
-          {wire.map((w, i) => (
-            <mesh key={i} geometry={w} material={cable} />
-          ))}
-        </group>
-      ))}
-    </Scroll>
-  );
-}
-
-// ---- Cliffs and hills -----------------------------------------------------
-
-const CLIFF_PERIOD = 240;
-const CLIFF_SEGMENT = 8;
-
-// Grassy lip at road level dropping through rock to below sea level, 40 m
-// wide. Built toward +X; mirrored onto the ocean side.
-function makeCliff() {
-  const cols = 10;
-  const rand = mulberry32(1968);
-  const geo = makePeriodicStrip({
-    width: 40,
-    cols,
-    period: CLIFF_PERIOD,
-    segment: CLIFF_SEGMENT,
-    copies: 7,
-    height: (i, k) => {
-      if (i === 0) return -0.1;
-      const u = i / cols;
-      const t = (k * CLIFF_SEGMENT * 2 * Math.PI) / CLIFF_PERIOD;
-      const recess = 0.12 * Math.sin(t * 3) + 0.08 * Math.sin(t * 7 + 1);
-      const drop = Math.min(1, Math.max(0, (u - 0.05 + recess) / 0.5));
-      return -40 * drop * drop * (3 - 2 * drop) + (rand() - 0.5) * 4 * u;
-    },
-  });
-  const grass = new Color("#8d8a4a");
-  const rock = [new Color("#7a6550"), new Color("#937a5e"), new Color("#5f5244")];
-  return paintByHeight(geo, 2, (y, r) => (y > -1.2 ? grass.clone().offsetHSL(0, 0, (r - 0.5) * 0.06) : rock[Math.floor(r * 3)]));
-}
-
-const HILL_COLS = 24;
-const HILL_WIDTH = 300;
-const HILL_PERIOD = 300;
-const HILL_SEGMENT = 10;
-const HILL_ROWS = HILL_PERIOD / HILL_SEGMENT;
-const HILL_COPIES = 6;
-
-function hillHeights() {
-  const rand = mulberry32(540);
-  return Array.from({ length: HILL_ROWS }, (_, k) =>
-    Array.from({ length: HILL_COLS + 1 }, (_, i) => {
-      if (i === 0) return -0.4;
-      const u = i / HILL_COLS;
-      const t = (k / HILL_ROWS) * 2 * Math.PI;
-      const rolling = 0.5 * Math.sin(2 * t + i * 0.55) + 0.3 * Math.sin(3 * t + i * 1.1 + 1.3) + 0.2 * Math.sin(5 * t - i * 0.8);
-      return Math.min(1, u * 6) * (2 + 8 * u + 90 * u * u + (6 + 25 * u) * rolling + 3 * rand());
-    }),
-  );
-}
-
-function Hills() {
-  const oaks = useRef<InstancedMesh>(null);
-  const { heights, hills, oak } = useMemo(() => {
-    const heights = hillHeights();
-    const gold = [new Color("#b39a5c"), new Color("#a68d50"), new Color("#c2a96a")];
-    const hills = paintByHeight(
-      makePeriodicStrip({
-        width: HILL_WIDTH,
-        cols: HILL_COLS,
-        period: HILL_PERIOD,
-        segment: HILL_SEGMENT,
-        copies: HILL_COPIES,
-        height: (i, k) => heights[k][i],
-      }),
-      11,
-      (_, r) => gold[Math.floor(r * 3)],
-    );
-    return { heights, hills, oak: new IcosahedronGeometry(1, 0) };
-  }, []);
-  useLayoutEffect(() => {
-    const rand = mulberry32(99);
-    // Decide per (column, row) once so every period gets the same trees.
-    const chosen = heights.map((row) => row.map(() => rand()));
-    const perCopy = HILL_ROWS * (HILL_COLS + 1);
-    const scale = new Vector3();
-    fillInstances(oaks.current!, perCopy * HILL_COPIES, (n, m) => {
-      const c = Math.floor(n / perCopy);
-      const k = Math.floor((n % perCopy) / (HILL_COLS + 1));
-      const i = n % (HILL_COLS + 1);
-      const r = chosen[k][i];
-      if (i < 3 || r > 0.14) return false;
-      const s = 0.8 + r * 10;
-      scale.set(2.6 * s, 1.5 * s, 2.6 * s);
-      m.makeScale(scale.x, scale.y, scale.z);
-      m.setPosition((i * HILL_WIDTH) / HILL_COLS, heights[k][i] + 0.6 * s, (c * HILL_ROWS + k) * HILL_SEGMENT);
-      return true;
+function Terrain() {
+  const { cliff, hills } = useMemo(() => {
+    const grass = new Color("#8f8a4c");
+    const rock = [new Color("#7a6550"), new Color("#937a5e"), new Color("#5f5244"), new Color("#86705a")];
+    const gold = [new Color("#94804c"), new Color("#877444"), new Color("#a08a55"), new Color("#7d6f45")];
+    const cliffUs = [-4.5, -6, -9, -13, -18, -24, -30, -37, -44, -52];
+    const hillUs = [8.5, 10, 13, 18, 26, 36, 50, 66, 85, 108, 135, 165, 200, 240];
+    // De-indexed with per-face normals so the rock reads as faceted stone.
+    const cliff = ribbon({
+      ds: 4,
+      us: cliffUs,
+      y: (s, p, u, j, key) => cliffY(s, u, p.y, j === 0 ? 0 : hash(key, j) - 0.5),
+      uv: (s, u) => [u / 6, s / 6],
+      color: (y, p, _u, j, key) => (y > p.y - 1.5 ? grass : rock[Math.floor(hash(key, j + 50) * rock.length)]),
+    }).toNonIndexed();
+    cliff.computeVertexNormals();
+    const hills = ribbon({
+      ds: 10,
+      us: hillUs,
+      y: (s, p, u) => hillY(s, u, p.y),
+      uv: (s, u) => [u / 8, s / 8],
+      color: (_y, _p, _u, j, key) => gold[Math.floor(hash(key, j + 90) * gold.length)],
     });
-  }, [heights]);
-  return (
-    <group position-x={8}>
-      <mesh geometry={hills} receiveShadow>
-        <meshStandardMaterial vertexColors roughness={1} flatShading />
-      </mesh>
-      <instancedMesh ref={oaks} args={[oak, undefined, HILL_ROWS * (HILL_COLS + 1) * HILL_COPIES]} castShadow>
-        <meshStandardMaterial color="#4a5528" roughness={0.95} flatShading />
-      </instancedMesh>
-    </group>
-  );
-}
-
-function Landscape() {
-  const cliff = useMemo(makeCliff, []);
+    return { cliff, hills };
+  }, []);
+  const grain = useMemo(() => noiseTexture(9, "#ffffff", 0.35), []);
   return (
     <>
-      <Scroll period={CLIFF_PERIOD} start={NEAR_Z}>
-        <mesh geometry={cliff} position-x={-4} scale-x={-1} receiveShadow>
-          <meshStandardMaterial vertexColors roughness={1} flatShading />
-        </mesh>
-      </Scroll>
-      <Scroll period={HILL_PERIOD} start={NEAR_Z}>
-        <Hills />
-      </Scroll>
+      <mesh geometry={cliff} receiveShadow castShadow>
+        <meshStandardMaterial vertexColors map={grain} roughness={1} side={DoubleSide} />
+      </mesh>
+      <mesh geometry={hills} receiveShadow>
+        <meshStandardMaterial vertexColors map={grain} roughness={1} side={DoubleSide} />
+      </mesh>
+    </>
+  );
+}
+
+// ---- Vegetation and rocks (Poly Haven, CC0) -------------------------------
+
+// Instances are grouped by stretch of road so the ones out of view can be
+// hidden; the models are detailed, so drawing a whole lap's worth is costly.
+const CHUNK = 200;
+
+interface Spot {
+  s: number;
+  matrix: Matrix4;
+}
+
+function ChunkedModel({ url, spots }: { url: string; spots: (modelSize: number) => Spot[] }) {
+  const { parts, bounds } = useModelParts(url);
+  const chunks = useMemo(() => {
+    const out: Matrix4[][] = [];
+    const size = bounds.getSize(new Vector3());
+    for (const { s, matrix } of spots(Math.max(size.x, size.y, size.z))) (out[Math.floor((s - S0) / CHUNK)] ??= []).push(matrix);
+    return out;
+  }, [spots, bounds]);
+  const groups = useRef<(Group | null)[]>([]);
+  useFrame(() => {
+    groups.current.forEach((g, c) => {
+      if (!g) return;
+      const start = S0 + c * CHUNK;
+      g.visible = start + CHUNK > here.s - 250 && start < here.s + FOG_FAR * 0.6;
+    });
+  });
+  return (
+    <>
+      {Array.from(chunks, (matrices, c) => (
+        <group key={c} ref={(g) => void (groups.current[c] = g)}>
+          {matrices && <InstancedModel parts={parts} matrices={matrices} />}
+        </group>
+      ))}
+    </>
+  );
+}
+
+// Scrub on the hills, densest near the road. Spots come from a 5 m grid keyed
+// on (distance mod lap), so every lap gets the same bushes.
+function shrubSpots(which: number, of: number, density: number) {
+  return (height: number): Spot[] => {
+    const out: Spot[] = [];
+    for (let s = Math.ceil(S0 / 5) * 5; s <= S1; s += 5) {
+      const key = Math.round(mod(s, L) / 5);
+      for (let j = 0; j < 3; j++) {
+        if (hash(key, j) > density || Math.floor(hash(key, j + 30) * of) !== which) continue;
+        const ss = s + hash(key, j + 20) * 5;
+        const u = 10.5 + Math.pow(hash(key, j + 10), 1.4) * 150;
+        const size = (1.8 + hash(key, j + 40) * 4) / height;
+        const y = hillY(ss, u, track.at(ss).y) - 0.15;
+        out.push({ s: ss, matrix: placeAlong(ss, u, y, new Vector3(size, size, size), hash(key, j + 60) * TAU) });
+      }
+    }
+    return out;
+  };
+}
+
+// Boulders down the cliff face and along the waterline.
+function rockSpots(which: number) {
+  return (height: number): Spot[] => {
+    const out: Spot[] = [];
+    for (let s = Math.ceil(S0 / 10) * 10; s <= S1; s += 10) {
+      const key = Math.round(mod(s, L) / 10);
+      for (let j = 0; j < 3; j++) {
+        if (hash(key, j + 100) > 0.22 || Math.floor(hash(key, j + 130) * 2) !== which) continue;
+        const ss = s + hash(key, j + 110) * 10;
+        const u = -9 - hash(key, j + 120) * 50;
+        const size = (1.5 + hash(key, j + 140) * 5) / height;
+        const y = Math.max(SEA - 1.5, cliffY(ss, u, track.at(ss).y)) - size * height * 0.25;
+        const tilt = new Euler(hash(key, j + 150) * 0.6, hash(key, j + 160) * TAU, hash(key, j + 170) * 0.6);
+        out.push({ s: ss, matrix: placeAlong(ss, u, y, new Vector3(size, size * 0.8, size), 0, tilt) });
+      }
+    }
+    return out;
+  };
+}
+
+const SHRUBS = ["shrub_03", "shrub_03", "shrub_04", "shrub_02"].map(polyHavenModel);
+const ROCKS = ["rock_07", "rock_09"].map(polyHavenModel);
+
+function Vegetation() {
+  const shrubs = useMemo(() => SHRUBS.map((_, i) => shrubSpots(i, SHRUBS.length, 0.7)), []);
+  const rocks = useMemo(() => ROCKS.map((_, i) => rockSpots(i)), []);
+  return (
+    <>
+      {SHRUBS.map((url, i) => (
+        <ChunkedModel key={`shrub${i}`} url={url} spots={shrubs[i]} />
+      ))}
+      {ROCKS.map((url, i) => (
+        <ChunkedModel key={`rock${i}`} url={url} spots={rocks[i]} />
+      ))}
     </>
   );
 }
 
 // ---- Ocean ----------------------------------------------------------------
 
-// Waves are built from integer wavenumbers over OCEAN_PERIOD metres, so the
-// pattern repeats exactly along Z and can scroll by (distance mod period).
+// Integer wavenumbers over OCEAN_PERIOD metres, so the pattern can be shifted
+// by whole-lap offsets (mod the period) without a visible jump.
 const OCEAN_PERIOD = 200;
 const WAVES: [number, number, number][] = [
   // [cycles across X, cycles along Z, amplitude in metres]
@@ -289,103 +453,157 @@ const WAVES: [number, number, number][] = [
 ];
 
 const oceanVertex = /* glsl */ `
+  varying vec3 vTrack;
   varying vec3 vWorld;
   void main() {
+    vTrack = position;
     vec4 w = modelMatrix * vec4(position, 1.0);
     vWorld = w.xyz;
     gl_Position = projectionMatrix * viewMatrix * w;
   }
 `;
 
+// Waves are evaluated in track space (plus the laps already driven), so they
+// stay put on the water as the world moves past.
 const oceanFragment = /* glsl */ `
   uniform float uTime;
-  uniform float uOffset;
+  uniform vec2 uLapOffset;
   uniform vec3 uSun;
   uniform vec3 uHaze;
   uniform float uFogNear;
   uniform float uFogFar;
   uniform vec3 uWaves[${WAVES.length}];
+  varying vec3 vTrack;
   varying vec3 vWorld;
   const float TAU = 6.2831853;
   void main() {
-    vec2 p = vec2(vWorld.x, vWorld.z + uOffset);
+    vec2 p = vTrack.xz + uLapOffset;
     float dist = length(vWorld - cameraPosition);
-    // Fade the ripples out with distance so far water doesn't shimmer.
-    float detail = 1.0 - smoothstep(80.0, 700.0, dist);
+    float detail = 1.0 - smoothstep(150.0, 1500.0, dist);
     vec2 grad = vec2(0.0);
     for (int n = 0; n < ${WAVES.length}; n++) {
       vec2 k = uWaves[n].xy * (TAU / ${OCEAN_PERIOD.toFixed(1)});
       float omega = sqrt(9.81 * length(k));
       grad += uWaves[n].z * k * cos(dot(k, p) - omega * uTime);
     }
-    vec3 nrm = normalize(vec3(-grad.x * detail * 0.35, 1.0, -grad.y * detail * 0.35));
+    vec3 nrm = normalize(vec3(-grad.x * detail * 0.3, 1.0, -grad.y * detail * 0.3));
     vec3 view = normalize(cameraPosition - vWorld);
     float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(nrm, view), 0.0), 5.0);
-    vec3 deep = vec3(0.02, 0.11, 0.17);
-    vec3 sky = vec3(0.55, 0.7, 0.85);
-    vec3 col = mix(deep, sky, fresnel);
-    float glint = pow(max(dot(reflect(-view, nrm), uSun), 0.0), 400.0);
-    col += vec3(1.0, 0.88, 0.7) * glint * 8.0;
+    vec3 deep = vec3(0.012, 0.07, 0.11);
+    vec3 col = mix(deep, uHaze * 0.9, fresnel);
+    float glint = pow(max(dot(reflect(-view, nrm), uSun), 0.0), 500.0);
+    col += vec3(1.0, 0.92, 0.8) * glint * 12.0;
     gl_FragColor = vec4(mix(col, uHaze, smoothstep(uFogNear, uFogFar, dist)), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
-function Ocean() {
-  const drive = useDrive();
+function Ocean({ sky }: { sky: HdriSky }) {
   const material = useRef<ShaderMaterial>(null);
+  // Flat, so where the inside of a bend folds the strip over itself the
+  // overlapping water is identical and the fold can't be seen.
+  const geometry = useMemo(
+    () => ribbon({ ds: 20, us: [-30, -60, -120, -250, -500, -1000, -2000, -3500, -5500], y: () => SEA }),
+    [],
+  );
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uOffset: { value: 0 },
-      uSun: { value: SUN },
-      uHaze: { value: HAZE },
+      uLapOffset: { value: [0, 0] },
+      uSun: { value: new Vector3() },
+      uHaze: { value: sky.horizon },
       uFogNear: { value: FOG_NEAR },
       uFogFar: { value: FOG_FAR },
       uWaves: { value: WAVES.map(([x, z, a]) => new Vector3(x, z, a)) },
     }),
-    [],
+    [sky],
   );
   // R3F copies each uniform into the material, so update the material's own.
   useFrame(({ clock }) => {
     const u = material.current?.uniforms;
     if (!u) return;
     u.uTime.value = clock.elapsedTime;
-    u.uOffset.value = driveDistance(drive, clock.elapsedTime) % OCEAN_PERIOD;
+    u.uLapOffset.value = [mod(here.lap * track.lapShift.x, OCEAN_PERIOD), mod(here.lap * track.lapShift.z, OCEAN_PERIOD)];
+    (u.uSun.value as Vector3).copy(sky.sun).applyAxisAngle(UP, -here.heading);
   });
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[-2020, SEA_LEVEL, 1500]}>
-      <planeGeometry args={[4000, 5000]} />
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={oceanVertex} fragmentShader={oceanFragment} />
+    <mesh geometry={geometry}>
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={oceanVertex} fragmentShader={oceanFragment} side={DoubleSide} />
     </mesh>
   );
 }
 
-// ---- Scene ----------------------------------------------------------------
+// ---- Following the car ----------------------------------------------------
 
-export default function CoastScene({ lightsOn, domeOn }: SceneProps) {
-  useCameraStart(5.5, 2, -7.5);
-  useFarPlane(6000); // the ocean has to reach the horizon
-  useExposure(0.45); // the physical sky is far brighter than the studio
-  const sunPosition = useMemo(() => SUN.clone().multiplyScalar(1000), []);
+// Moves the world (and turns the sky and sun with it) so the car's current
+// spot on the road sits at the origin, facing +Z. Runs before the other frame
+// callbacks so they all see this frame's position.
+function World({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<DirectionalLight | null>; children: ReactNode }) {
+  const drive = useDrive();
+  const group = useRef<Group>(null);
+  const turn = useMemo(() => new Matrix4(), []);
+  useFrame(({ clock, scene }) => {
+    const { distance } = driveState(drive, clock.elapsedTime);
+    here.lap = Math.floor(distance / L);
+    here.s = distance - here.lap * L;
+    const p = track.at(here.s);
+    here.heading = p.heading;
+    group.current?.matrix.makeTranslation(-p.x, -p.y, -p.z).premultiply(turn.makeRotationY(-p.heading));
+    scene.environmentRotation.y = sky.rotation.y - p.heading;
+    scene.backgroundRotation.y = sky.rotation.y - p.heading;
+    sunLight.current?.position.copy(sky.sun).applyAxisAngle(UP, -p.heading).multiplyScalar(40);
+  }, -1);
   return (
-    <DriveProvider speed={SPEED}>
-      <fog attach="fog" args={[HAZE, FOG_NEAR, FOG_FAR]} />
-      <Sky sunPosition={sunPosition} turbidity={5} rayleigh={1.2} mieCoefficient={0.004} mieDirectionalG={0.85} />
-      <Environment resolution={256} environmentIntensity={0.6}>
-        <Sky sunPosition={sunPosition} turbidity={5} rayleigh={1.2} mieCoefficient={0.004} mieDirectionalG={0.85} />
-      </Environment>
-      <hemisphereLight args={["#cfe0f0", "#8a7a55", 0.5]} />
-      <directionalLight position={SUN.clone().multiplyScalar(60)} intensity={2.6} color="#ffe6c4" />
-      <Road />
-      <Guardrail />
-      <TelephonePoles />
-      <Landscape />
-      <Ocean />
+    <group ref={group} matrixAutoUpdate={false}>
+      {children}
+    </group>
+  );
+}
+
+function CoastWorld({ lightsOn, domeOn }: SceneProps) {
+  const sky = useHdriSky(SKY, -0.5, EXPOSURE);
+  const sun = useRef<DirectionalLight>(null);
+  return (
+    <DriveProvider profile={track}>
+      <fog attach="fog" args={[sky.fog, FOG_NEAR, FOG_FAR]} />
+      <Environment map={sky.texture} background environmentRotation={sky.rotation} backgroundRotation={sky.rotation} />
+      <directionalLight
+        ref={sun}
+        intensity={2.2}
+        color="#fff1dc"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
+        shadow-camera-left={-12}
+        shadow-camera-right={12}
+        shadow-camera-top={12}
+        shadow-camera-bottom={-12}
+        shadow-camera-far={120}
+      />
+      <World sky={sky} sunLight={sun}>
+        <Road />
+        <RoadFurniture />
+        <Terrain />
+        <Ocean sky={sky} />
+        <Optional>
+          <Vegetation />
+        </Optional>
+      </World>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.65} scale={12} blur={2.2} far={3} />
-      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
+      <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
     </DriveProvider>
+  );
+}
+
+export default function CoastScene(props: SceneProps) {
+  useCameraStart(5.5, 2, -7.5);
+  useFarPlane(9000); // the ocean has to reach the horizon
+  useExposure(EXPOSURE);
+  return (
+    <>
+      <CoastWorld {...props} />
+      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={16} maxPolarAngle={Math.PI / 2.05} />
+    </>
   );
 }

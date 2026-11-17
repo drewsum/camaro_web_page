@@ -47,6 +47,7 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
   const { rig, beams, glows, dome } = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
+      obj.castShadow = true; // for scenes with a shadow-casting sun
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
     });
@@ -55,7 +56,7 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
     return { rig, beams, glows: makeLampGlows(rig, scene), dome: makeDomeLight(rig, scene) };
   }, [scene]);
 
-  useDrivingPose(rig);
+  useDrivingPose(rig, lightsOn);
   useFrame(() => updateLampGlows(glows));
 
   useEffect(() => {

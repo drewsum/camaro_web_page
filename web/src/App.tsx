@@ -72,6 +72,13 @@ export default function App() {
         <a href="https://skfb.ly/pNoxx">"1967 Chevrolet Camaro SS 350 Coupe"</a> by Ddiaz Design,
         licensed under{" "}
         <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.
+        {scene.credits?.map((c) => (
+          <span key={c.title}>
+            {" "}
+            <a href={c.href}>{c.title}</a>
+            {c.author && ` by ${c.author}`} ({c.licenseUrl ? <a href={c.licenseUrl}>{c.license}</a> : c.license}).
+          </span>
+        ))}
       </footer>
     </>
   );
