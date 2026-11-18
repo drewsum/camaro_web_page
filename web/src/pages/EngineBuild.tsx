@@ -1,3 +1,4 @@
+import DynoChart from "./DynoChart";
 import { Photo, Row } from "./Placeholder";
 
 export default function EngineBuild() {
@@ -73,6 +74,7 @@ export default function EngineBuild() {
       </table>
 
       <h2>Output</h2>
+      <DynoChart />
       <table className="sheet">
         <tbody>
           <Row label="Horsepower">610 HP at 5400 rpm</Row>

@@ -279,6 +279,96 @@ canvas {
   color: #9a9ea8;
 }
 
+/* Interactive dyno chart on the engine build page. */
+.dyno {
+  margin: 4px 0 20px;
+}
+
+.dyno svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+  cursor: crosshair;
+  font-size: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dyno svg:focus-visible {
+  outline: 2px solid #e0a030;
+  outline-offset: 2px;
+}
+
+.dyno-grid line {
+  stroke: #2a2e36;
+}
+
+.dyno-grid text {
+  fill-opacity: 0.85;
+  dominant-baseline: middle;
+}
+
+.dyno-grid text:not([fill]),
+.dyno-axis:not([fill]) {
+  fill: #9a9ea8;
+}
+
+.dyno-axis {
+  font-size: 12px;
+}
+
+.dyno-cursor {
+  stroke: #eef0f4;
+  stroke-opacity: 0.35;
+  stroke-dasharray: 4 4;
+}
+
+.dyno-tip rect {
+  fill: rgba(14, 16, 20, 0.94);
+  stroke: #3a3f4a;
+}
+
+.dyno-tip text {
+  font-size: 13px;
+}
+
+.dyno-legend {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dyno-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #2a2e36;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dyno-legend button[aria-pressed="false"] {
+  opacity: 0.4;
+}
+
+.dyno-legend span {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.dyno figcaption {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
 
 /* Phones: with a page open (and the scene controls hidden) the links become
    a row along the top and the page fills the width beneath them. */
