@@ -6,11 +6,25 @@ import Lightbox, { pagePhotos, type Shot } from "./Lightbox";
 // src="/photos/<file name>". Clicking a photo opens it full size, with the
 // other photos on the same page a swipe or arrow key away.
 
-export function Photo({ src, caption, wide }: { src?: string; caption?: string; wide?: boolean }) {
+// `credit` adds an attribution line under the caption; `side` floats a
+// portrait picture beside the text at its natural shape instead of cropping it.
+export function Photo({
+  src,
+  caption,
+  credit,
+  wide,
+  side,
+}: {
+  src?: string;
+  caption?: string;
+  credit?: string;
+  wide?: boolean;
+  side?: boolean;
+}) {
   const [open, setOpen] = useState<{ shots: Shot[]; start: number } | null>(null);
 
   return (
-    <figure className={wide ? "photo wide" : "photo"}>
+    <figure className={["photo", wide && "wide", side && "side"].filter(Boolean).join(" ")}>
       {src ? (
         <button
           type="button"
@@ -23,14 +37,19 @@ export function Photo({ src, caption, wide }: { src?: string; caption?: string; 
             setOpen({ shots, start: Math.max(0, all.indexOf(img)) });
           }}
         >
-          <img className="photo-img" src={src} alt={caption ?? ""} loading="lazy" />
+          <img className="photo-img" src={src} alt={[caption, credit].filter(Boolean).join(". ")} loading="lazy" />
         </button>
       ) : (
         <div className="photo-slot" role="img" aria-label="Photo placeholder">
           Photo
         </div>
       )}
-      {caption && <figcaption>{caption}</figcaption>}
+      {(caption || credit) && (
+        <figcaption>
+          {caption}
+          {credit && <span className="photo-credit">{credit}</span>}
+        </figcaption>
+      )}
       {open && <Lightbox shots={open.shots} start={open.start} onClose={() => setOpen(null)} />}
     </figure>
   );

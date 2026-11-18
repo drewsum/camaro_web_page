@@ -10,6 +10,12 @@ export default function Overview() {
       <p>Thanks for checking out my prized 1968 Camaro SS!</p>
 
       <h2>History</h2>
+      <Photo
+        side
+        src="photos/gm-1968-camaro-ss.jpg"
+        caption="Cover of Chevrolet's 1968 Camaro sales brochure"
+        credit="Image courtesy of General Motors"
+      />
       <p>I believe the car is a true super-sport. It would have been built with a 396 Chevy Big Block. It is still the true Matador Red color. It was built with a red interior, but has been changed to black leather. I tracked it down in Joliet, Illinois</p>
 
       <h2>Class</h2>

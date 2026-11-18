@@ -779,3 +779,33 @@ canvas {
 .attribution[hidden] {
   display: none;
 }
+
+/* A portrait photo that sits beside the text instead of spanning the page. */
+.photo.side {
+  float: right;
+  width: min(42%, 240px);
+  margin: 4px 0 12px 20px;
+}
+
+.photo.side .photo-img {
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+.photo-credit {
+  display: block;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.page h2 {
+  clear: both;
+}
+
+@media (max-width: 520px) {
+  .photo.side {
+    float: none;
+    width: 100%;
+    margin: 0 0 16px;
+  }
+}
