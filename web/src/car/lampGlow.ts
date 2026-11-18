@@ -74,15 +74,23 @@ export function makeLampGlows(rig: CarRig, scene: Object3D): LampGlow[] {
   return [...clusters].flatMap(([key, c]) => {
     if (c.box.isEmpty()) return [];
     const name = `LampGlow_${key}`;
-    let light = existing.find((l) => l.name === name);
+    const anchor = rig.anchors[`Glow_${key}`];
+    let light = (anchor ?? rig.body).children.find((l): l is PointLight => l instanceof PointLight && l.name === name);
+    light ??= existing.find((l) => l.name === name);
     if (!light) {
       light = new PointLight(c.color, 0, 4.5, 2);
       light.name = name;
-      // Sit just outside the lens, pushed away from the body's centre.
-      const centre = c.box.getCenter(new Vector3());
-      const out = new Vector3(centre.x, 0, centre.z).normalize().multiplyScalar(0.25);
-      light.position.copy(centre).add(out);
-      rig.body.add(light);
+      if (anchor) {
+        // The model marks the bulb, just behind the lens, so the light shines
+        // out through the lens and the body panels around it stay dark.
+        anchor.add(light);
+      } else {
+        // Fallback: just outside the lens, pushed away from the body's centre.
+        const centre = c.box.getCenter(new Vector3());
+        const out = new Vector3(centre.x, 0, centre.z).normalize().multiplyScalar(0.25);
+        light.position.copy(centre).add(out);
+        rig.body.add(light);
+      }
     }
     return [{ light, lamps: c.lamps }];
   });
