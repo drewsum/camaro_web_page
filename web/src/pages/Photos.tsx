@@ -46,7 +46,7 @@ export default function Photos() {
         <Photo src="/photos/39.jpeg" caption="Looking at the piston to valve clearance on the intake valve at top dead center with a small camera in the #1 spark plug hole. I had to use wimpy valve springs to keep the lifters from collapsing to make an accurate measurement" />
         <Photo src="/photos/40.jpeg" caption="Measuring rocker ratio and actual valve lift for each lobe" />
         <Photo src="/photos/41.jpeg" caption="Installed oiling setup, with a billet high volume oil pump and windage tray. I did not cheap out on the oil pump; a quality unit is the best insurance on a build" />
-        <Photo src="/photos/42.jpeg" caption="Installing the oil pan for what I thought was the first time" />
+        <Photo src="/photos/42.jpeg" caption="Installing the oil pan for what I thought was the only time" />
         <Photo src="/photos/43.jpeg" caption="Installed roller rockers and springs on the odd bank. The orange really pops, too bad no one can see it" />
         <Photo src="/photos/44.jpeg" caption="Odd head installed with pushrods and valve cover visible, even head yet to be lowered" />
         <Photo src="/photos/45.jpeg" caption="Even head installed without rockers or pushrods" />
