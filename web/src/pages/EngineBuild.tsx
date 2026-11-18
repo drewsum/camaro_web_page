@@ -1,3 +1,4 @@
+import CamProfileChart from "./CamProfileChart";
 import DynoChart from "./DynoChart";
 import { Photo, Row } from "./Placeholder";
 
@@ -44,6 +45,9 @@ export default function EngineBuild() {
           <Row label="Head Attachment">ARP Head Studs</Row>
         </tbody>
       </table>
+
+      <h2>Cam profile</h2>
+      <CamProfileChart />
 
       <h2>Induction and fuel</h2>
       <table className="sheet">

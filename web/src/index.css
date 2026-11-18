@@ -279,12 +279,12 @@ canvas {
   color: #9a9ea8;
 }
 
-/* Interactive dyno chart on the engine build page. */
-.dyno {
+/* Interactive charts on the engine build page (dyno, cam profile). */
+.chart {
   margin: 4px 0 20px;
 }
 
-.dyno svg {
+.chart svg {
   display: block;
   width: 100%;
   height: auto;
@@ -295,51 +295,51 @@ canvas {
   background: rgba(255, 255, 255, 0.02);
 }
 
-.dyno svg:focus-visible {
+.chart svg:focus-visible {
   outline: 2px solid #e0a030;
   outline-offset: 2px;
 }
 
-.dyno-grid line {
+.chart-grid line {
   stroke: #2a2e36;
 }
 
-.dyno-grid text {
+.chart-grid text {
   fill-opacity: 0.85;
   dominant-baseline: middle;
 }
 
-.dyno-grid text:not([fill]),
-.dyno-axis:not([fill]) {
+.chart-grid text:not([fill]),
+.chart-axis:not([fill]) {
   fill: #9a9ea8;
 }
 
-.dyno-axis {
+.chart-axis {
   font-size: 12px;
 }
 
-.dyno-cursor {
+.chart-cursor {
   stroke: #eef0f4;
   stroke-opacity: 0.35;
   stroke-dasharray: 4 4;
 }
 
-.dyno-tip rect {
+.chart-tip rect {
   fill: rgba(14, 16, 20, 0.94);
   stroke: #3a3f4a;
 }
 
-.dyno-tip text {
+.chart-tip text {
   font-size: 13px;
 }
 
-.dyno-legend {
+.chart-legend {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
 }
 
-.dyno-legend button {
+.chart-legend button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -353,17 +353,37 @@ canvas {
   cursor: pointer;
 }
 
-.dyno-legend button[aria-pressed="false"] {
+.chart-legend button[aria-pressed="false"] {
   opacity: 0.4;
 }
 
-.dyno-legend span {
+.chart-legend span {
   width: 14px;
   height: 3px;
   border-radius: 2px;
 }
 
-.dyno figcaption {
+.chart-mark line {
+  stroke: #5a606c;
+}
+
+.cam-overlap {
+  fill: rgba(238, 240, 244, 0.35);
+}
+
+.sheet.events {
+  margin-top: 12px;
+}
+
+.sheet.events th {
+  width: auto;
+}
+
+.sheet.events thead th {
+  font-weight: 600;
+}
+
+.chart figcaption {
   margin-top: 6px;
   font-size: 0.8rem;
   opacity: 0.6;

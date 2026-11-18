@@ -68,8 +68,8 @@ export default function DynoChart() {
   ].filter(Boolean) as { key: string; label: string; value: string; color: string }[];
 
   return (
-    <figure className="dyno">
-      <div className="dyno-legend">
+    <figure className="chart">
+      <div className="chart-legend">
         <button type="button" aria-pressed={show.hp} onClick={() => setShow((s) => ({ ...s, hp: !s.hp }))}>
           <span style={{ background: HP_COLOR }} /> Horsepower
         </button>
@@ -93,7 +93,7 @@ export default function DynoChart() {
         {Array.from({ length: STEPS + 1 }, (_, i) => {
           const y = H - M.bottom - (i / STEPS) * (H - M.top - M.bottom);
           return (
-            <g key={i} className="dyno-grid">
+            <g key={i} className="chart-grid">
               <line x1={M.left} x2={W - M.right} y1={y} y2={y} />
               <text x={M.left - 8} y={y} textAnchor="end" fill={HP_COLOR}>
                 {HP[0] + ((HP[1] - HP[0]) * i) / STEPS}
@@ -105,20 +105,20 @@ export default function DynoChart() {
           );
         })}
         {[3000, 3500, 4000, 4500, 5000, 5500].map((r) => (
-          <g key={r} className="dyno-grid">
+          <g key={r} className="chart-grid">
             <line x1={x(r)} x2={x(r)} y1={M.top} y2={H - M.bottom} />
             <text x={x(r)} y={H - M.bottom + 18} textAnchor="middle">
               {r}
             </text>
           </g>
         ))}
-        <text className="dyno-axis" x={(M.left + W - M.right) / 2} y={H - 6} textAnchor="middle">
+        <text className="chart-axis" x={(M.left + W - M.right) / 2} y={H - 6} textAnchor="middle">
           Engine speed (RPM)
         </text>
-        <text className="dyno-axis" transform={`translate(14 ${(M.top + H - M.bottom) / 2}) rotate(-90)`} textAnchor="middle" fill={HP_COLOR}>
+        <text className="chart-axis" transform={`translate(14 ${(M.top + H - M.bottom) / 2}) rotate(-90)`} textAnchor="middle" fill={HP_COLOR}>
           Corrected HP
         </text>
-        <text className="dyno-axis" transform={`translate(${W - 10} ${(M.top + H - M.bottom) / 2}) rotate(90)`} textAnchor="middle" fill={TQ_COLOR}>
+        <text className="chart-axis" transform={`translate(${W - 10} ${(M.top + H - M.bottom) / 2}) rotate(90)`} textAnchor="middle" fill={TQ_COLOR}>
           Corrected torque (ft-lbs)
         </text>
 
@@ -127,10 +127,10 @@ export default function DynoChart() {
 
         {p && (
           <g pointerEvents="none">
-            <line className="dyno-cursor" x1={px} x2={px} y1={M.top} y2={H - M.bottom} />
+            <line className="chart-cursor" x1={px} x2={px} y1={M.top} y2={H - M.bottom} />
             {show.tq && <circle cx={px} cy={yOf(p[2], TQ)} r={5} fill={TQ_COLOR} stroke="#0e1014" strokeWidth={2} />}
             {show.hp && <circle cx={px} cy={yOf(p[1], HP)} r={5} fill={HP_COLOR} stroke="#0e1014" strokeWidth={2} />}
-            <g transform={`translate(${tipX} ${M.top + 6})`} className="dyno-tip">
+            <g transform={`translate(${tipX} ${M.top + 6})`} className="chart-tip">
               <rect width={tipW} height={14 + rows.length * 20} rx={6} />
               {rows.map((r, i) => (
                 <g key={r.key} transform={`translate(10 ${21 + i * 20})`}>
