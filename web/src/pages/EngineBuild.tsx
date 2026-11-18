@@ -5,9 +5,9 @@ export default function EngineBuild() {
     <>
       <h1>Engine build</h1>
 
-      <Photo wide src="" caption="Caption" />
+      <Photo wide src="/photos/48.jpeg" caption="Completed engine rebuild on the dyno" />
 
-      <p>Placeholder text. An overview of the engine and the goals of the build.</p>
+      <Photo wide src="/photos/38.jpeg" caption="Completed short block with ARP head studs" />
 
       <h2>Short block</h2>
       <table className="sheet">
@@ -25,6 +25,8 @@ export default function EngineBuild() {
           
         </tbody>
       </table>
+
+      <Photo wide src="/photos/43.jpeg" caption="Installed AFR 2110 heads with valve train" />
 
       <h2>Top end</h2>
       <table className="sheet">

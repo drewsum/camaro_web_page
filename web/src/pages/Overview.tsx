@@ -5,7 +5,7 @@ export default function Overview() {
     <>
       <h1>1968 Camaro SS</h1>
 
-      <Photo wide src="" caption="Caption" />
+      <Photo wide src="photos/02.jpeg" caption="The Camaro, getting a quick fix to an exhaust issue on a road trip" />
 
       <p>Thanks for checking out my prized 1968 Camaro SS!</p>
 
@@ -18,7 +18,7 @@ export default function Overview() {
       <h2>Exterior</h2>
       <p>2" cowl hood, rally wheels, true black big block rear panel, painted sometime in the mid 2000's</p>
 
-      <Photo wide src="" caption="Caption" />
+      <Photo wide src="photos/55.jpeg" caption="Cruising with friends, note the earplugs to protect hearing at 3500 rpm" />
 
       <h2>Interior</h2>
       <p>I've rebuilt most of the interior. The entire car has soundproofing and thermal barrier. The dash and gauges all work. The 1968 model year had the unique in-dash clock inside the tachometer. I've added a retrosound 4 channel stereo, which looks period correct but adds bluetooth. I've retrofitted the dash with an in-dash shift light</p>
