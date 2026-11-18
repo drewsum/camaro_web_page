@@ -16,7 +16,7 @@ export default function Overview() {
         caption="Cover of Chevrolet's 1968 Camaro sales brochure"
         credit="Image courtesy of General Motors"
       />
-      <p>I believe the car is a true super-sport. It would have been built with a 396 Chevy Big Block. It is still the true Matador Red color. It was built with a red interior, but has been changed to black leather. I tracked it down in Joliet, Illinois</p>
+      <p>I believe the car is a true super-sport. It would have been built with a 396 Chevy Big Block. It is still the true Matador Red color. It was built with a red interior, but has been changed to black leather. I tracked it down in Joliet, Illinois, after years of searching. In decoding the VIN plate and build codes, this car was the 3,166th Camaro off the Van Nuys, California production line in September of 1967. This was the first month of 1968 model year production. This car was probably sold on the west coast before arricving in the midwest. Van Nuys was the primary assembly plant for the west coast, most Camaros were built in Norwood, Ohio for 1968</p>
 
       <h2>Class</h2>
       <p>None, and lots, somehow at the same time</p>
