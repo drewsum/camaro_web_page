@@ -1,61 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-
-// Cam card for the Comp Cams custom grind, as installed. Everything below is
-// worked out from these numbers, so a new cam only needs this block changed.
-const CAM = {
-  lsa: 110, // lobe separation angle
-  advance: 4, // installed advance
-  intake: { dur050: 242, advertised: 291, lift: 0.622 },
-  exhaust: { dur050: 250, advertised: 301, lift: 0.618 },
-};
-
-// Crank angle convention: 0 is TDC at overlap, -180 is BDC at the end of the
-// power stroke, +180 is BDC at the end of the intake stroke, ±360 is firing TDC.
-type Valve = {
-  name: string;
-  color: string;
-  lift: number;
-  center: number;
-  half050: number; // half the duration at 0.050"
-  halfSeat: number; // half the advertised duration
-  k: number; // curve shape exponent
-};
-
-// The lift curve is lift·cos(π/2 · θ/halfSeat)^k, centred on the lobe centreline.
-// It is zero at the advertised (seat) points, and k is chosen so the curve
-// crosses 0.050" exactly at the 0.050" duration. This matches the timing events
-// on the cam card; the ramps between seat and 0.050" are an approximation.
-function valve(name: string, color: string, spec: typeof CAM.intake, center: number): Valve {
-  const half050 = spec.dur050 / 2;
-  const halfSeat = spec.advertised / 2;
-  const k = Math.log(0.05 / spec.lift) / Math.log(Math.cos((Math.PI / 2) * (half050 / halfSeat)));
-  return { name, color, lift: spec.lift, center, half050, halfSeat, k };
-}
-
-const INTAKE = valve("Intake", "#4ea1f3", CAM.intake, CAM.lsa - CAM.advance);
-const EXHAUST = valve("Exhaust", "#e0a030", CAM.exhaust, -(CAM.lsa + CAM.advance));
-const VALVES = [EXHAUST, INTAKE];
-
-function liftAt(v: Valve, angle: number) {
-  const t = (angle - v.center) / v.halfSeat;
-  return Math.abs(t) >= 1 ? 0 : v.lift * Math.cos((Math.PI / 2) * t) ** v.k;
-}
-
-// "59° BBDC", "11° ATDC", "TDC", using the nearest TDC or BDC.
-export function timing(angle: number) {
-  const ref = Math.round(angle / 180) * 180;
-  const d = Math.round(angle - ref);
-  const mark = ref % 360 === 0 ? "TDC" : "BDC";
-  return d === 0 ? mark : `${Math.abs(d)}° ${d < 0 ? "B" : "A"}${mark}`;
-}
-
-const STROKES = [
-  { name: "Power", from: -360, to: -180, fill: "rgba(229, 83, 75, 0.10)" },
-  { name: "Exhaust", from: -180, to: 0, fill: "rgba(224, 160, 48, 0.10)" },
-  { name: "Intake", from: 0, to: 180, fill: "rgba(78, 161, 243, 0.10)" },
-  { name: "Compression", from: 180, to: 360, fill: "rgba(110, 180, 90, 0.10)" },
-];
-const strokeAt = (a: number) => STROKES.find((s) => a < s.to) ?? STROKES[3];
+import { CAM, EXHAUST, INTAKE, STROKES, VALVES, events, liftAt, strokeAt, timing, type Valve } from "./camModel";
 
 // Chart geometry, in viewBox units.
 const W = 720;
@@ -73,12 +17,6 @@ function curve(v: Valve) {
   return pts.join("");
 }
 
-const events = (v: Valve) => ({
-  open: v.center - v.half050,
-  close: v.center + v.half050,
-  seatOpen: v.center - v.halfSeat,
-  seatClose: v.center + v.halfSeat,
-});
 const overlap050 = events(EXHAUST).close - events(INTAKE).open;
 
 // Area where both valves are off their seats (overlap), under the lower curve.
@@ -119,7 +57,7 @@ export default function CamProfileChart() {
     angle === null
       ? []
       : [
-          { label: "Crank angle", value: `${angle}°`, color: "#eef0f4" },
+          { label: "Crank angle", value: `${angle}Â°`, color: "#eef0f4" },
           { label: "Timing", value: timing(angle), color: "#eef0f4" },
           { label: "Stroke", value: strokeAt(angle).name, color: "#eef0f4" },
           ...shown.map((v) => {
@@ -229,7 +167,7 @@ export default function CamProfileChart() {
       </svg>
       <figcaption>
         Hover or drag across the chart (or focus it and use the arrow keys, Shift for bigger steps) to follow the valves
-        through one 720° cycle. Filled dots are the 0.050" events, hollow dots the advertised (seat) events; the shaded
+        through one 720Â° cycle. Filled dots are the 0.050" events, hollow dots the advertised (seat) events; the shaded
         sliver at TDC is overlap. Curve shape between those points is modelled from the cam card.
       </figcaption>
 
@@ -249,9 +187,9 @@ export default function CamProfileChart() {
             [
               ["Opens", (v: Valve) => timing(events(v).open)],
               // Cam cards quote lobe centerlines from overlap TDC, not the nearest BDC.
-              ["Centerline", (v: Valve) => `${Math.abs(v.center)}° ${v.center < 0 ? "BTDC" : "ATDC"}`],
+              ["Centerline", (v: Valve) => `${Math.abs(v.center)}Â° ${v.center < 0 ? "BTDC" : "ATDC"}`],
               ["Closes", (v: Valve) => timing(events(v).close)],
-              ["Duration", (v: Valve) => `${v.half050 * 2}° (${v.halfSeat * 2}° advertised)`],
+              ["Duration", (v: Valve) => `${v.half050 * 2}Â° (${v.halfSeat * 2}Â° advertised)`],
               ["Max lift", (v: Valve) => `${v.lift.toFixed(3)}"`],
             ] as [string, (v: Valve) => string][]
           ).map(([label, f]) => (
@@ -265,7 +203,7 @@ export default function CamProfileChart() {
           <tr>
             <th scope="row">Overlap</th>
             <td colSpan={2}>
-              {overlap050}° at 0.050", {CAM.lsa}° LSA, installed {CAM.advance}° advanced
+              {overlap050}Â° at 0.050", {CAM.lsa}Â° LSA, installed {CAM.advance}Â° advanced
             </td>
           </tr>
         </tbody>

@@ -1,5 +1,6 @@
 import CamProfileChart from "./CamProfileChart";
 import DynoChart from "./DynoChart";
+import EngineAnimation from "./EngineAnimation";
 import { Photo, Row } from "./Placeholder";
 
 export default function EngineBuild() {
@@ -89,6 +90,13 @@ export default function EngineBuild() {
 
       <h2>Notes</h2>
       <p>This engine started as a ZZ502 Chevy crate engine, built in the early 2000s. All that remains is the engine block.</p>
+
+      <h2>Inside one cylinder</h2>
+      <p>
+        A to-scale cutaway of one cylinder running through the four-stroke cycle, with valve events from the cam card
+        above and the spark at 15° BTDC. Slowed way down from the 3000 to 5600 rpm on the dyno.
+      </p>
+      <EngineAnimation />
     </>
   );
 }
