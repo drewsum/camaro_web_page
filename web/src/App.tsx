@@ -58,7 +58,8 @@ export default function App() {
 
   useEffect(() => {
     if (!page) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closePage();
+    // A photo lightbox handles its own Escape (and marks it handled).
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && closePage();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [page]);
