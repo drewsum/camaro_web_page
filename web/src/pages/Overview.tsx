@@ -1,4 +1,4 @@
-import { Photo } from "./Placeholder";
+import { Photo, Row } from "./Placeholder";
 
 export default function Overview() {
   return (

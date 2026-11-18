@@ -1,15 +1,4 @@
-import type { ReactNode } from "react";
-import { Photo } from "./Placeholder";
-
-// One line of the build sheet: the part on the left, its spec on the right.
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <tr>
-      <th scope="row">{label}</th>
-      <td>{children}</td>
-    </tr>
-  );
-}
+import { Photo, Row } from "./Placeholder";
 
 export default function EngineBuild() {
   return (
