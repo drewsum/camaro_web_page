@@ -21,7 +21,7 @@ export default function Overview() {
       <Photo wide src="" caption="Caption" />
 
       <h2>Interior</h2>
-      <p>I've rebuilt most of the interior. The entire car has soundproofing and thermal barrier. The dash and gauges all work. The 1968 model year had the unique in-dash clock inside the tachometer. I've added a retrosound 4 channel stereo, which looks period correct but adds bluetooth. Ive retrofitted the dah with an in-dash shift light</p>
+      <p>I've rebuilt most of the interior. The entire car has soundproofing and thermal barrier. The dash and gauges all work. The 1968 model year had the unique in-dash clock inside the tachometer. I've added a retrosound 4 channel stereo, which looks period correct but adds bluetooth. I've retrofitted the dash with an in-dash shift light</p>
 
       <h2>Special Features</h2>
       <table className="sheet">
