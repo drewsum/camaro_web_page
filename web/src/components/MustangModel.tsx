@@ -9,12 +9,13 @@ import { DRACO_URL, fixTexturedBlending } from "./CamaroModel";
 
 // Ddiaz Design's '69 Mach 1 428 Cobra Jet (CC BY-NC-SA 4.0), rigged like the
 // Camaro by scripts/build_mustang.py. Origin between the wheels at ground
-// level, nose toward +Z.
+// level, nose toward +Z. Only one scene shows it at a time, so the cached
+// GLTF scene is used directly, like CamaroModel does.
 export const MUSTANG_URL = "/models/mustang.glb";
 
 interface Props {
   lightsOn?: boolean;
-  profile: DriveProfile; // its own run, on the shared drive clock
+  profile?: DriveProfile; // its own run on the shared drive clock; parked without one
 }
 
 export default function MustangModel({ lightsOn = false, profile }: Props) {

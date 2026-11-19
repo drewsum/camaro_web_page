@@ -11,10 +11,12 @@ import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
+import MustangModel from "../components/MustangModel";
 import Onlooker, { onlookerModel } from "./carshow/Onlooker";
 
 // Parked on the grass at a summer car show among other muscle cars (a
-// Chevelle SS, a Challenger R/T and a '67 Mustang, fetched from public repos),
+// Chevelle SS and a Challenger R/T fetched from public repos, and our rigged
+// '69 Mach 1 Cobra Jet),
 // while a few old guys with beers look it over. The field,
 // tree line and sky are a real photo (Poly Haven's "je_gray_park" HDRI)
 // projected onto the ground around the cars.
@@ -163,7 +165,9 @@ function Show({ lightsOn, domeOn }: SceneProps) {
         <ClassicCar id="challenger" position={[-4.6, 0.3]} rotationY={0.08} />
       </Optional>
       <Optional>
-        <ClassicCar id="mustang" position={[9.3, -1.2]} rotationY={-0.12} />
+        <group position={[9.3, 0, -1.2]} rotation-y={-0.12}>
+          <MustangModel />
+        </group>
       </Optional>
 
       <Optional>

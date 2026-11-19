@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import {
   BackSide,
+  BoxGeometry,
   CanvasTexture,
   Color,
   Matrix4,
@@ -23,6 +24,7 @@ import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import MustangModel from "../components/MustangModel";
+import { preloadPbr, usePbrMaterial } from "./common/pbr";
 import { AMBER_STEP, finishTime, QUARTER_MILE, Race, STAGE_TIME, trapSpeed, type Runner } from "./drag/race";
 
 // Golden-hour quarter mile against a '69 Mach 1 Cobra Jet: stage at the tree, count
@@ -47,57 +49,102 @@ const MUSTANG_RUN = race.profile(MUSTANG);
 
 // ---- Surface ----------------------------------------------------------------
 
-// One lane-pair-wide tile of pavement, 8 m long: base, rubber laid down by
-// the tyres in each lane, lane and edge lines. 24 px per metre.
-function stripTexture(base: string, rubber: number, seed: number) {
-  const W = Math.round((LANE * 2 + 1.2) * 24);
+// The strip is concrete from behind the burnout box to 100 m out (where
+// launches dig in) and asphalt beyond, both scanned surfaces from Poly Haven.
+// Rubber laid down by the tyres and the painted lines sit on top as a
+// transparent overlay, so they stay sharp over the tiled scans.
+const STRIP_WIDTH = LANE * 2 + 1.2;
+const PAD_TO = START_Z + 100;
+const CONCRETE = "brushed_concrete";
+const ASPHALT = "asphalt_track";
+const WALL = "concrete_wall_008";
+preloadPbr(CONCRETE);
+preloadPbr(ASPHALT);
+preloadPbr(WALL, "1k");
+
+// One 8 m tile of overlay across both lanes, 64 px per metre: streaky rubber
+// in each tyre track (heavier on the launch pad) and the lane and edge lines.
+function overlayTexture(rubber: number, seed: number) {
+  const PX = 64;
+  const W = Math.round(STRIP_WIDTH * PX);
+  const H = 8 * PX;
   const c = document.createElement("canvas");
   c.width = W;
-  c.height = 192;
+  c.height = H;
   const g = c.getContext("2d")!;
-  g.fillStyle = base;
-  g.fillRect(0, 0, W, 192);
+  const px = (x: number) => (x + LANE / 2 + 0.6) * PX;
   const rand = mulberry32(seed);
-  for (let n = 0; n < 6000; n++) {
-    const v = Math.floor(rand() * 60);
-    g.fillStyle = `rgba(${v},${v},${v},0.25)`;
-    g.fillRect(rand() * W, rand() * 192, 1 + rand() * 2, 1 + rand() * 2);
-  }
-  const px = (x: number) => (x + LANE / 2 + 0.6) * 24;
   for (const lane of [0, LANE]) {
     for (const wheel of [-0.76, 0.76]) {
-      const grad = g.createLinearGradient(px(lane + wheel - 0.35), 0, px(lane + wheel + 0.35), 0);
-      grad.addColorStop(0, "rgba(10,10,10,0)");
-      grad.addColorStop(0.5, `rgba(10,10,10,${rubber})`);
-      grad.addColorStop(1, "rgba(10,10,10,0)");
+      const x0 = lane + wheel;
+      const grad = g.createLinearGradient(px(x0 - 0.42), 0, px(x0 + 0.42), 0);
+      grad.addColorStop(0, "rgba(8,8,8,0)");
+      grad.addColorStop(0.3, `rgba(8,8,8,${rubber * 0.8})`);
+      grad.addColorStop(0.5, `rgba(8,8,8,${rubber})`);
+      grad.addColorStop(0.7, `rgba(8,8,8,${rubber * 0.8})`);
+      grad.addColorStop(1, "rgba(8,8,8,0)");
       g.fillStyle = grad;
-      g.fillRect(px(lane + wheel - 0.35), 0, 0.7 * 24, 192);
+      g.fillRect(px(x0 - 0.42), 0, 0.84 * PX, H);
+      // Streaks along the direction of travel; full-height so the tile wraps.
+      for (let n = 0; n < 40; n++) {
+        const x = x0 + (rand() - 0.5) * 0.7;
+        g.fillStyle = `rgba(5,5,5,${rubber * (0.08 + rand() * 0.18)})`;
+        g.fillRect(px(x), 0, 1 + rand() * 4, H);
+      }
     }
   }
-  g.fillStyle = "#f2f0ea";
-  g.fillRect(px(LANE / 2) - 2, 0, 4, 192); // centre line
-  g.fillRect(px(-LANE / 2) - 2, 0, 4, 192);
-  g.fillRect(px(LANE * 1.5) - 2, 0, 4, 192);
+  // Painted lines, slightly worn.
+  for (const x of [-LANE / 2, LANE / 2, LANE * 1.5]) {
+    g.fillStyle = "rgba(242,240,234,0.92)";
+    g.fillRect(px(x) - 0.05 * PX, 0, 0.1 * PX, H);
+    for (let n = 0; n < 120; n++) {
+      g.fillStyle = `rgba(60,60,60,${0.15 + rand() * 0.3})`;
+      g.fillRect(px(x) - 0.05 * PX + rand() * 0.1 * PX, rand() * H, 1 + rand() * 2, 1 + rand() * 3);
+    }
+  }
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = t.wrapT = RepeatWrapping;
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   return t;
 }
 
-function Pavement({ from, to, base, rubber, seed }: { from: number; to: number; base: string; rubber: number; seed: number }) {
-  const texture = useMemo(() => {
-    const t = stripTexture(base, rubber, seed);
-    t.repeat.set(1, (to - from) / 8);
+function Pavement({ from, to, surface, tile, brightness, rubber, seed }: { from: number; to: number; surface: string; tile: number; brightness: number; rubber: number; seed: number }) {
+  const length = to - from;
+  const material = usePbrMaterial(surface, { tile, size: [STRIP_WIDTH, length], normalScale: 0.8, brightness });
+  const overlay = useMemo(() => {
+    const t = overlayTexture(rubber, seed);
+    t.repeat.set(1, length / 8);
     return t;
-  }, [base, rubber, seed, from, to]);
-  const width = LANE * 2 + 1.2;
+  }, [rubber, seed, length]);
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, 0, (from + to) / 2]} receiveShadow>
-      <planeGeometry args={[width, to - from]} />
-      <meshStandardMaterial map={texture} roughness={0.8} />
-    </mesh>
+    <group position={[LANE / 2, 0, (from + to) / 2]}>
+      <mesh rotation-x={-Math.PI / 2} receiveShadow material={material}>
+        <planeGeometry args={[STRIP_WIDTH, length]} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position-y={0.002} receiveShadow>
+        <planeGeometry args={[STRIP_WIDTH, length]} />
+        <meshStandardMaterial map={overlay} transparent depthWrite={false} roughness={0.75} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-2} />
+      </mesh>
+    </group>
   );
+}
+
+// A box whose UVs are its own surface coordinates in metres, so a tiled
+// material keeps its real-world scale on every face.
+function metricBox(w: number, h: number, d: number) {
+  const g = new BoxGeometry(w, h, d);
+  const pos = g.attributes.position;
+  const nrm = g.attributes.normal;
+  const uv = g.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const [x, y, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+    const [ax, ay] = [Math.abs(nrm.getX(i)), Math.abs(nrm.getY(i))];
+    if (ax > 0.5) uv.setXY(i, z, y);
+    else if (ay > 0.5) uv.setXY(i, x, z);
+    else uv.setXY(i, x, y);
+  }
+  return g;
 }
 
 function Line({ z, checkered = false }: { z: number; checkered?: boolean }) {
@@ -128,13 +175,12 @@ function Line({ z, checkered = false }: { z: number; checkered?: boolean }) {
 
 function Walls() {
   const length = STRIP_TO - STRIP_FROM;
+  const geometry = useMemo(() => metricBox(0.35, 0.84, length), [length]);
+  const material = usePbrMaterial(WALL, { res: "1k", tile: 2.7, size: [1, 1], tint: "#d8d6d0" });
   return (
     <>
       {WALL_X.map((x) => (
-        <mesh key={x} position={[x, 0.42, (STRIP_FROM + STRIP_TO) / 2]} castShadow receiveShadow>
-          <boxGeometry args={[0.35, 0.84, length]} />
-          <meshStandardMaterial color="#9d9a92" roughness={0.95} />
-        </mesh>
+        <mesh key={x} position={[x, 0.42, (STRIP_FROM + STRIP_TO) / 2]} geometry={geometry} material={material} castShadow receiveShadow />
       ))}
       {/* Grass beyond the walls */}
       <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, -0.02, (STRIP_FROM + STRIP_TO) / 2]} receiveShadow>
@@ -367,8 +413,8 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
         shadow-camera-far={120}
       />
       <Pass lightsOn={!!lightsOn}>
-        <Pavement from={STRIP_FROM} to={START_Z + 100} base="#a9a59c" rubber={0.85} seed={1} />
-        <Pavement from={START_Z + 100} to={STRIP_TO} base="#4a4a4c" rubber={0.45} seed={2} />
+        <Pavement from={STRIP_FROM} to={PAD_TO} surface={CONCRETE} tile={2.5} brightness={1.25} rubber={0.8} seed={1} />
+        <Pavement from={PAD_TO} to={STRIP_TO} surface={ASPHALT} tile={3} brightness={2.2} rubber={0.45} seed={2} />
         <Line z={START_Z} />
         <Line z={START_Z + QUARTER_MILE} checkered />
         <Walls />

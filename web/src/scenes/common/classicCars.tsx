@@ -29,12 +29,6 @@ export const CLASSIC_CARS = {
     yaw: 0,
     credit: CREDITS.challenger,
   },
-  mustang: {
-    url: raw("manips1/CrossyroadinRealWorld", "65e9464f7fdcb2c8a51459065f729853d39776d9", "models/mustang/scene.gltf"),
-    length: 4.61,
-    yaw: 0,
-    credit: CREDITS.mustang,
-  },
 } satisfies Record<string, ClassicCarDef>;
 
 export type ClassicCarId = keyof typeof CLASSIC_CARS;
