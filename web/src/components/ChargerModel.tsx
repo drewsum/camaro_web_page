@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
-import { DRACO_URL, fixTexturedBlending } from "./CamaroModel";
+import { DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
+import { markCar } from "../car/layers";
 
 // Ddiaz Design's '69 Dodge Charger R/T (CC BY-NC-SA 4.0), prepared by
 // scripts/build_charger.py: real size, origin between the wheels at ground
@@ -16,7 +17,9 @@ export default function ChargerModel() {
       obj.castShadow = true;
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
+      materials.forEach(dropTransmission);
     });
+    markCar(scene);
   }, [scene]);
   return <primitive object={scene} />;
 }

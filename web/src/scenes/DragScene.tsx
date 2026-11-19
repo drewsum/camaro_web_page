@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
 import {
   BackSide,
   BoxGeometry,
@@ -377,7 +378,7 @@ function Pass({ children, lightsOn }: { children: ReactNode; lightsOn: boolean }
         <group ref={rival} position-x={LANE}>
           <Optional>
             <MustangModel profile={MUSTANG_RUN} lightsOn={lightsOn} />
-            <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
+            <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
           </Optional>
         </group>
       </group>
@@ -425,7 +426,7 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
         <LightPoles />
       </Pass>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
+      <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
     </DriveProvider>
   );
 }

@@ -1,10 +1,13 @@
 import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { useProgress } from "@react-three/drei";
+import { PerformanceMonitor, useProgress } from "@react-three/drei";
 import { SCENES } from "./scenes";
 import { PAGES } from "./pages";
 
 const SCENE_KEY = "camaro.scene";
+// Phones report 3 or more; past 2 the extra pixels cost far more than they show.
+const MAX_DPR = Math.min(window.devicePixelRatio || 1, 2);
+
 
 function Loader() {
   const { active, progress } = useProgress();
@@ -52,6 +55,7 @@ export default function App() {
   const [sceneId, setSceneId] = useState(savedSceneId);
   const [lightsOn, setLightsOn] = useState(false);
   const [domeOn, setDomeOn] = useState(false);
+  const [dpr, setDpr] = useState(MAX_DPR);
   const scene = SCENES.find((s) => s.id === sceneId) ?? SCENES[0];
   const lights = scene.night || lightsOn;
   const page = useHashPage();
@@ -79,7 +83,15 @@ export default function App() {
           well out from the eye; depth precision scales with it, and phone GPUs
           often give WebGL only a 16-bit depth buffer. */}
       <div className={page ? "viewer behind" : "viewer"} inert={!!page}>
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}>
+        <Canvas shadows dpr={dpr} camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}>
+          {/* Full resolution while the frame rate holds; on a device that
+              can't keep up, render fewer pixels (and back up when it can). */}
+          <PerformanceMonitor
+            factor={1}
+            flipflops={4}
+            onChange={({ factor }) => setDpr(Math.round((1 + (MAX_DPR - 1) * factor) * 4) / 4)}
+            onFallback={() => setDpr(1)}
+          />
           <Suspense fallback={null}>
             <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} />
           </Suspense>

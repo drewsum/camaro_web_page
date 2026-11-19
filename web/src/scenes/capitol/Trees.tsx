@@ -1,15 +1,16 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import {
   BufferAttribute,
   BufferGeometry,
   CylinderGeometry,
   DoubleSide,
+  Group,
   Matrix4,
   MeshStandardMaterial,
   Quaternion,
   Vector3,
-  type InstancedMesh,
 } from "three";
+import { tiledInstances } from "../common/tiles";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { mulberry32 } from "../common/periodic";
 import { groundY, hash, MAP } from "./data";
@@ -120,22 +121,16 @@ export default function Trees() {
   );
 }
 
+// Tiled so the trees out of view, and those outside the shadow camera's
+// patch around the car, are skipped rather than drawn every frame.
+const TREE_TILE = 90;
+
 function TreeKind({ wood, leaves, bark, leaf, matrices }: { wood: BufferGeometry; leaves: BufferGeometry; bark: MeshStandardMaterial; leaf: MeshStandardMaterial; matrices: Matrix4[] }) {
-  const a = useRef<InstancedMesh>(null);
-  const b = useRef<InstancedMesh>(null);
-  useLayoutEffect(() => {
-    if (!a.current || !b.current) return;
-    for (const mesh of [a.current, b.current]) {
-      matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
-    }
-  }, [matrices]);
+  const group = useMemo(() => {
+    const g = new Group();
+    g.add(tiledInstances(wood, bark, matrices, TREE_TILE), tiledInstances(leaves, leaf, matrices, TREE_TILE));
+    return g;
+  }, [wood, leaves, bark, leaf, matrices]);
   if (!matrices.length) return null;
-  return (
-    <>
-      <instancedMesh ref={a} args={[wood, bark, matrices.length]} castShadow receiveShadow />
-      <instancedMesh ref={b} args={[leaves, leaf, matrices.length]} castShadow receiveShadow />
-    </>
-  );
+  return <primitive object={group} />;
 }

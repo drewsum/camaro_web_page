@@ -5,7 +5,8 @@ import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig"
 import { useDrivingPose } from "../car/useDrivingPose";
 import { MUSTANG_CHASSIS } from "../car/suspension";
 import type { DriveProfile } from "../car/driveClock";
-import { DRACO_URL, fixTexturedBlending } from "./CamaroModel";
+import { DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
+import { markCar } from "../car/layers";
 
 // Ddiaz Design's '69 Mach 1 428 Cobra Jet (CC BY-NC-SA 4.0), rigged like the
 // Camaro by scripts/build_mustang.py. Origin between the wheels at ground
@@ -26,7 +27,9 @@ export default function MustangModel({ lightsOn = false, profile }: Props) {
       obj.castShadow = true;
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
+      materials.forEach(dropTransmission);
     });
+    markCar(scene);
     return findCarRig(scene, "Mustang");
   }, [scene]);
 

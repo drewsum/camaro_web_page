@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
-import { Mesh, Object3D, SpotLight, type Material, type MeshStandardMaterial } from "three";
+import { Mesh, Object3D, SpotLight, Vector3, type Material, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
+import { markCar } from "../car/layers";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 import { useDrivingPose } from "../car/useDrivingPose";
 import { makeDomeLight, makeLampGlows, setDomeLight, updateLampGlows } from "../car/lampGlow";
@@ -21,6 +22,29 @@ export function fixTexturedBlending(material: Material) {
   m.depthWrite = true;
   m.alphaTest = 0.5;
   m.needsUpdate = true;
+}
+
+// Blender's Transmission comes through as MeshPhysicalMaterial.transmission,
+// and a single transmissive material makes three render every opaque object
+// in the scene a second time each frame (into a texture for the glass to
+// refract). The car's glass is thin, unrefracting and already alpha-blended
+// (and the lenses barely transmissive), so it looks the same blended alone.
+export function dropTransmission(material: Material) {
+  const m = material as MeshPhysicalMaterial;
+  if (!m.transmission) return;
+  m.transmission = 0;
+  m.needsUpdate = true;
+}
+
+// Badges, emblems, lamp internals and the wheel-arch lips are dense (about a
+// third of the car's triangles) but tiny or skin-tight: at the sun shadow
+// map's ~3 cm texels their shadows vanish inside the body's, so drawing them
+// into it every frame buys nothing.
+function castsVisibleShadow(mesh: Mesh) {
+  if (mesh.name.startsWith("WheelArch_trim")) return false;
+  mesh.geometry.computeBoundingBox();
+  const size = mesh.geometry.boundingBox!.getSize(new Vector3()).multiply(mesh.getWorldScale(new Vector3()));
+  return Math.max(size.x, size.y, size.z) >= 0.3;
 }
 
 // A headlight beam hung on one of the model's LightAnchor_Head_* empties,
@@ -47,10 +71,12 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
   const { rig, beams, glows, dome } = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
-      obj.castShadow = true; // for scenes with a shadow-casting sun
+      obj.castShadow = castsVisibleShadow(obj); // for scenes with a shadow-casting sun
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
+      materials.forEach(dropTransmission);
     });
+    markCar(scene);
     const rig = findCarRig(scene);
     const beams = ["Head_L", "Head_R"].flatMap((k) => (rig.anchors[k] ? [makeBeam(rig.anchors[k])] : []));
     return { rig, beams, glows: makeLampGlows(rig, scene), dome: makeDomeLight(rig, scene) };

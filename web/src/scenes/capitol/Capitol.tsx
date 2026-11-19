@@ -7,10 +7,13 @@ import {
   CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
-  InstancedMesh,
   LatheGeometry,
+  LOD,
   Matrix4,
+  Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
+  type Object3D,
   Quaternion,
   RingGeometry,
   Shape,
@@ -25,6 +28,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { groundY, MAP, signedArea } from "./data";
 import { CAPITOL_BAY, CAPITOL_STOREY, DOME_RIBS, domeTexture, graniteTextures, rusticatedTextures } from "./textures";
 import { preloadPbr, usePbrTextures } from "../common/pbr";
+import { tiledInstances } from "../common/tiles";
 
 // The Wisconsin State Capitol (1917, George B. Post & Sons): four white
 // granite wings on the building's mapped footprint, and at the crossing the
@@ -101,15 +105,26 @@ function drum(r: number, y0: number, y1: number, tex: ReturnType<typeof graniteT
 // A Corinthian column standing on y = 0, `r` its lower radius: an Attic base
 // on a square plinth, a fluted shaft tapering toward the top, and a bell
 // capital wrapped in two rows of acanthus with volutes under the abacus.
-function column(r: number, h: number) {
+//
+// `detail` false gives the distant version, for when flutes and leaves are
+// a pixel or two: the same silhouette with a plain shaft and bell, about a
+// twentieth of the triangles.
+function column(r: number, h: number, detail = true) {
   const parts: BufferGeometry[] = [];
   parts.push(new BoxGeometry(r * 2.8, r * 0.32, r * 2.8).translate(0, r * 0.16, 0));
   const base = [v2(1.4, 0.32), v2(1.4, 0.46), v2(1.22, 0.58), v2(1.15, 0.64), v2(1.27, 0.74), v2(1.07, 0.92), v2(1.0, 1.0)];
-  parts.push(new LatheGeometry(base.map((p) => p.multiplyScalar(r)), 24));
+  parts.push(new LatheGeometry(base.map((p) => p.multiplyScalar(r)), detail ? 24 : 10));
   const capH = r * 2.4, abacusH = r * 0.35;
   const shaftH = h - r - capH - abacusH;
-  // Twenty-four flutes: the radius dips between arrises.
-  const shaft = new CylinderGeometry(r * 0.86, r, shaftH, 96, 8, true);
+  if (!detail) {
+    parts.push(new CylinderGeometry(r * 0.86, r, shaftH, 12, 1, true).translate(0, r + shaftH / 2, 0));
+    parts.push(new LatheGeometry([v2(r * 0.9, 0), v2(r * 1.0, capH * 0.5), v2(r * 1.3, capH)], 10).translate(0, r + shaftH, 0));
+    parts.push(new BoxGeometry(r * 2.75, abacusH, r * 2.75).translate(0, r + shaftH + capH + abacusH / 2, 0));
+    return merge(parts);
+  }
+  // Twenty-four flutes: the radius dips between arrises. The flutes run
+  // straight and the taper is linear, so one row of quads carries it all.
+  const shaft = new CylinderGeometry(r * 0.86, r, shaftH, 96, 1, true);
   const p = shaft.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i);
@@ -137,6 +152,33 @@ function column(r: number, h: number) {
   }
   parts.push(new BoxGeometry(r * 2.75, abacusH, r * 2.75).translate(0, y0 + capH + abacusH / 2, 0));
   return merge(parts);
+}
+
+// The shadow a column casts, from an octagonal stand-in. It sits a little
+// inside the real column's surface, so the column doesn't shadow itself.
+function columnShadow(r: number, h: number) {
+  const capH = r * 2.4 + r * 0.35;
+  return merge([
+    new CylinderGeometry(r * 0.78, r * 0.9, h - capH, 8, 1).translate(0, (h - capH) / 2, 0),
+    new CylinderGeometry(r * 1.15, r * 0.8, capH, 8, 1).translate(0, h - capH / 2, 0),
+  ]);
+}
+
+// Shadow stand-ins draw only into the shadow map: in the main pass they
+// write neither colour nor depth.
+const SHADOW_ONLY = new MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+
+// Detailed geometry near the camera, a lighter version beyond `distance`.
+// Neither casts a shadow (a stand-in does that), so the shadow doesn't
+// change when the level does.
+function twoLevels(near: BufferGeometry, far: BufferGeometry, mat: MeshStandardMaterial, distance: number) {
+  const lod = new LOD();
+  for (const [geo, d] of [[near, 0], [far, distance]] as const) {
+    const mesh = new Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    lod.addLevel(mesh, d, 4);
+  }
+  return lod;
 }
 
 // A robed figure for the pediments and the dome's corner groups, standing
@@ -263,12 +305,11 @@ function portico() {
   }
   // Cheek blocks either side of the steps.
   for (const s of [-1, 1]) parts.push(new BoxGeometry(2.4, PODIUM + 1, 5).translate(s * 10.2, (PODIUM - 1) / 2, D + 2.5));
-  const col = column(R, COL_H);
+  // The columns at two levels of detail, and their shadow stand-ins.
   const xs = Array.from({ length: 6 }, (_, k) => -11 + k * 4.4);
-  for (const x of xs) {
-    parts.push(col.clone().translate(x, PODIUM, D - 1.6));
-    parts.push(new BoxGeometry(1.4, COL_H, 0.3).translate(x, PODIUM + COL_H / 2, 0.15));
-  }
+  const row = (g: BufferGeometry) => merge(xs.map((x) => g.clone().translate(x, PODIUM, D - 1.6)));
+  const columns = { near: row(column(R, COL_H)), far: row(column(R, COL_H, false)), shadow: row(columnShadow(R, COL_H)) };
+  for (const x of xs) parts.push(new BoxGeometry(1.4, COL_H, 0.3).translate(x, PODIUM + COL_H / 2, 0.15));
   const top = PODIUM + COL_H;
   const FRONT = D - 1.6 + R * 1.4;
   // Architrave in two fasciae, a plain frieze, dentils, then the cornice.
@@ -301,7 +342,7 @@ function portico() {
     else fig = figure(2.3, "recline").rotateY(x > 0 ? Math.PI : 0);
     parts.push(fig.scale(1, 1, 0.65).translate(x, P0, zf));
   }
-  return merge(parts);
+  return { mass: merge(parts), columns };
 }
 
 // Raised ribs over the dome: each a strip `w` wide standing `d` proud of the
@@ -363,10 +404,13 @@ function lucarnes(a: number, b: number, th: number) {
 
 export default function Capitol() {
   const scan = usePbrTextures(TOOLING, "1k");
-  const { parts, balusters } = useMemo(() => {
+  const { parts, objects } = useMemo(() => {
     const { cx, cz, ground: g } = bounds();
     const S = CAPITOL_STOREY;
-    const list: { geo: BufferGeometry; mat: MeshStandardMaterial }[] = [];
+    // Meshes (cast: false for detail whose shadow wouldn't be seen), and
+    // objects that manage their own meshes (levels of detail, tiles).
+    const list: { geo: BufferGeometry; mat: MeshStandardMaterial | MeshBasicMaterial; cast?: boolean }[] = [];
+    const objects: Object3D[] = [];
     const windows = graniteTextures(true);
     const rustic = rusticatedTextures();
     const plainTex = graniteTextures(false);
@@ -470,7 +514,11 @@ export default function Capitol() {
     list.push({ geo: c(new CylinderGeometry(19.8, 20.2, 1.2, 96).translate(0, g + 31.6, 0)), mat: plain }); // stylobate
     const drumWall = drum(16, g + 32, g + 47, windows, scan.normalMap, 7.5);
     list.push({ geo: c(drumWall.geo), mat: drumWall.mat });
-    list.push({ geo: c(ring(24, 18.4, column(0.66, 13.4), g + 32.2)), mat: plain });
+    // The colonnade, measured for its level of detail from the drum's centre.
+    const colonnade = twoLevels(ring(24, 18.4, column(0.66, 13.4), 0), ring(24, 18.4, column(0.66, 13.4, false), 0), plain, COLONNADE_LOD);
+    colonnade.position.set(cx, g + 32.2, cz);
+    objects.push(colonnade);
+    list.push({ geo: c(ring(24, 18.4, columnShadow(0.66, 13.4), g + 32.2)), mat: SHADOW_ONLY });
     // Entablature over the colonnade, a balustrade along it.
     list.push({ geo: c(new CylinderGeometry(19.3, 19.3, 1.2, 96).translate(0, g + 46.2, 0)), mat: plain });
     list.push({ geo: c(new CylinderGeometry(19.6, 19.4, 1.1, 96).translate(0, g + 47.35, 0)), mat: plain });
@@ -492,12 +540,13 @@ export default function Capitol() {
     list.push({ geo: c(new LatheGeometry(profile, 128).translate(0, domeY, 0)), mat: new MeshStandardMaterial({ map: domeTexture(), roughness: 0.75, side: DoubleSide }) });
     list.push({ geo: c(domeRibs(A, B, end).translate(0, domeY, 0)), mat: new MeshStandardMaterial({ color: STONE, roughness: 0.75, side: DoubleSide }) });
     const luc = lucarnes(A, B, 0.33);
-    list.push({ geo: c(luc.frames.translate(0, domeY, 0)), mat: plain });
-    list.push({ geo: c(luc.glass.translate(0, domeY, 0)), mat: new MeshStandardMaterial({ color: "#222a30", metalness: 0.6, roughness: 0.15 }) });
+    list.push({ geo: c(luc.frames.translate(0, domeY, 0)), mat: plain, cast: false });
+    list.push({ geo: c(luc.glass.translate(0, domeY, 0)), mat: new MeshStandardMaterial({ color: "#222a30", metalness: 0.6, roughness: 0.15 }), cast: false });
     const lanternBase = domeY + B * Math.sin(end);
     list.push({ geo: c(new CylinderGeometry(4.3, 4.6, 1.2, 48).translate(0, lanternBase + 0.6, 0)), mat: plain });
     list.push({ geo: c(new CylinderGeometry(2.7, 2.7, 5.5, 48).translate(0, lanternBase + 1.2 + 2.75, 0)), mat: plain });
-    list.push({ geo: c(ring(8, 3.5, column(0.22, 5.2), lanternBase + 1.2)), mat: plain });
+    // Seen from 60 m down at the closest, so the lantern's columns are the plain kind.
+    list.push({ geo: c(ring(8, 3.5, column(0.22, 5.2, false), lanternBase + 1.2)), mat: plain });
     list.push({ geo: c(new CylinderGeometry(4, 4, 1, 48).translate(0, lanternBase + 7.2, 0)), mat: plain });
     const cap: Vector2[] = [];
     for (let k = 0; k <= 12; k++) {
@@ -523,31 +572,44 @@ export default function Capitol() {
       ];
       groups.push(merge(grp).applyMatrix4(m));
     }
-    list.push({ geo: merge(groups), mat: plain });
+    // Their shadows fall on the pavilion roof, out of sight from the street.
+    list.push({ geo: merge(groups), mat: plain, cast: false });
 
-    // Porticos where the wings end, one along each axis.
+    // Porticos where the wings end, one along each axis. The stonework is
+    // one mesh; the columns switch detail with distance from the portico.
     const port = portico();
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const e = Math.max(...pts.map(([x, z]) => (x - cx) * dx + (z - cz) * dz));
       const m = new Matrix4().makeRotationY(Math.atan2(dx, dz)).setPosition(cx + dx * e, groundY(cx + dx * (e + 9), cz + dz * (e + 9)), cz + dz * e);
-      list.push({ geo: port.clone().applyMatrix4(m), mat: plain });
+      list.push({ geo: port.mass.clone().applyMatrix4(m), mat: plain });
+      list.push({ geo: port.columns.shadow.clone().applyMatrix4(m), mat: SHADOW_ONLY });
+      const cols = twoLevels(port.columns.near, port.columns.far, plain, PORTICO_LOD);
+      cols.applyMatrix4(m);
+      objects.push(cols);
     }
 
     list.push({ geo: merge(bal.stone), mat: plain });
-    const balusters = new InstancedMesh(baluster(), plain, bal.balusters.length);
-    bal.balusters.forEach((m, i) => balusters.setMatrixAt(i, m));
-    balusters.castShadow = balusters.receiveShadow = true;
-    return { parts: list, balusters };
+    // Balusters in 40 m tiles: culled out of view, dropped past 220 m (where
+    // each is under a pixel wide and the rails and posts carry the look).
+    // Their shadows fall on the roofs, so they don't cast.
+    objects.push(tiledInstances(baluster(), plain, bal.balusters, 40, { castShadow: false, hideBeyond: 220 }));
+    return { parts: list, objects };
   }, [scan]);
   return (
     <>
-      {parts.map(({ geo, mat }, i) => (
-        <mesh key={i} geometry={geo} material={mat} castShadow receiveShadow />
+      {parts.map(({ geo, mat, cast }, i) => (
+        <mesh key={i} geometry={geo} material={mat} castShadow={cast ?? true} receiveShadow={mat !== SHADOW_ONLY} />
       ))}
-      <primitive object={balusters} />
+      {objects.map((o, i) => (
+        <primitive key={`o${i}`} object={o} />
+      ))}
     </>
   );
 }
+
+// Distances (m) past which the columns switch to their plain version.
+const PORTICO_LOD = 110;
+const COLONNADE_LOD = 150;
 
 function ring(count: number, radius: number, geo: BufferGeometry, y: number) {
   const parts: BufferGeometry[] = [];

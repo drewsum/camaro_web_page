@@ -1,6 +1,7 @@
 import { useRef, type ReactNode, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
 import { Matrix4, Vector3, type DirectionalLight, type Group } from "three";
 import CamaroModel from "../components/CamaroModel";
 import { DriveProvider, driveState, useDrive } from "../car/driveClock";
@@ -79,7 +80,7 @@ function Square({ lightsOn, domeOn }: SceneProps) {
         <Furniture />
       </City>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
+      <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
     </DriveProvider>
   );
 }

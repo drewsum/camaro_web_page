@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, Group, Mesh, Vector3 } from "three";
 import { CREDITS, type Credit } from "../credits";
+import { dropTransmission } from "../../components/CamaroModel";
 
 // Other classic cars, loaded at runtime from public GitHub repos (pinned to a
 // commit) rather than committed here. Each is a Sketchfab export whose
@@ -36,7 +37,9 @@ export function useClassicCar(id: ClassicCarId) {
   return useMemo(() => {
     const model = scene.clone(true);
     model.traverse((o) => {
-      if (o instanceof Mesh) o.castShadow = true;
+      if (!(o instanceof Mesh)) return;
+      o.castShadow = true;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) dropTransmission(m);
     });
     // Fit in a wrapper so Sketchfab's own root rotation (Z-up) is left alone.
     const fit = new Group();

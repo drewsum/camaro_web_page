@@ -1,4 +1,5 @@
-import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
 import CamaroModel from "../components/CamaroModel";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
@@ -25,7 +26,7 @@ export default function ShowroomScene({ lightsOn, domeOn }: SceneProps) {
         <circleGeometry args={[14, 64]} />
         <meshStandardMaterial color="#1b1d22" roughness={0.9} />
       </mesh>
-      <ContactShadows position={[0, 0, 0]} opacity={0.7} scale={12} blur={2.4} far={3} />
+      <CarContactShadows position={[0, 0, 0]} opacity={0.7} scale={12} blur={2.4} far={3} />
       <OrbitControls
         makeDefault
         enablePan={false}

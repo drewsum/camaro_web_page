@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ShaderPass } from "postprocessing";
 import { BackSide, CanvasTexture, Color, PlaneGeometry, RepeatWrapping, SRGBColorSpace, ShaderMaterial } from "three";
@@ -306,7 +307,7 @@ export default function OutrunScene({ domeOn }: SceneProps) {
       <Road />
       <Mountains />
       <CamaroModel lightsOn domeOn={domeOn} />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
+      <CarContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
       <EffectComposer multisampling={4}>
         <primitive object={sanitize} />

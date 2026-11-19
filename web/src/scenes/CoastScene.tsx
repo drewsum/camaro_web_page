@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
 import {
   BoxGeometry,
   BufferAttribute,
@@ -681,7 +682,7 @@ function CoastWorld({ lightsOn, domeOn }: SceneProps) {
         </Optional>
       </World>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
+      <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
     </DriveProvider>
   );
 }
