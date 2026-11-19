@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
-import { Mesh, Object3D, SpotLight, Vector3, type Material, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
+import { Mesh, Vector3, type Material, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
 import { markCar } from "../car/layers";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 import { useDrivingPose } from "../car/useDrivingPose";
-import { makeDomeLight, makeLampGlows, setDomeLight, updateLampGlows } from "../car/lampGlow";
+import { makeDomeLight, makeHeadBeams, makeLampGlows, setDomeLight, updateLampGlows } from "../car/lampGlow";
 
 export const MODEL_URL = "/models/camaro.glb";
 export const DRACO_URL = "/draco/";
@@ -48,18 +48,6 @@ export function castsVisibleShadow(mesh: Mesh) {
   return Math.max(size.x, size.y, size.z) >= 0.3;
 }
 
-// A headlight beam hung on one of the model's LightAnchor_Head_* empties,
-// aimed straight ahead (+Z in car space).
-// The GLTF scene is cached, so reuse a beam that's already attached.
-function makeBeam(anchor: Object3D): SpotLight {
-  const existing = anchor.children.find((c): c is SpotLight => c instanceof SpotLight);
-  if (existing) return existing;
-  const beam = new SpotLight("#ffe9c7", 0, 30, 0.42, 0.55, 2);
-  beam.target.position.set(0, -0.9, 7);
-  anchor.add(beam, beam.target);
-  return beam;
-}
-
 interface Props {
   lightsOn?: boolean;
   domeOn?: boolean;
@@ -79,7 +67,7 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
     });
     markCar(scene);
     const rig = findCarRig(scene);
-    const beams = ["Head_L", "Head_R"].flatMap((k) => (rig.anchors[k] ? [makeBeam(rig.anchors[k])] : []));
+    const beams = makeHeadBeams(rig, scene);
     return { rig, beams, glows: makeLampGlows(rig, scene), dome: makeDomeLight(rig, scene) };
   }, [scene]);
 

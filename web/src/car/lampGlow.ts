@@ -5,12 +5,12 @@ import {
   MeshBasicMaterial,
   CircleGeometry,
   Matrix4,
+  Object3D,
   PointLight,
   SpotLight,
   Vector3,
   type Material,
   type MeshStandardMaterial,
-  type Object3D,
 } from "three";
 import type { CarRig } from "./carRig";
 
@@ -117,6 +117,46 @@ export function updateLampGlows(glows: LampGlow[]) {
   }
 }
 
+// ---- Headlight beams ------------------------------------------------------
+
+// A headlight beam hung on an anchor at the headlamp, aimed straight ahead
+// (+Z in car space) and dipped to the road. The GLTF scene is cached, so a
+// beam that's already attached is reused.
+function makeBeam(anchor: Object3D): SpotLight {
+  const existing = anchor.children.find((c): c is SpotLight => c instanceof SpotLight);
+  if (existing) return existing;
+  const beam = new SpotLight("#ffe9c7", 0, 30, 0.42, 0.55, 2);
+  beam.target.position.set(0, -0.9, 7);
+  anchor.add(beam, beam.target);
+  return beam;
+}
+
+// One beam per headlamp: on the model's LightAnchor_Head_L/R empties where it
+// has them, otherwise just ahead of the headlight lenses' own faces.
+export function makeHeadBeams(rig: CarRig, scene: Object3D): SpotLight[] {
+  return (["L", "R"] as const).flatMap((side) => {
+    let anchor = rig.anchors[`Head_${side}`];
+    if (!anchor) {
+      const name = `AutoAnchor_Head_${side}`;
+      anchor = rig.body.children.find((o) => o.name === name) as Object3D;
+      if (!anchor) {
+        const lenses = rig.lamps.filter((m) => m.userData.lamp_role === "headlight" && m.userData.lamp_side === side);
+        if (!lenses.length) return [];
+        scene.updateMatrixWorld(true);
+        const box = new Box3();
+        scene.traverse((o) => {
+          if (o instanceof Mesh) for (const m of lenses) materialBounds(o, m, rig.body, box);
+        });
+        if (box.isEmpty()) return [];
+        anchor = new Object3D();
+        anchor.name = name;
+        anchor.position.copy(box.getCenter(new Vector3())).setZ(box.max.z + 0.05);
+        rig.body.add(anchor);
+      }
+    }
+    return [makeBeam(anchor)];
+  });
+}
 // ---- Dome light -----------------------------------------------------------
 
 export interface DomeLight {

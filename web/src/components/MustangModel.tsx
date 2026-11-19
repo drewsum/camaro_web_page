@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
@@ -7,6 +8,7 @@ import { MUSTANG_CHASSIS } from "../car/suspension";
 import type { DriveProfile } from "../car/driveClock";
 import { castsVisibleShadow, DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
 import { markCar } from "../car/layers";
+import { makeHeadBeams, makeLampGlows, updateLampGlows } from "../car/lampGlow";
 
 // Ddiaz Design's '69 Mach 1 428 Cobra Jet (CC BY-NC-SA 4.0), rigged like the
 // Camaro by scripts/build_mustang.py. Origin between the wheels at ground
@@ -21,7 +23,7 @@ interface Props {
 
 export default function MustangModel({ lightsOn = false, profile }: Props) {
   const { scene } = useGLTF(MUSTANG_URL, DRACO_URL);
-  const rig = useMemo(() => {
+  const { rig, beams, glows } = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
       obj.castShadow = castsVisibleShadow(obj);
@@ -30,12 +32,20 @@ export default function MustangModel({ lightsOn = false, profile }: Props) {
       materials.forEach(dropTransmission);
     });
     markCar(scene);
-    return findCarRig(scene, "Mustang");
+    const rig = findCarRig(scene, "Mustang");
+    // Real light from its lamps, as on the Camaro: headlight beams down the
+    // lane, and a red glow behind that brightens when it brakes.
+    return { rig, beams: makeHeadBeams(rig, scene), glows: makeLampGlows(rig, scene) };
   }, [scene]);
 
   useDrivingPose(rig, { lightsOn, chassis: MUSTANG_CHASSIS, profile });
 
-  useEffect(() => applyLamps(rig, lightsOn ? LAMPS_DRIVING : LAMPS_OFF), [rig, lightsOn]);
+  useFrame(() => updateLampGlows(glows));
+
+  useEffect(() => {
+    applyLamps(rig, lightsOn ? LAMPS_DRIVING : LAMPS_OFF);
+    for (const b of beams) b.intensity = lightsOn ? 250 : 0;
+  }, [rig, beams, lightsOn]);
 
   return <primitive object={scene} />;
 }
