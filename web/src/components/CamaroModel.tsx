@@ -14,7 +14,7 @@ export const DRACO_URL = "/draco/";
 // and don't occlude each other, so the interior flickers and the underbody shows
 // through it. Render those as opaque with an alpha cutout instead; untextured
 // glass and lens materials keep blending.
-function fixTexturedBlending(material: Material) {
+export function fixTexturedBlending(material: Material) {
   const m = material as MeshStandardMaterial;
   if (!m.transparent || !m.map) return;
   m.transparent = false;
@@ -56,7 +56,7 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
     return { rig, beams, glows: makeLampGlows(rig, scene), dome: makeDomeLight(rig, scene) };
   }, [scene]);
 
-  useDrivingPose(rig, lightsOn);
+  useDrivingPose(rig, { lightsOn });
   useFrame(() => updateLampGlows(glows));
 
   useEffect(() => {

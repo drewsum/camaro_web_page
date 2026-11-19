@@ -22,10 +22,10 @@ import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
-import { ClassicCar } from "./common/classicCars";
+import MustangModel from "../components/MustangModel";
 import { AMBER_STEP, finishTime, QUARTER_MILE, Race, STAGE_TIME, trapSpeed, type Runner } from "./drag/race";
 
-// Golden-hour quarter mile against a '67 Mustang: stage at the tree, count
+// Golden-hour quarter mile against a '69 Mach 1 Cobra Jet: stage at the tree, count
 // down, launch, run to the finish and brake through the shutdown, then a
 // quick fade and the next pass. The Camaro stays at the origin; the strip
 // slides past it.
@@ -39,9 +39,11 @@ const STRIP_FROM = -120;
 const STRIP_TO = START_Z + QUARTER_MILE + 450;
 const WALL_X = [-LANE / 2 - 0.8, LANE * 1.5 + 0.8];
 
-const CAMARO: Runner = { topSpeed: 50, tau: 6, reaction: 0.12 };
-const MUSTANG: Runner = { topSpeed: 49.2, tau: 5.9, reaction: 0.21 };
+// Both four-speeds, power-shifted; 3.91 and 4.30 rear gears respectively.
+const CAMARO: Runner = { topSpeed: 50, tau: 6, reaction: 0.12, shifts: [16.5, 27, 38], shiftTime: 0.3, brake: 4.2 };
+const MUSTANG: Runner = { topSpeed: 49.2, tau: 5.9, reaction: 0.21, shifts: [15.5, 25.5, 36.5], shiftTime: 0.34, brake: 4.0 };
 const race = new Race(CAMARO, MUSTANG);
+const MUSTANG_RUN = race.profile(MUSTANG);
 
 // ---- Surface ----------------------------------------------------------------
 
@@ -310,7 +312,7 @@ function LightPoles() {
 
 // Slides the strip past the Camaro, moves the Mustang along its lane and
 // fades to black around each reset.
-function Pass({ children }: { children: ReactNode }) {
+function Pass({ children, lightsOn }: { children: ReactNode; lightsOn: boolean }) {
   const drive = useDrive();
   const strip = useRef<Group>(null);
   const rival = useRef<Group>(null);
@@ -328,7 +330,8 @@ function Pass({ children }: { children: ReactNode }) {
         {children}
         <group ref={rival} position-x={LANE}>
           <Optional>
-            <ClassicCar id="mustang" position={[0, 0]} />
+            <MustangModel profile={MUSTANG_RUN} lightsOn={lightsOn} />
+            <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
           </Optional>
         </group>
       </group>
@@ -363,7 +366,7 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
         shadow-camera-bottom={-14}
         shadow-camera-far={120}
       />
-      <Pass>
+      <Pass lightsOn={!!lightsOn}>
         <Pavement from={STRIP_FROM} to={START_Z + 100} base="#a9a59c" rubber={0.85} seed={1} />
         <Pavement from={START_Z + 100} to={STRIP_TO} base="#4a4a4c" rubber={0.45} seed={2} />
         <Line z={START_Z} />

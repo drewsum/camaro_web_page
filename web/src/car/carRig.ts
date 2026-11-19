@@ -36,7 +36,7 @@ export interface CarRig {
 
 function need(scene: Object3D, name: string): Object3D {
   const o = scene.getObjectByName(name);
-  if (!o) throw new Error(`camaro.glb is missing rig node "${name}"`);
+  if (!o) throw new Error(`car model is missing rig node "${name}"`);
   return o;
 }
 
@@ -51,8 +51,10 @@ interface RestPose {
 }
 const restPoses = new WeakMap<Object3D, RestPose>();
 
-export function findCarRig(scene: Object3D): CarRig {
-  const root = need(scene, "Camaro");
+// rootName is the top rig node: "Camaro" in camaro.glb, "Mustang" in mustang.glb
+// (built by scripts/build_mustang.py with the same layout).
+export function findCarRig(scene: Object3D, rootName = "Camaro"): CarRig {
+  const root = need(scene, rootName);
   const body = need(scene, "Body");
   const steeringWheel = need(scene, "SteeringWheel");
   let rest = restPoses.get(root);
@@ -73,6 +75,9 @@ export function findCarRig(scene: Object3D): CarRig {
   for (const m of lamps) {
     m.emissive = new Color(...(m.userData.lamp_color as [number, number, number]));
     m.emissiveIntensity = 0;
+    // ACES tone mapping skews a bright saturated red toward orange, so lit
+    // tail and brake lamps read amber in daylight. Keep the red lamps out of it.
+    if (m.userData.lamp_role === "tail" || m.userData.lamp_role === "marker_rear") m.toneMapped = false;
   }
   const byId = (prefix: string) =>
     Object.fromEntries(WHEELS.map((w) => [w, need(scene, prefix + w)])) as Record<WheelId, Object3D>;

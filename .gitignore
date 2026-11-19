@@ -8,3 +8,6 @@ web/node_modules/
 web/dist/
 web/public/draco/
 *.tsbuildinfo
+
+# Sketchfab download that scripts/build_mustang.py builds mustang.blend from
+3d_model/mustang69/
