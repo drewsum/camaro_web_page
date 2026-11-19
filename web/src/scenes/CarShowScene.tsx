@@ -1,16 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { useThree } from "@react-three/fiber";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
 import { markCar } from "../car/layers";
-import { GroundedSkybox } from "three/examples/jsm/objects/GroundedSkybox.js";
 import { Vector3, type Group } from "three";
 import CamaroModel from "../components/CamaroModel";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
-import { useExposure } from "./common/renderer";
+import { useExposure, useFarPlane } from "./common/renderer";
 import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import SkyReflections from "./common/SkyReflections";
+import { preloadPbr, usePbrMaterial } from "./common/pbr";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import MustangModel from "../components/MustangModel";
@@ -20,13 +19,20 @@ import Onlooker, { onlookerModel } from "./carshow/Onlooker";
 // Parked on the grass at a summer car show among other muscle cars (a
 // Challenger R/T fetched from a public repo, plus Ddiaz Design's '69 Charger
 // R/T and our rigged '69 Mach 1 Cobra Jet), while a few old guys with beers
-// look it over. The field,
-// tree line and sky are a real photo (Poly Haven's "je_gray_park" HDRI)
-// projected onto the ground around the cars.
+// look it over. An open mown field runs out to the horizon under a real sky
+// (Poly Haven's "kloofendal_48d_partly_cloudy_puresky" HDRI), the grass
+// their scanned "leafy_grass".
 
-const PARK = polyHavenHdri("je_gray_park", "4k");
+const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
+const SUN_AZIMUTH = 0.9; // mid-afternoon, over the camera's right shoulder
 const EXPOSURE = 0.85;
-const CAMERA_HEIGHT = 1.8; // roughly how high the HDRI was shot from
+const GRASS = "leafy_grass";
+const FIELD = 8000; // metres across: out to the horizon, so no sky shows under its edge
+preloadPbr(GRASS);
+// The haze the far field fades into, matched by eye to this sky just above
+// the horizon on screen (the sky's own averaged horizon colour comes out much
+// whiter, which drew a bright line along the edge of the field).
+const HAZE = "#9ea3b6";
 
 // ---- Props ----------------------------------------------------------------
 
@@ -105,21 +111,36 @@ function Canopy({ position, rotationY }: { position: [number, number]; rotationY
 
 // ---- Scene ----------------------------------------------------------------
 
-// The park photo wrapped onto a dome with a flat floor, so the grass reads as
-// ground under the cars rather than a backdrop.
-function ParkBackdrop({ texture }: { texture: GroundedSkybox["material"]["map"] }) {
-  const scene = useThree((s) => s.scene);
-  useEffect(() => {
-    const dome = new GroundedSkybox(texture!, CAMERA_HEIGHT, 120);
-    dome.position.y = CAMERA_HEIGHT - 0.01;
-    scene.add(dome);
-    return () => {
-      scene.remove(dome);
-      dome.geometry.dispose();
-      dome.material.dispose();
+// The open field: scanned grass tiled every 2 m, broken up by much broader
+// patches (the same scan, blurred and stretched to tens of metres) so it
+// doesn't read as a repeating tile toward the horizon, with faint mowing stripes.
+function GrassField() {
+  const material = usePbrMaterial(GRASS, { tile: 2, size: [FIELD, FIELD], normalScale: 0.9, tint: "#b4d68a", brightness: 1.1 });
+  useMemo(() => {
+    material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <map_fragment>",
+        /* glsl */ `#include <map_fragment>
+        {
+          vec3 avg = textureLod(map, vec2(0.5), 16.0).rgb;
+          vec3 broad = texture(map, vMapUv * 0.071 + 0.17, 5.0).rgb + texture(map, vMapUv * 0.023 + 0.53, 6.0).rgb;
+          const vec3 LUMA = vec3(0.3, 0.59, 0.11);
+          float patchy = dot(broad, LUMA) / max(2.0 * dot(avg, LUMA), 1e-3);
+          diffuseColor.rgb *= mix(1.0, clamp(patchy, 0.7, 1.35), 0.6);
+          // Mown in 3 m passes, alternately toward and away from the camera.
+          float pass = smoothstep(0.4, 0.6, abs(fract(vMapUv.x / 1.5) - 0.5) * 2.0);
+          diffuseColor.rgb *= mix(0.93, 1.05, pass);
+        }`,
+      );
     };
-  }, [scene, texture]);
-  return null;
+    material.customProgramCacheKey = () => "carshow-grass";
+    material.needsUpdate = true;
+  }, [material]);
+  return (
+    <mesh rotation-x={-Math.PI / 2} material={material} receiveShadow>
+      <planeGeometry args={[FIELD, FIELD]} />
+    </mesh>
+  );
 }
 
 // Points on the hero car (centred at the origin, nose toward +Z). The
@@ -135,12 +156,15 @@ const CAR_CENTER = new Vector3(0, 0.6, 0.4);
 const GREY_HAIR = "#b9b5ad";
 
 function Show({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(PARK, null, EXPOSURE);
+  const sky = useHdriSky(SKY, SUN_AZIMUTH, EXPOSURE);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <>
-      <SkyReflections sky={sky} background={false} />
-      <ParkBackdrop texture={sky.texture} />
+      {/* Exponential haze, so the far field fades into the sky over a soft
+          band rather than a hard line where the fog finally reaches full. */}
+      <fogExp2 attach="fog" args={[HAZE, 0.0028]} />
+      <SkyReflections sky={sky} ground="#2c3a1a" />
+      <GrassField />
       <directionalLight
         position={sun}
         intensity={sky.sunIntensity}
@@ -154,12 +178,6 @@ function Show({ lightsOn, domeOn }: SceneProps) {
         shadow-camera-bottom={-14}
         shadow-camera-far={100}
       />
-      {/* Catches the sun's shadows on the photographed grass. */}
-      <mesh rotation-x={-Math.PI / 2} position-y={0.005} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <shadowMaterial opacity={0.35} />
-      </mesh>
-
       <Canopy position={[-1.5, -7]} rotationY={0.15} />
       <Canopy position={[6, -9]} rotationY={-0.1} />
 
@@ -214,6 +232,7 @@ function Show({ lightsOn, domeOn }: SceneProps) {
 
 export default function CarShowScene(props: SceneProps) {
   useCameraStart(6.5, 2.4, 7.5);
+  useFarPlane(5000);
   useExposure(EXPOSURE);
   return (
     <>
