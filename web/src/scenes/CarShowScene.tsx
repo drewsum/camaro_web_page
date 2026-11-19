@@ -12,12 +12,13 @@ import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import MustangModel from "../components/MustangModel";
+import ChargerModel from "../components/ChargerModel";
 import Onlooker, { onlookerModel } from "./carshow/Onlooker";
 
 // Parked on the grass at a summer car show among other muscle cars (a
-// Chevelle SS and a Challenger R/T fetched from public repos, and our rigged
-// '69 Mach 1 Cobra Jet),
-// while a few old guys with beers look it over. The field,
+// Challenger R/T fetched from a public repo, plus Ddiaz Design's '69 Charger
+// R/T and our rigged '69 Mach 1 Cobra Jet), while a few old guys with beers
+// look it over. The field,
 // tree line and sky are a real photo (Poly Haven's "je_gray_park" HDRI)
 // projected onto the ground around the cars.
 
@@ -159,7 +160,9 @@ function Show({ lightsOn, domeOn }: SceneProps) {
 
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
       <Optional>
-        <ClassicCar id="chevelle" position={[4.5, -0.4]} rotationY={-0.06} />
+        <group position={[4.6, 0, -0.4]} rotation-y={-0.06}>
+          <ChargerModel />
+        </group>
       </Optional>
       <Optional>
         <ClassicCar id="challenger" position={[-4.6, 0.3]} rotationY={0.08} />

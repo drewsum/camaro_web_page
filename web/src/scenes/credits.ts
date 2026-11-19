@@ -10,11 +10,10 @@ export interface Credit {
   licenseUrl?: string;
 }
 
-const CC_BY = "http://creativecommons.org/licenses/by/4.0/";
 const CC_BY_NC_SA = "http://creativecommons.org/licenses/by-nc-sa/4.0/";
 
 export const CREDITS = {
-  chevelle: { title: "Chevrolet Chevelle SS", href: "https://sketchfab.com/890244234", author: "BadKarma™", license: "CC BY 4.0", licenseUrl: CC_BY },
+  charger: { title: "1969 Dodge Charger R/T", href: "https://sketchfab.com/3d-models/1969-dodge-charger-rt-261de8013c4e4fb0884a8106bd3212a7", author: "Ddiaz Design", license: "CC BY-NC-SA 4.0", licenseUrl: CC_BY_NC_SA },
   challenger: { title: "1970 Dodge Challenger R/T", href: "https://sketchfab.com/ddiaz-design", author: "Ddiaz Design", license: "CC BY-NC-SA 4.0", licenseUrl: CC_BY_NC_SA },
   mach1: { title: "1969 Ford Mustang Mach-1 428 Cobra Jet", href: "https://sketchfab.com/3d-models/1969-ford-mustang-mach-1-428-cobra-jet-679cdf81b9854759860b0afe9d1e4012", author: "Ddiaz Design", license: "CC BY-NC-SA 4.0", licenseUrl: CC_BY_NC_SA },
   polyHaven: { title: "Skies, plants and rocks", href: "https://polyhaven.com", author: "Poly Haven", license: "CC0" },

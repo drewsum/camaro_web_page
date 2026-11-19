@@ -17,12 +17,6 @@ export interface ClassicCarDef {
 const raw = (repo: string, sha: string, path: string) => `https://raw.githubusercontent.com/${repo}/${sha}/${path}`;
 
 export const CLASSIC_CARS = {
-  chevelle: {
-    url: raw("gibranalfarabi/portofolio-ar", "8591516383f4d51db0a1de6f4967a7450fc137c9", "assets/3D-model/chevrolet_chevelle_ss/scene.gltf"),
-    length: 5.0,
-    yaw: 0,
-    credit: CREDITS.chevelle,
-  },
   challenger: {
     url: raw("Omkar7637/OpenGL_Projects", "91f960eae2218260a8d077ba9f04ed15ccc36504", "01-Windows/03-PP/Model_Loading/1970_dodge_challenger_rt/scene.gltf"),
     length: 4.86,

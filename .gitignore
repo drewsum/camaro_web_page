@@ -11,3 +11,5 @@ web/public/draco/
 
 # Sketchfab download that scripts/build_mustang.py builds mustang.blend from
 3d_model/mustang69/
+# Sketchfab download that scripts/build_charger.py builds charger.blend from
+3d_model/charger69/

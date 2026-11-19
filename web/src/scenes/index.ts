@@ -32,7 +32,7 @@ export const SCENES: SceneDef[] = [
     label: "Car show",
     Component: lazy(() => import("./CarShowScene")),
     night: false,
-    credits: [CREDITS.chevelle, CREDITS.challenger, CREDITS.mach1, CREDITS.quaternius, CREDITS.polyHaven],
+    credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.quaternius, CREDITS.polyHaven],
   },
   { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true },
 ];
