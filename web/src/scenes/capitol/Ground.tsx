@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { BufferAttribute, BufferGeometry, CanvasTexture, LinearMipmapLinearFilter, MeshStandardMaterial, SRGBColorSpace } from "three";
+import { BufferAttribute, BufferGeometry, CanvasTexture, LinearMipmapLinearFilter, MeshStandardMaterial, SRGBColorSpace, type Texture } from "three";
 import { EXTENT, GRID, groundY, MAP, segmentDistance, type Pt } from "./data";
 import { RING, ringCentre, ringTrack } from "./ringTrack";
-import { asphaltTexture, concreteTexture, grassTexture } from "./textures";
+import { ASPHALT_WEAR_TILE, asphaltWearTexture, grassTexture, PANEL, paintWearTexture, sidewalkJointsTexture } from "./textures";
+import { preloadPbr, usePbrTextures } from "../common/pbr";
 
 // The ground: one terrain mesh over the real elevation grid, surfaced from a
 // painted map of where the asphalt, sidewalks and lawns are. Each surface's
@@ -84,18 +85,33 @@ function terrainGeometry() {
   return geo;
 }
 
-function groundMaterial() {
+// Scanned CC0 surfaces from Poly Haven: the same weathered grey asphalt as
+// the coast road, and broom-finished concrete for the sidewalks.
+const ASPHALT = "asphalt_04"; // one scan covers 4 m
+const SIDEWALK = "brushed_concrete_03"; // 2 m
+preloadPbr(ASPHALT);
+preloadPbr(SIDEWALK);
+
+type Pbr = ReturnType<typeof usePbrTextures>;
+
+function groundMaterial(asphalt: Pbr, walk: Pbr) {
   const zone = zoneMap();
-  const asphalt = asphaltTexture();
-  const concrete = concreteTexture();
+  const wear = asphaltWearTexture();
+  const joints = sidewalkJointsTexture();
   const grass = grassTexture();
   const m = new MeshStandardMaterial({ roughness: 1 });
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, {
       uZone: { value: zone },
-      uAsphalt: { value: asphalt },
-      uConcrete: { value: concrete },
       uGrass: { value: grass },
+      uAsphalt: { value: asphalt.map },
+      uAsphaltN: { value: asphalt.normalMap },
+      uAsphaltArm: { value: asphalt.arm },
+      uWear: { value: wear },
+      uWalk: { value: walk.map },
+      uWalkN: { value: walk.normalMap },
+      uWalkArm: { value: walk.arm },
+      uJoints: { value: joints },
     });
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec2 vMap;")
@@ -105,8 +121,22 @@ function groundMaterial() {
         "#include <common>",
         `#include <common>
         varying vec2 vMap;
-        uniform sampler2D uZone, uAsphalt, uConcrete, uGrass;
-        vec3 zoneW;`,
+        uniform sampler2D uZone, uGrass, uAsphalt, uAsphaltN, uAsphaltArm, uWear, uWalk, uWalkN, uWalkArm, uJoints;
+        vec3 zoneW;
+        vec2 auv, cuv;
+        vec3 aArm, cArm;
+        // Tangent frame from screen-space derivatives (as three's own
+        // normal mapping does), with the map coordinates as UVs.
+        mat3 groundTBN(vec3 eye, vec3 n, vec2 uv) {
+          vec3 q0 = dFdx(eye), q1 = dFdy(eye);
+          vec2 st0 = dFdx(uv), st1 = dFdy(uv);
+          vec3 q1perp = cross(q1, n), q0perp = cross(n, q0);
+          vec3 T = q1perp * st0.x + q0perp * st1.x;
+          vec3 B = q1perp * st0.y + q0perp * st1.y;
+          float det = max(dot(T, T), dot(B, B));
+          float s = det == 0.0 ? 0.0 : inversesqrt(det);
+          return mat3(T * s, B * s, n);
+        }`,
       )
       .replace(
         "#include <map_fragment>",
@@ -114,15 +144,49 @@ function groundMaterial() {
         zoneW = texture2D(uZone, vec2(zuv.x, 1.0 - zuv.y)).rgb;
         zoneW = smoothstep(0.3, 0.7, zoneW); // crisper edges than the map's pixels
         zoneW /= max(zoneW.r + zoneW.g + zoneW.b, 1e-3);
+        auv = vMap / 4.0;
+        cuv = vMap / 2.0;
+        aArm = texture2D(uAsphaltArm, auv).rgb;
+        cArm = texture2D(uWalkArm, cuv).rgb;
         vec3 grassC = texture2D(uGrass, vMap / 4.0).rgb * (0.85 + 0.3 * texture2D(uGrass, vMap / 31.0).g);
-        vec3 asphaltC = texture2D(uAsphalt, vMap / 4.0).rgb * (0.92 + 0.16 * texture2D(uConcrete, vMap / 47.0).r);
-        vec3 concreteC = texture2D(uConcrete, vMap / 4.5).rgb;
-        diffuseColor.rgb *= grassC * zoneW.r + asphaltC * zoneW.g + concreteC * zoneW.b;`,
+        // Large, slow variation from the scan itself sampled far out, so the
+        // 4 m tile doesn't read as a grid down a long street.
+        float slow = 0.9 + 0.35 * (texture2D(uAsphalt, vMap / 53.0 + 0.37).r - 0.35);
+        vec3 asphaltC = texture2D(uAsphalt, auv).rgb * 0.85 * slow * aArm.r
+          * texture2D(uWear, vMap / ${ASPHALT_WEAR_TILE.toFixed(1)}).rgb;
+        // The scan is a warm, dirty slab; Madison's sidewalks are pale grey.
+        vec3 walkScan = texture2D(uWalk, cuv).rgb;
+        walkScan = mix(vec3(dot(walkScan, vec3(0.3, 0.59, 0.11))), walkScan, 0.25) * vec3(1.0, 0.99, 0.96);
+        vec3 walkC = walkScan * 1.9 * cArm.r * texture2D(uJoints, vMap / ${(3 * PANEL).toFixed(1)}).rgb;
+        diffuseColor.rgb *= grassC * zoneW.r + asphaltC * zoneW.g + walkC * zoneW.b;`,
       )
       .replace(
         "#include <roughnessmap_fragment>",
-        "float roughnessFactor = roughness * (0.97 * zoneW.r + 0.86 * zoneW.g + 0.9 * zoneW.b);",
+        "float roughnessFactor = roughness * (0.97 * zoneW.r + aArm.g * zoneW.g + cArm.g * zoneW.b);",
+      )
+      .replace(
+        "#include <normal_fragment_maps>",
+        `vec3 nA = texture2D(uAsphaltN, auv).xyz * 2.0 - 1.0;
+        vec3 nC = texture2D(uWalkN, cuv).xyz * 2.0 - 1.0;
+        vec3 nts = vec3(0.0, 0.0, 1.0) * zoneW.r + nA * zoneW.g + nC * zoneW.b;
+        nts.xy *= 0.8;
+        normal = normalize(groundTBN(-vViewPosition, normal, vMap) * nts);`,
       );
+  };
+  return m;
+}
+
+// Street paint, flaked where the wear texture says so.
+function paintMaterial(color: string, wear: Texture) {
+  const m = new MeshStandardMaterial({ color, roughness: 0.7, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uPaintWear = { value: wear };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec2 vMap;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvMap = position.xz;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nvarying vec2 vMap;\nuniform sampler2D uPaintWear;")
+      .replace("#include <map_fragment>", "#include <map_fragment>\ndiffuseColor.a *= 0.92 * texture2D(uPaintWear, vMap / 2.0).r;");
   };
   return m;
 }
@@ -370,19 +434,22 @@ function curbs(onRoad: OnRoad) {
 }
 
 export default function Ground() {
-  const { terrain, material, lines, curb } = useMemo(() => {
+  const asphalt = usePbrTextures(ASPHALT);
+  const walk = usePbrTextures(SIDEWALK);
+  const { terrain, lines, curb } = useMemo(() => {
     const onRoad = roadIndex();
-    return { terrain: terrainGeometry(), material: groundMaterial(), lines: markings(onRoad), curb: curbs(onRoad) };
+    return { terrain: terrainGeometry(), lines: markings(onRoad), curb: curbs(onRoad) };
+  }, []);
+  const material = useMemo(() => groundMaterial(asphalt, walk), [asphalt, walk]);
+  const paint = useMemo(() => {
+    const wear = paintWearTexture();
+    return { white: paintMaterial("#e9e7e0", wear), yellow: paintMaterial("#e0ae2c", wear) };
   }, []);
   return (
     <>
       <mesh geometry={terrain} material={material} receiveShadow />
-      <mesh geometry={lines.white} receiveShadow>
-        <meshStandardMaterial color="#e9e7e0" roughness={0.7} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-      </mesh>
-      <mesh geometry={lines.yellow} receiveShadow>
-        <meshStandardMaterial color="#e0ae2c" roughness={0.7} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
-      </mesh>
+      <mesh geometry={lines.white} material={paint.white} receiveShadow />
+      <mesh geometry={lines.yellow} material={paint.yellow} receiveShadow />
       <mesh geometry={curb} receiveShadow castShadow>
         <meshStandardMaterial color="#b9b5ad" roughness={0.85} side={2} />
       </mesh>

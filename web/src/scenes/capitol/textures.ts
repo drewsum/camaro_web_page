@@ -33,51 +33,118 @@ function speckle(g: Ctx, w: number, h: number, seed: number, count: number, spre
 
 // ---- Ground ---------------------------------------------------------------
 
-// Each covers 4 m × 4 m.
-export function asphaltTexture() {
-  const [c, g] = canvas(512);
-  g.fillStyle = "#47484a";
-  g.fillRect(0, 0, 512, 512);
+// The streets and sidewalks themselves are scanned Poly Haven textures (see
+// Ground); these are the layers multiplied over them.
+
+// City wear over ASPHALT_WEAR_TILE metres square at 64 px per metre, white
+// where the scan shows through: tar-snake crack sealing wandering every
+// which way, oil stains, and a few saw-cut utility patches.
+export const ASPHALT_WEAR_TILE = 16;
+export function asphaltWearTexture() {
+  const PX = 64, S = ASPHALT_WEAR_TILE * PX;
+  const [c, g] = canvas(S);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, S, S);
   const rand = mulberry32(11);
-  for (let n = 0; n < 40000; n++) {
-    const v = 50 + Math.floor(rand() * 50);
-    g.fillStyle = `rgb(${v},${v},${v + 3})`;
-    g.fillRect(rand() * 512, rand() * 512, 1 + rand() * 1.5, 1 + rand() * 1.5);
+  // Draw at all nine wrap offsets so the tile is seamless.
+  const wrapped = (draw: (ox: number, oy: number) => void) => {
+    for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) draw(ox, oy);
+  };
+  for (let n = 0; n < 3; n++) {
+    const x = rand() * S, y = rand() * S, w = (1.2 + rand() * 2.5) * PX, h = (1 + rand() * 2) * PX;
+    const tone = 205 + Math.floor(rand() * 25);
+    wrapped((ox, oy) => {
+      g.fillStyle = `rgb(${tone},${tone},${tone + 2})`;
+      g.fillRect(x + ox, y + oy, w, h);
+      g.strokeStyle = "rgba(40,40,42,0.85)";
+      g.lineWidth = 0.05 * PX;
+      g.strokeRect(x + ox, y + oy, w, h);
+    });
   }
-  // Faint wear and patching.
-  for (let n = 0; n < 10; n++) {
-    g.fillStyle = `rgba(${rand() < 0.5 ? "30,30,32" : "110,110,112"},0.07)`;
-    g.beginPath();
-    g.ellipse(rand() * 512, rand() * 512, 30 + rand() * 80, 20 + rand() * 50, rand() * 3, 0, Math.PI * 2);
-    g.fill();
+  for (let n = 0; n < 40; n++) {
+    const x = rand() * S, y = rand() * S, rx = (0.08 + rand() * 0.35) * PX, ry = rx * (0.5 + rand() * 0.8), a = 0.12 + rand() * 0.22;
+    wrapped((ox, oy) => {
+      const grad = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rx);
+      grad.addColorStop(0, `rgba(30,28,26,${a})`);
+      grad.addColorStop(1, "rgba(30,28,26,0)");
+      g.fillStyle = grad;
+      g.beginPath();
+      g.ellipse(x + ox, y + oy, rx, ry, rand() * 3, 0, Math.PI * 2);
+      g.fill();
+    });
   }
-  return texture(c);
+  g.lineCap = g.lineJoin = "round";
+  for (let n = 0; n < 9; n++) {
+    let x = rand() * S, y = rand() * S, a = rand() * Math.PI * 2;
+    const heading = a, pts: [number, number][] = [[x, y]];
+    const steps = 20 + Math.floor(rand() * 60);
+    for (let i = 0; i < steps; i++) {
+      a += (rand() - 0.5) * 0.9;
+      a += (heading - a) * 0.3;
+      x += Math.cos(a) * 0.12 * PX;
+      y += Math.sin(a) * 0.12 * PX;
+      pts.push([x, y]);
+    }
+    const width = (0.025 + rand() * 0.03) * PX;
+    wrapped((ox, oy) => {
+      g.strokeStyle = "rgba(14,14,15,0.85)";
+      g.lineWidth = width;
+      g.beginPath();
+      pts.forEach(([px, py], i) => (i ? g.lineTo(px + ox, py + oy) : g.moveTo(px + ox, py + oy)));
+      g.stroke();
+    });
+  }
+  return texture(c, false); // a plain multiplier, not a colour
 }
 
-// Poured concrete sidewalk: 1.5 m panels with tooled joints.
-export function concreteTexture() {
-  const [c, g] = canvas(512);
-  g.fillStyle = "#9a958c";
-  g.fillRect(0, 0, 512, 512);
-  speckle(g, 512, 512, 21, 26000, 0.35, 0.25);
+// Poured concrete sidewalk, 1.5 m panels with tooled joints, three panels
+// square: each panel a slightly different pour, the joints dark grooves.
+export const PANEL = 1.5;
+export function sidewalkJointsTexture() {
+  const PX = 128, S = 3 * PANEL * PX;
+  const [c, g] = canvas(S);
   const rand = mulberry32(22);
-  for (let n = 0; n < 14; n++) {
-    g.fillStyle = `rgba(${rand() < 0.5 ? "70,66,60" : "200,196,188"},0.06)`;
+  const p = PANEL * PX;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const v = 228 + Math.floor(rand() * 27);
+      g.fillStyle = `rgb(${v},${v},${v - 2})`;
+      g.fillRect(i * p, j * p, p, p);
+    }
+  }
+  for (let k = 0; k < 3; k++) {
+    // Groove plus a little tooled margin either side.
+    g.fillStyle = "rgba(150,146,140,0.5)";
+    g.fillRect(k * p - 4, 0, 8, S);
+    g.fillRect(0, k * p - 4, S, 8);
+    g.fillStyle = "rgb(70,67,62)";
+    g.fillRect(k * p - 1.5, 0, 3, S);
+    g.fillRect(0, k * p - 1.5, S, 3);
+  }
+  // Edges wrap: draw the k = 0 lines at the far side too.
+  g.fillStyle = "rgba(150,146,140,0.5)";
+  g.fillRect(S - 4, 0, 4, S);
+  g.fillRect(0, S - 4, S, 4);
+  g.fillStyle = "rgb(70,67,62)";
+  g.fillRect(S - 1.5, 0, 1.5, S);
+  g.fillRect(0, S - 1.5, S, 1.5);
+  return texture(c, false);
+}
+
+// Worn paint: alpha speckle over 2 m, for the street markings.
+export function paintWearTexture() {
+  const [c, g] = canvas(256);
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, 256, 256);
+  const rand = mulberry32(23);
+  for (let n = 0; n < 2600; n++) {
+    const v = Math.floor(rand() * 160);
+    g.fillStyle = `rgba(${v},${v},${v},${0.3 + rand() * 0.6})`;
     g.beginPath();
-    g.arc(rand() * 512, rand() * 512, 30 + rand() * 90, 0, Math.PI * 2);
+    g.arc(rand() * 256, rand() * 256, 0.4 + rand() * 1.6, 0, Math.PI * 2);
     g.fill();
   }
-  g.strokeStyle = "rgba(60,58,54,0.7)";
-  g.lineWidth = 2;
-  for (let k = 0; k <= 512; k += 192) {
-    g.beginPath();
-    g.moveTo(k, 0);
-    g.lineTo(k, 512);
-    g.moveTo(0, k);
-    g.lineTo(512, k);
-    g.stroke();
-  }
-  return texture(c);
+  return texture(c, false);
 }
 
 export function grassTexture() {

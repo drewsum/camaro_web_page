@@ -53,6 +53,21 @@ export function usePbrMaterial(name: string, { res = "2k", tile, size, normalSca
   }, [tex, tile, size[0], size[1], normalScale, tint, brightness, roughness]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+// The raw textures, wrapping and at full anisotropy, for custom shaders that
+// sample them themselves (shared from drei's cache, so don't change repeat).
+export function usePbrTextures(name: string, res: PbrRes = "2k") {
+  const tex = useTexture(urls(name, res));
+  return useMemo(() => {
+    for (const t of [tex.map, tex.normalMap, tex.arm]) {
+      t.wrapS = t.wrapT = RepeatWrapping;
+      t.anisotropy = 16;
+      t.needsUpdate = true;
+    }
+    tex.map.colorSpace = SRGBColorSpace;
+    return tex;
+  }, [tex]);
+}
+
 export function preloadPbr(name: string, res: PbrRes = "2k") {
   useTexture.preload(Object.values(urls(name, res)));
 }
