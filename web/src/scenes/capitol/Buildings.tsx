@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { BufferAttribute, BufferGeometry, MeshStandardMaterial, ShapeUtils, Vector2, type Material } from "three";
 import { groundY, hash, MAP, signedArea, type Building, type Pt } from "./data";
-import { BAY, facadeTextures, FACADES, garageTextures, roofTexture, SHOP_H, SHOP_W, storefrontTextures, STOREY } from "./textures";
+import { BAY, FACADE_BAYS, FACADE_STOREYS, facadeTextures, FACADES, garageTextures, roofTexture, SHOP_H, SHOP_W, storefrontTextures, STOREY } from "./textures";
 
 // The blocks around the Square, extruded from their OpenStreetMap footprints
 // to their mapped heights (or storeys). Each gets a facade style, and the
@@ -11,22 +11,24 @@ class Bucket {
   pos: number[] = [];
   nor: number[] = [];
   uv: number[] = [];
+  col: number[] = [];
   geometry() {
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(new Float32Array(this.pos), 3));
     g.setAttribute("normal", new BufferAttribute(new Float32Array(this.nor), 3));
     g.setAttribute("uv", new BufferAttribute(new Float32Array(this.uv), 2));
+    if (this.col.length) g.setAttribute("color", new BufferAttribute(new Float32Array(this.col), 3));
     return g;
   }
 }
 
 const NO_SHOPS = new Set(["house", "apartments", "residential", "garage", "parking", "shed", "church", "public", "government", "civic"]);
-const SHOP_VARIANTS = 4;
+const SHOP_VARIANTS = 10;
 
 // Wall quad from a to b between heights y0 and y1, with u along the wall and
 // v up it. `out` = +1 when outward is (dz, -dx), i.e. for a polygon with
 // positive signed area (see signedArea), whose inside is to the left of a→b.
-function wall(b: Bucket, a: Pt, c: Pt, y0: number, y1: number, u0: number, u1: number, v0: number, v1: number, out: number) {
+function wall(b: Bucket, a: Pt, c: Pt, y0: number, y1: number, u0: number, u1: number, v0: number, v1: number, out: number, tint?: [number, number, number]) {
   const dx = c[0] - a[0], dz = c[1] - a[1];
   const len = Math.hypot(dx, dz);
   const nx = (dz / len) * out, nz = (-dx / len) * out;
@@ -42,6 +44,7 @@ function wall(b: Bucket, a: Pt, c: Pt, y0: number, y1: number, u0: number, u1: n
     b.pos.push(x, y, z);
     b.nor.push(nx, 0, nz);
     b.uv.push(u, v);
+    if (tint) b.col.push(...tint);
   }
 }
 
@@ -62,8 +65,8 @@ function roof(b: Bucket, pts: Pt[], y: number) {
 
 function styleFor(bd: Building) {
   const r = hash(bd.id, 3);
-  if (bd.h > 36) return r < 0.5 ? 3 : r < 0.75 ? 5 : 2;
-  if (bd.kind === "house" || bd.kind === "residential") return [0, 1, 4, 7][Math.floor(r * 4)];
+  if (bd.h > 36) return [3, 3, 5, 2, 11, 10][Math.floor(r * 6)];
+  if (bd.kind === "house" || bd.kind === "residential") return [0, 1, 4, 7, 8, 8, 9, 13][Math.floor(r * 8)];
   return Math.floor(r * FACADES.length);
 }
 
@@ -84,6 +87,11 @@ export function buildingGeometries() {
     const shopfront = !isGarage && !bd.min && !NO_SHOPS.has(bd.kind) && bd.h >= 7;
     const split = shopfront ? street + SHOP_H : bottom;
     const style = facade[styleFor(bd)];
+    // Each building starts somewhere different in its texture block, and is a
+    // shade lighter or darker, warmer or cooler, than its neighbours.
+    const du = Math.floor(hash(bd.id, 5) * FACADE_BAYS), dv = Math.floor(hash(bd.id, 6) * FACADE_STOREYS);
+    const shade = 0.86 + hash(bd.id, 7) * 0.24, warm = (hash(bd.id, 8) - 0.5) * 0.08;
+    const tint: [number, number, number] = [shade * (1 + warm), shade, shade * (1 - warm)];
     let run = 0;
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i], c = pts[(i + 1) % pts.length];
@@ -91,12 +99,22 @@ export function buildingGeometries() {
       if (isGarage) {
         wall(garage, a, c, bottom, top, run / 4, (run + len) / 4, (bottom - street) / 3, (top - street) / 3, out);
       } else {
-        wall(style, a, c, split, top, run / BAY, (run + len) / BAY, (split - street - (shopfront ? SHOP_H : 0.6)) / STOREY, (top - street - (shopfront ? SHOP_H : 0.6)) / STOREY, out);
+        const lift = street + (shopfront ? SHOP_H : 0.6);
+        wall(style, a, c, split, top, (du + run / BAY) / FACADE_BAYS, (du + (run + len) / BAY) / FACADE_BAYS, (dv + (split - lift) / STOREY) / FACADE_STOREYS, (dv + (top - lift) / STOREY) / FACADE_STOREYS, out, tint);
         if (shopfront) {
-          const shop = shops[Math.floor(hash(bd.id, i) * SHOP_VARIANTS)];
-          // Below street level on a slope, the shopfront's plinth carries on down.
-          wall(shop, a, c, base, street, run / SHOP_W, (run + len) / SHOP_W, 0, 0, out);
-          wall(shop, a, c, street, split, run / SHOP_W, (run + len) / SHOP_W, 0, 1, out);
+          // A row of separate shops, one or two 6 m units each, so a long
+          // block face isn't one storefront repeated end to end.
+          const units = Math.max(1, Math.round(len / SHOP_W));
+          const at = (s: number): Pt => [a[0] + ((c[0] - a[0]) * s) / units, a[1] + ((c[1] - a[1]) * s) / units];
+          for (let s = 0, n = 0; s < units; n++) {
+            const span = Math.min(units - s, 1 + Math.floor(hash(bd.id, 100 * i + n + 50) * 2));
+            const shop = shops[Math.floor(hash(bd.id, 100 * i + n) * SHOP_VARIANTS)];
+            const p = at(s), q = at(s + span), u0 = (s * len) / units / SHOP_W, u1 = ((s + span) * len) / units / SHOP_W;
+            // Below street level on a slope, the shopfront's plinth carries on down.
+            wall(shop, p, q, base, street, u0, u1, 0, 0, out);
+            wall(shop, p, q, street, split, u0, u1, 0, 1, out);
+            s += span;
+          }
         }
       }
       run += len;
@@ -110,7 +128,7 @@ export default function Buildings() {
   const parts = useMemo(() => {
     const g = buildingGeometries();
     const list: { geo: BufferGeometry; mat: Material }[] = [];
-    facadeTextures().forEach((t, i) => list.push({ geo: g.facade[i], mat: new MeshStandardMaterial({ ...t, roughness: 1, metalness: 1, envMapIntensity: 1 }) }));
+    facadeTextures().forEach((t, i) => list.push({ geo: g.facade[i], mat: new MeshStandardMaterial({ ...t, roughness: 1, metalness: 1, envMapIntensity: 1, vertexColors: true }) }));
     for (let i = 0; i < SHOP_VARIANTS; i++) {
       list.push({ geo: g.shops[i], mat: new MeshStandardMaterial({ ...storefrontTextures(200 + i), roughness: 1, metalness: 1 }) });
     }

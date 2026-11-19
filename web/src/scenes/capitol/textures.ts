@@ -173,144 +173,299 @@ export interface FacadeStyle {
   wall: string;
   joint?: string; // brick mortar
   brick?: boolean;
+  ashlar?: boolean; // stone or panel joints
   frame: string;
   glass: [string, string]; // top and bottom of the window's gradient
   windows: { x: number; y: number; w: number; h: number }[]; // fractions of one bay × one storey
   sill?: string;
   band?: string; // a horizontal band at the floor line
+  lintel?: string; // a header over each window
+  blinds?: string; // the usual blind colour behind the glass
 }
 
-// One bay (3.2 m) by one storey (3.5 m) at 64 px per metre.
+// One bay (3.2 m) by one storey (3.5 m); each texture covers a block of
+// FACADE_BAYS × FACADE_STOREYS of them at 64 px per metre so the windows
+// differ (blinds, curtains, lights on) instead of repeating every bay.
 export const BAY = 3.2;
 export const STOREY = 3.5;
+export const FACADE_BAYS = 3;
+export const FACADE_STOREYS = 2;
 
 export const FACADES: FacadeStyle[] = [
-  // Red brick with two punched windows per bay.
-  { wall: "#8a4b3a", joint: "#b5a89a", brick: true, frame: "#e8e2d4", glass: ["#4c5a66", "#20262c"], sill: "#cfc6b4", windows: [{ x: 0.12, y: 0.22, w: 0.3, h: 0.52 }, { x: 0.58, y: 0.22, w: 0.3, h: 0.52 }] },
-  // Tan brick, one wide window.
+  // 0 Red brick with two punched windows per bay.
+  { wall: "#8a4b3a", joint: "#b5a89a", brick: true, frame: "#e8e2d4", glass: ["#4c5a66", "#20262c"], sill: "#cfc6b4", lintel: "#c9bfae", windows: [{ x: 0.12, y: 0.22, w: 0.3, h: 0.52 }, { x: 0.58, y: 0.22, w: 0.3, h: 0.52 }] },
+  // 1 Tan brick, one wide window.
   { wall: "#b59a74", joint: "#d8cdb9", brick: true, frame: "#3b3a37", glass: ["#5e6d78", "#232a31"], sill: "#d9d0bd", windows: [{ x: 0.15, y: 0.2, w: 0.7, h: 0.55 }] },
-  // Limestone with tall windows.
-  { wall: "#cfc5ad", frame: "#5b5248", glass: ["#53636e", "#1f252b"], band: "#bdb197", windows: [{ x: 0.22, y: 0.14, w: 0.56, h: 0.66 }] },
-  // Glass curtain wall.
-  { wall: "#59636b", frame: "#3d4247", glass: ["#7d93a3", "#2c3a46"], windows: [{ x: 0.02, y: 0.04, w: 0.46, h: 0.88 }, { x: 0.52, y: 0.04, w: 0.46, h: 0.88 }] },
-  // Dark brown brick.
+  // 2 Limestone with tall windows.
+  { wall: "#cfc5ad", ashlar: true, frame: "#5b5248", glass: ["#53636e", "#1f252b"], band: "#bdb197", windows: [{ x: 0.22, y: 0.14, w: 0.56, h: 0.66 }] },
+  // 3 Glass curtain wall.
+  { wall: "#59636b", frame: "#3d4247", glass: ["#7d93a3", "#2c3a46"], blinds: "#9aa0a3", windows: [{ x: 0.02, y: 0.04, w: 0.46, h: 0.88 }, { x: 0.52, y: 0.04, w: 0.46, h: 0.88 }] },
+  // 4 Dark brown brick.
   { wall: "#5c3b2e", joint: "#8f8578", brick: true, frame: "#d4cfc4", glass: ["#46535d", "#1c2126"], sill: "#a8a090", windows: [{ x: 0.18, y: 0.2, w: 0.64, h: 0.55 }] },
-  // White precast with ribbon windows.
-  { wall: "#dcdad3", frame: "#2e3135", glass: ["#61727e", "#26303a"], windows: [{ x: 0, y: 0.32, w: 1, h: 0.42 }] },
-  // Grey stone.
-  { wall: "#8f8d88", frame: "#2f2f2f", glass: ["#566670", "#1e2328"], band: "#7b7973", windows: [{ x: 0.2, y: 0.18, w: 0.25, h: 0.6 }, { x: 0.55, y: 0.18, w: 0.25, h: 0.6 }] },
-  // Cream terra cotta.
+  // 5 White precast with ribbon windows.
+  { wall: "#dcdad3", ashlar: true, frame: "#2e3135", glass: ["#61727e", "#26303a"], windows: [{ x: 0, y: 0.32, w: 1, h: 0.42 }] },
+  // 6 Grey stone.
+  { wall: "#8f8d88", ashlar: true, frame: "#2f2f2f", glass: ["#566670", "#1e2328"], band: "#7b7973", windows: [{ x: 0.2, y: 0.18, w: 0.25, h: 0.6 }, { x: 0.55, y: 0.18, w: 0.25, h: 0.6 }] },
+  // 7 Cream terra cotta.
   { wall: "#e2d3b2", frame: "#6b5a44", glass: ["#4f5f69", "#1d2329"], band: "#d0bf9b", sill: "#c9b892", windows: [{ x: 0.16, y: 0.2, w: 0.68, h: 0.56 }] },
+  // 8 Madison's Cream City brick, dark green trim.
+  { wall: "#d6c495", joint: "#ece3cc", brick: true, frame: "#2f3a33", glass: ["#526170", "#1e252b"], sill: "#bfae86", lintel: "#b8a67c", windows: [{ x: 0.14, y: 0.2, w: 0.3, h: 0.56 }, { x: 0.56, y: 0.2, w: 0.3, h: 0.56 }] },
+  // 9 Painted white brick, black frames.
+  { wall: "#d5d3cc", joint: "#bab7af", brick: true, frame: "#1f1f20", glass: ["#56656f", "#1d2227"], sill: "#bdbab2", windows: [{ x: 0.1, y: 0.2, w: 0.22, h: 0.58 }, { x: 0.39, y: 0.2, w: 0.22, h: 0.58 }, { x: 0.68, y: 0.2, w: 0.22, h: 0.58 }] },
+  // 10 Red sandstone, tall pairs.
+  { wall: "#8e5a44", ashlar: true, frame: "#ddd5c3", glass: ["#4e5c66", "#1e2429"], band: "#784a37", lintel: "#7a4b38", windows: [{ x: 0.16, y: 0.16, w: 0.28, h: 0.64 }, { x: 0.56, y: 0.16, w: 0.28, h: 0.64 }] },
+  // 11 Dark metal panels, a wide strip window.
+  { wall: "#3e4246", ashlar: true, frame: "#1c1e20", glass: ["#6f8696", "#26323c"], blinds: "#8c9194", windows: [{ x: 0.04, y: 0.26, w: 0.92, h: 0.5 }] },
+  // 12 Orange 1960s brick with ribbon windows.
+  { wall: "#9c5a34", joint: "#cbb9a0", brick: true, frame: "#c8c3b8", glass: ["#5a6a75", "#222a31"], band: "#c9c1b0", windows: [{ x: 0, y: 0.3, w: 1, h: 0.38 }] },
+  // 13 Beige stucco, white trim.
+  { wall: "#c9b593", frame: "#efebe1", glass: ["#57666f", "#1f252a"], sill: "#e4ddcc", windows: [{ x: 0.2, y: 0.22, w: 0.6, h: 0.52 }] },
 ];
 
 const PX = 64;
 
+// Blinds, curtain and light colours a window might show.
+const BLINDS = ["#e8e2d2", "#d9d2bf", "#cfc9bd", "#f0ece4", "#b8ad98"];
+const CURTAINS = ["#7a3b33", "#3d4e6b", "#a08a5c", "#4f5e45", "#d8cfbf", "#6a4b5e"];
+
 function drawFacade(style: FacadeStyle, seed: number) {
-  const w = Math.round(BAY * PX), h = Math.round(STOREY * PX);
+  const bw = BAY * PX, bh = STOREY * PX;
+  const w = Math.round(FACADE_BAYS * bw), h = Math.round(FACADE_STOREYS * bh);
   const [cc, cg] = canvas(w, h);
+  // Roughness in green, metalness in blue: one map serves both.
   const [rc, rg] = canvas(w, h);
-  const [mc, mg] = canvas(w, h);
+  const rand = mulberry32(seed);
   cg.fillStyle = style.wall;
   cg.fillRect(0, 0, w, h);
-  rg.fillStyle = "rgb(225,225,225)";
+  rg.fillStyle = "rgb(0,225,0)";
   rg.fillRect(0, 0, w, h);
-  mg.fillStyle = "#000";
-  mg.fillRect(0, 0, w, h);
   if (style.brick) {
-    // Running bond, ~ 0.2 m × 0.07 m bricks.
+    // Running bond, ~ 0.2 m × 0.07 m bricks, each one a little different.
+    const course = 4.5, brick = 13;
+    const rows = Math.ceil(h / course), cols = Math.ceil(w / brick) + 1;
+    for (let row = 0; row < rows; row++) {
+      for (let k = 0; k < cols; k++) {
+        const r = rand();
+        if (r > 0.45) continue;
+        const dark = r < 0.25;
+        cg.fillStyle = `rgba(${dark ? "20,10,5" : "255,240,220"},${0.03 + rand() * (dark ? 0.12 : 0.07)})`;
+        cg.fillRect(k * brick - (row % 2) * 6.5, row * course, brick - 1, course - 1);
+      }
+    }
     cg.fillStyle = style.joint!;
-    const course = 4.5;
+    cg.globalAlpha = 0.55;
     for (let y = 0, row = 0; y < h; y += course, row++) {
-      cg.globalAlpha = 0.55;
       cg.fillRect(0, y, w, 1);
-      for (let x = (row % 2) * 6.5; x < w; x += 13) cg.fillRect(x, y, 1, course);
-      cg.globalAlpha = 1;
+      for (let x = (row % 2) * 6.5; x < w; x += brick) cg.fillRect(x, y, 1, course);
     }
-    const rand = mulberry32(seed);
-    for (let n = 0; n < 220; n++) {
-      cg.fillStyle = `rgba(${rand() < 0.5 ? "0,0,0" : "255,240,220"},${0.04 + rand() * 0.06})`;
-      cg.fillRect(Math.floor(rand() * 16) * 13, Math.floor(rand() * 50) * course, 12, course - 1);
+    cg.globalAlpha = 1;
+  } else {
+    speckle(cg, w, h, seed, 1500 * FACADE_BAYS * FACADE_STOREYS, 0.3, 0.15);
+    // Broad blotches of weathering so the plain walls aren't flat.
+    for (let n = 0; n < 18; n++) {
+      const x = rand() * w, y = rand() * h, r = (0.6 + rand() * 1.6) * PX;
+      const grad = cg.createRadialGradient(x, y, 0, x, y, r);
+      const c = rand() < 0.6 ? "40,36,30" : "255,250,240";
+      grad.addColorStop(0, `rgba(${c},${0.05 + rand() * 0.06})`);
+      grad.addColorStop(1, `rgba(${c},0)`);
+      cg.fillStyle = grad;
+      cg.fillRect(x - r, y - r, 2 * r, 2 * r);
     }
-  } else speckle(cg, w, h, seed, 1500, 0.3, 0.15);
-  if (style.band) {
-    cg.fillStyle = style.band;
-    cg.fillRect(0, h - 10, w, 10);
   }
-  for (const win of style.windows) {
-    const x = win.x * w, y = win.y * h, ww = win.w * w, hh = win.h * h;
-    cg.fillStyle = style.frame;
-    cg.fillRect(x - 3, y - 3, ww + 6, hh + 6);
-    const grad = cg.createLinearGradient(0, y, 0, y + hh);
-    grad.addColorStop(0, style.glass[0]);
-    grad.addColorStop(1, style.glass[1]);
-    cg.fillStyle = grad;
+  if (style.ashlar) {
+    // Stone courses at 0.875 m (four to a storey), joints offset by half a block.
+    cg.fillStyle = "rgba(0,0,0,0.16)";
+    const cH = bh / 4, bW = bw / 2;
+    for (let j = 0; j < 4 * FACADE_STOREYS; j++) {
+      cg.fillRect(0, j * cH, w, 1.5);
+      for (let x = (j % 2) * bW * 0.5; x < w; x += bW) cg.fillRect(x, j * cH, 1.5, cH);
+    }
+  }
+  for (let s = 0; s < FACADE_STOREYS; s++) {
+    // Canvas y runs down, texture v up: storey 0 sits at the bottom.
+    const oy = h - (s + 1) * bh;
+    if (style.band) {
+      cg.fillStyle = style.band;
+      cg.fillRect(0, oy + bh - 10, w, 10);
+    }
+    for (let b = 0; b < FACADE_BAYS; b++) {
+      const ox = b * bw;
+      for (const win of style.windows) drawWindow(cg, rg, style, rand, ox + win.x * bw, oy + win.y * bh, win.w * bw, win.h * bh);
+    }
+  }
+  const map = texture(cc), rm = texture(rc, false);
+  return { map, roughnessMap: rm, metalnessMap: rm };
+}
+
+function drawWindow(cg: Ctx, rg: Ctx, style: FacadeStyle, rand: () => number, x: number, y: number, ww: number, hh: number) {
+  if (style.lintel) {
+    cg.fillStyle = style.lintel;
+    cg.fillRect(x - 6, y - 10, ww + 12, 7);
+  }
+  cg.fillStyle = style.frame;
+  cg.fillRect(x - 3, y - 3, ww + 6, hh + 6);
+  // Each pane catches the sky a little differently.
+  const grad = cg.createLinearGradient(0, y - hh * rand() * 0.4, 0, y + hh * (1 + rand() * 0.4));
+  grad.addColorStop(0, style.glass[0]);
+  grad.addColorStop(1, style.glass[1]);
+  cg.fillStyle = grad;
+  cg.fillRect(x, y, ww, hh);
+  rg.fillStyle = "rgb(0,18,150)";
+  rg.fillRect(x, y, ww, hh);
+  const r = rand();
+  if (r < 0.1) {
+    // Lights on: a warm interior behind the glass.
+    const lit = cg.createLinearGradient(0, y, 0, y + hh);
+    lit.addColorStop(0, "rgba(255,226,170,0.55)");
+    lit.addColorStop(1, "rgba(200,150,90,0.3)");
+    cg.fillStyle = lit;
     cg.fillRect(x, y, ww, hh);
-    // Mullions every ~1.1 m and a transom.
-    cg.fillStyle = style.frame;
-    const panes = Math.max(1, Math.round(ww / (1.1 * PX)));
-    for (let k = 1; k < panes; k++) cg.fillRect(x + (k * ww) / panes - 1.5, y, 3, hh);
-    if (hh > 1.6 * PX) cg.fillRect(x, y + hh * 0.28, ww, 3);
-    if (style.sill) {
-      cg.fillStyle = style.sill;
-      cg.fillRect(x - 5, y + hh + 3, ww + 10, 5);
-    }
-    rg.fillStyle = "rgb(18,18,18)";
-    rg.fillRect(x, y, ww, hh);
-    mg.fillStyle = "rgb(150,150,150)";
-    mg.fillRect(x, y, ww, hh);
+  } else if (r < 0.22) {
+    // Curtains drawn part way from each side.
+    cg.fillStyle = CURTAINS[Math.floor(rand() * CURTAINS.length)];
+    const cw = ww * (0.15 + rand() * 0.3);
+    cg.globalAlpha = 0.85;
+    cg.fillRect(x, y, cw, hh);
+    cg.fillRect(x + ww - cw, y, cw, hh);
+    cg.globalAlpha = 1;
+  } else if (r < 0.3) {
+    // Empty and dark.
+    cg.fillStyle = "rgba(5,7,9,0.45)";
+    cg.fillRect(x, y, ww, hh);
   }
-  return { map: texture(cc), roughnessMap: texture(rc, false), metalnessMap: texture(mc, false) };
+  // Blinds pulled down to all sorts of heights.
+  if (r >= 0.1 && rand() < 0.6) {
+    const drop = hh * (0.1 + rand() * 0.75);
+    cg.fillStyle = style.blinds ?? BLINDS[Math.floor(rand() * BLINDS.length)];
+    cg.globalAlpha = 0.75;
+    cg.fillRect(x, y, ww, drop);
+    cg.globalAlpha = 0.25;
+    cg.fillStyle = "#000";
+    for (let k = 3; k < drop; k += 4) cg.fillRect(x, y + k, ww, 1);
+    cg.globalAlpha = 1;
+    cg.fillRect(x, y + drop - 2, ww, 2);
+    // Glass is still in front, so only a little rougher.
+    rg.fillStyle = "rgb(0,60,110)";
+    rg.fillRect(x, y, ww, drop);
+  }
+  // Mullions every ~1.1 m and a transom.
+  cg.fillStyle = style.frame;
+  const panes = Math.max(1, Math.round(ww / (1.1 * PX)));
+  for (let k = 1; k < panes; k++) cg.fillRect(x + (k * ww) / panes - 1.5, y, 3, hh);
+  if (hh > 1.6 * PX) cg.fillRect(x, y + hh * 0.28, ww, 3);
+  rg.fillStyle = "rgb(0,225,0)";
+  for (let k = 1; k < panes; k++) rg.fillRect(x + (k * ww) / panes - 1.5, y, 3, hh);
+  if (style.sill) {
+    cg.fillStyle = style.sill;
+    cg.fillRect(x - 5, y + hh + 3, ww + 10, 5);
+    // Rain streaks running down from the sill.
+    for (let n = 0; n < 3; n++) {
+      const sx = x + rand() * ww, len = (0.3 + rand() * 1.1) * PX;
+      const streak = cg.createLinearGradient(0, y + hh + 8, 0, y + hh + 8 + len);
+      streak.addColorStop(0, "rgba(30,26,22,0.18)");
+      streak.addColorStop(1, "rgba(30,26,22,0)");
+      cg.fillStyle = streak;
+      cg.fillRect(sx, y + hh + 8, 3 + rand() * 6, len);
+    }
+  }
 }
 
 export function facadeTextures() {
   return FACADES.map((s, i) => drawFacade(s, 100 + i));
 }
 
-// Street-level shopfronts, one 6 m × 4.5 m unit: big glass, a sign band, a door.
+// Street-level shopfronts, one 6 m × 4.5 m unit: a sign band, big glass over
+// a bulkhead, a door. Each variant picks its own frame, sign, bulkhead and
+// window dressing, and some get a striped awning.
 export const SHOP_W = 6;
 export const SHOP_H = 4.5;
+const SHOP_FRAMES = ["#1b1b1b", "#3a3633", "#8c8a85", "#2d4a3a", "#5a3a26", "#e6e1d6", "#6e2a2a", "#23324a"];
+const SHOP_SIGNS = ["#1f3b57", "#5a1f24", "#20402e", "#2b2b2b", "#6b4a1f", "#d8cfb8", "#8a2f1f", "#3c2f52", "#b58a2e", "#0f5c5c"];
+const AWNINGS: [string, string][] = [["#7a1f1f", "#e8e0cc"], ["#1f4a2e", "#e8e0cc"], ["#23324a", "#d8d2c0"], ["#2b2b2b", "#2b2b2b"], ["#a0522d", "#f0e6cc"], ["#5a1f4a", "#5a1f4a"]];
 export function storefrontTextures(seed: number) {
   const w = SHOP_W * PX, h = SHOP_H * PX;
   const [cc, cg] = canvas(w, h);
   const [rc, rg] = canvas(w, h);
-  const [mc, mg] = canvas(w, h);
   const rand = mulberry32(seed);
-  const signs = ["#1f3b57", "#5a1f24", "#20402e", "#2b2b2b", "#6b4a1f"];
-  cg.fillStyle = "#3a3633";
+  const pick = <T,>(a: T[]) => a[Math.floor(rand() * a.length)];
+  const frame = pick(SHOP_FRAMES), sign = pick(SHOP_SIGNS);
+  cg.fillStyle = frame;
   cg.fillRect(0, 0, w, h);
-  rg.fillStyle = "rgb(200,200,200)";
+  speckle(cg, w, h, seed, 3000, 0.3, 0.12);
+  rg.fillStyle = "rgb(0,200,0)";
   rg.fillRect(0, 0, w, h);
-  mg.fillStyle = "#000";
-  mg.fillRect(0, 0, w, h);
-  const signTop = h * 0.08, signH = h * 0.14;
-  cg.fillStyle = signs[Math.floor(rand() * signs.length)];
+  const signTop = h * 0.06, signH = h * (0.12 + rand() * 0.06);
+  cg.fillStyle = sign;
   cg.fillRect(w * 0.04, signTop, w * 0.92, signH);
-  cg.fillStyle = "rgba(240,232,210,0.85)";
-  for (let k = 0; k < 7; k++) cg.fillRect(w * (0.2 + k * 0.085), signTop + signH * 0.35, w * 0.06, signH * 0.3);
-  const gx = w * 0.04, gy = signTop + signH + 10, gw = w * 0.92, gh = h - gy - 14;
+  // Lettering: a light or dark word or two, left, centred or right.
+  const light = !/^#[c-f]/i.test(sign);
+  cg.fillStyle = light ? "rgba(240,232,210,0.9)" : "rgba(30,28,26,0.85)";
+  const letters = 4 + Math.floor(rand() * 8), lw = w * 0.05, gap = w * 0.018;
+  const span = letters * (lw + gap), lx = w * (0.08 + rand() * (0.84 - span / w));
+  for (let k = 0; k < letters; k++) if (rand() > 0.12) cg.fillRect(lx + k * (lw + gap), signTop + signH * 0.3, lw, signH * 0.4);
+  const awning = rand() < 0.45 ? pick(AWNINGS) : null;
+  const gx = w * 0.04, gy = signTop + signH + 10, gw = w * 0.92;
+  // Bulkhead under the glass: panelled, tiled or brick.
+  const bulk = h * (0.1 + rand() * 0.08), gh = h - gy - bulk - 6;
+  const by = gy + gh + 3, kind = rand();
+  cg.fillStyle = kind < 0.33 ? frame : kind < 0.66 ? "#5e2f25" : "#2a2c2e";
+  cg.fillRect(gx, by, gw, bulk);
+  cg.fillStyle = cg.strokeStyle = "rgba(0,0,0,0.25)";
+  if (kind < 0.33) for (let k = 0; k < 6; k++) cg.strokeRect(gx + (k * gw) / 6 + 6, by + 6, gw / 6 - 12, bulk - 12);
+  else if (kind < 0.66) for (let y = by; y < by + bulk; y += 4.5) cg.fillRect(gx, y, gw, 1);
+  else for (let x = gx; x < gx + gw; x += 10) cg.fillRect(x, by, 1, bulk);
   const grad = cg.createLinearGradient(0, gy, 0, gy + gh);
-  grad.addColorStop(0, "#62717b");
+  const sky = rand() * 0.3;
+  grad.addColorStop(0, `rgb(${98 + sky * 80 | 0},${113 + sky * 70 | 0},${123 + sky * 60 | 0})`);
   grad.addColorStop(0.5, "#30383f");
   grad.addColorStop(1, "#1d2124");
   cg.fillStyle = grad;
   cg.fillRect(gx, gy, gw, gh);
-  // Hints of a lit interior.
-  for (let n = 0; n < 12; n++) {
-    cg.fillStyle = `rgba(${200 + rand() * 50 | 0},${170 + rand() * 50 | 0},${120 + rand() * 40 | 0},0.12)`;
-    cg.fillRect(gx + rand() * gw, gy + gh * 0.3 + rand() * gh * 0.6, 20 + rand() * 60, 10 + rand() * 40);
+  // A lit interior with shelves, racks or tables, in a warm or cool light.
+  const warmLight = rand() < 0.7;
+  const glow = cg.createLinearGradient(0, gy, 0, gy + gh);
+  glow.addColorStop(0, warmLight ? "rgba(255,220,160,0.2)" : "rgba(200,225,255,0.2)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  cg.fillStyle = glow;
+  cg.fillRect(gx, gy, gw, gh);
+  for (let n = 0; n < 14 + rand() * 14; n++) {
+    const hue = rand();
+    cg.fillStyle = `rgba(${150 + hue * 100 | 0},${110 + rand() * 100 | 0},${80 + (1 - hue) * 120 | 0},${0.1 + rand() * 0.15})`;
+    cg.fillRect(gx + rand() * gw, gy + gh * 0.35 + rand() * gh * 0.55, 12 + rand() * 50, 8 + rand() * 30);
   }
-  cg.fillStyle = "#1b1b1b";
-  for (const fx of [0.33, 0.66]) cg.fillRect(gx + gw * fx - 3, gy, 6, gh);
-  const door = rand() < 0.5 ? 0.04 : 0.7;
-  cg.fillStyle = "#26211d";
-  cg.fillRect(gx + gw * door, gy + gh * 0.05, gw * 0.22, gh * 0.95);
-  rg.fillStyle = "rgb(15,15,15)";
+  // Mullions.
+  cg.fillStyle = frame;
+  const panes = 2 + Math.floor(rand() * 3);
+  for (let k = 1; k < panes; k++) cg.fillRect(gx + (gw * k) / panes - 3, gy, 6, gh);
+  if (rand() < 0.5) cg.fillRect(gx, gy + gh * 0.22, gw, 5);
+  const door = rand() < 0.5 ? 0.04 : 0.74;
+  cg.fillStyle = frame;
+  cg.fillRect(gx + gw * door - 4, gy + gh * 0.02, gw * 0.22 + 8, gh + bulk);
+  cg.fillStyle = "#1a1d20";
+  cg.fillRect(gx + gw * door + 6, gy + gh * 0.08, gw * 0.22 - 12, gh + bulk - gh * 0.1);
+  rg.fillStyle = "rgb(0,15,140)";
   rg.fillRect(gx, gy, gw, gh);
-  mg.fillStyle = "rgb(140,140,140)";
-  mg.fillRect(gx, gy, gw, gh);
+  if (awning) {
+    // Seen flat on the wall: the awning's sloped face, then its valance.
+    const ay = gy - 4, ah = gh * 0.22, stripe = w / 24;
+    for (let k = 0; k < 24; k++) {
+      cg.fillStyle = awning[k % 2];
+      cg.fillRect(k * stripe, ay, stripe + 0.5, ah);
+    }
+    const shade = cg.createLinearGradient(0, ay, 0, ay + ah);
+    shade.addColorStop(0, "rgba(255,255,255,0.12)");
+    shade.addColorStop(1, "rgba(0,0,0,0.25)");
+    cg.fillStyle = shade;
+    cg.fillRect(0, ay, w, ah);
+    cg.fillStyle = "rgba(0,0,0,0.35)";
+    cg.fillRect(0, ay + ah, w, 8);
+    rg.fillStyle = "rgb(0,235,0)";
+    rg.fillRect(0, ay, w, ah);
+  }
   cg.fillStyle = "#9b958a";
-  cg.fillRect(0, h - 14, w, 14);
-  return { map: texture(cc), roughnessMap: texture(rc, false), metalnessMap: texture(mc, false) };
+  cg.fillRect(0, h - 6, w, 6);
+  const rm = texture(rc, false);
+  return { map: texture(cc), roughnessMap: rm, metalnessMap: rm };
 }
 
 // Concrete parking-ramp floors with open sides: 3 m deck to deck.
