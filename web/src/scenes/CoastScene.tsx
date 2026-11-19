@@ -32,7 +32,7 @@ import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import { polyHavenHdri, type HdriSky } from "./common/hdri";
-import { useSceneSky } from "./common/night";
+import { GroundGlows, NearestLights, useSceneSky } from "./common/night";
 import { InstancedModel, LodInstancedModel, polyHavenModel, useModelParts, type Level } from "./common/polyHaven";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
@@ -395,6 +395,69 @@ function RoadFurniture() {
   );
 }
 
+// Cobra-head street lights hung off every fourth utility pole (200 m apart,
+// which divides the lap), reaching out over the land-side shoulder.
+const LAMP_SPACING = POLE_SPACING * 4;
+const LAMP_U = 7;
+const LAMP_HEIGHT = 8.2;
+const SODIUM = "#ffb766";
+
+function StreetLights({ night }: { night: boolean }) {
+  const arms = useRef<InstancedMesh>(null);
+  const heads = useRef<InstancedMesh>(null);
+  const lenses = useRef<InstancedMesh>(null);
+  const spots = useMemo(() => spotsEvery(LAMP_SPACING), []);
+  const { lamps, pools, tilts } = useMemo(() => {
+    const roadAt = (s: number) => new Vector3(...track.offset(track.at(s), 4.5)).setY(track.at(s).y);
+    return {
+      lamps: spots.map((s) => new Vector3(...track.offset(track.at(s), LAMP_U)).setY(poleBase(s) + LAMP_HEIGHT - 0.3)),
+      // The pool of light lands mostly on the road, inboard of the lamp,
+      // tilted to the road's grade so it doesn't sink into a slope.
+      pools: spots.map(roadAt),
+      tilts: spots.map((s) => {
+        const t = roadAt(s + 4).sub(roadAt(s - 4)).normalize();
+        const n = UP.clone().addScaledVector(t, -t.dot(UP)).normalize();
+        return new Quaternion().setFromUnitVectors(UP, n);
+      }),
+    };
+  }, [spots]);
+  useLayoutEffect(() => {
+    const one = new Vector3(1, 1, 1);
+    spots.forEach((s, i) => {
+      const base = poleBase(s);
+      arms.current!.setMatrixAt(i, placeAlong(s, (POLE_U + LAMP_U) / 2, base + LAMP_HEIGHT + 0.25, one, 0, new Euler(0, 0, 0.08)));
+      heads.current!.setMatrixAt(i, placeAlong(s, LAMP_U + 0.15, base + LAMP_HEIGHT, one));
+      lenses.current!.setMatrixAt(i, placeAlong(s, LAMP_U + 0.1, base + LAMP_HEIGHT - 0.11, one));
+    });
+    for (const m of [arms.current!, heads.current!, lenses.current!]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
+  }, [spots]);
+  return (
+    <>
+      <instancedMesh ref={arms} args={[undefined, undefined, spots.length]} castShadow>
+        <boxGeometry args={[POLE_U - LAMP_U + 0.2, 0.08, 0.08]} />
+        <meshStandardMaterial color="#9a9fa3" metalness={0.6} roughness={0.45} />
+      </instancedMesh>
+      <instancedMesh ref={heads} args={[undefined, undefined, spots.length]} castShadow>
+        <boxGeometry args={[0.8, 0.18, 0.36]} />
+        <meshStandardMaterial color="#a7abae" metalness={0.5} roughness={0.5} />
+      </instancedMesh>
+      <instancedMesh ref={lenses} args={[undefined, undefined, spots.length]}>
+        <boxGeometry args={[0.6, 0.05, 0.28]} />
+        <meshStandardMaterial color="#d9d4c8" emissive={SODIUM} emissiveIntensity={night ? 9 : 0} roughness={0.2} />
+      </instancedMesh>
+      {night && (
+        <>
+          <GroundGlows spots={pools} tilts={tilts} radius={11} color={SODIUM} opacity={0.2} />
+          <NearestLights spots={lamps} count={2} kind="spot" color={SODIUM} intensity={140} distance={34} angle={1.05} />
+        </>
+      )}
+    </>
+  );
+}
+
 function Terrain() {
   const { cliff, hills } = useMemo(() => {
     const grass = new Color("#8f8a4c");
@@ -671,6 +734,7 @@ function CoastWorld({ lightsOn, domeOn, night = false }: SceneProps) {
       <World sky={sky} sunLight={sun}>
         <Road />
         <RoadFurniture />
+        <StreetLights night={night} />
         <Terrain />
         <Ocean sky={sky} night={night} />
         <Optional>

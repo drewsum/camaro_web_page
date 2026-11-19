@@ -11,6 +11,7 @@ import {
   Object3D,
   PlaneGeometry,
   PointLight,
+  Quaternion,
   SpotLight,
   Vector3,
   type ColorRepresentation,
@@ -35,11 +36,11 @@ export function useSceneSky(day: string, sunAzimuth: number | null, exposure: nu
       ...sky,
       sunIntensity: 0.22,
       sunColor: MOONLIGHT,
-      envIntensity: 0.22,
-      backgroundIntensity: 0.3,
+      envIntensity: 0.17,
+      backgroundIntensity: 0.14,
       // The haze far things fade into, dimmed to match the darker sky behind it.
-      horizon: sky.horizon.clone().multiplyScalar(0.3),
-      fog: sky.fog.clone().multiplyScalar(0.45),
+      horizon: sky.horizon.clone().multiplyScalar(0.15),
+      fog: sky.fog.clone().multiplyScalar(0.28),
     };
   }, [sky, night]);
 }
@@ -118,7 +119,20 @@ function glow() {
   return (glowTexture = new CanvasTexture(c));
 }
 
-export function GroundGlows({ spots, radius, color, opacity = 0.5 }: { spots: Vector3[]; radius: number; color: ColorRepresentation; opacity?: number }) {
+// `tilts`, when given, turn each disc to lie on sloping ground instead of flat.
+export function GroundGlows({
+  spots,
+  radius,
+  color,
+  opacity = 0.5,
+  tilts,
+}: {
+  spots: Vector3[];
+  radius: number;
+  color: ColorRepresentation;
+  opacity?: number;
+  tilts?: Quaternion[];
+}) {
   const mesh = useRef<InstancedMesh>(null);
   const { geometry, material } = useMemo(
     () => ({
@@ -141,11 +155,12 @@ export function GroundGlows({ spots, radius, color, opacity = 0.5 }: { spots: Ve
     const o = new Object3D();
     spots.forEach((p, i) => {
       o.position.copy(p).setY(p.y + 0.03);
+      if (tilts) o.quaternion.copy(tilts[i]);
       o.updateMatrix();
       m.setMatrixAt(i, o.matrix);
     });
     m.instanceMatrix.needsUpdate = true;
     m.computeBoundingSphere();
-  }, [spots]);
+  }, [spots, tilts]);
   return <instancedMesh ref={mesh} args={[geometry, material, spots.length]} renderOrder={1} />;
 }

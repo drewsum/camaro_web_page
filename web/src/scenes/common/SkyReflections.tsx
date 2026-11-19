@@ -23,12 +23,12 @@ export default function SkyReflections({
 }) {
   const turn = { environmentRotation: sky.rotation, backgroundRotation: sky.rotation };
   if (ground === undefined) {
-    return <Environment map={sky.texture} background={background} environmentIntensity={sky.envIntensity} {...turn} />;
+    return <Environment map={sky.texture} background={background} backgroundIntensity={sky.backgroundIntensity ?? 1} environmentIntensity={sky.envIntensity} {...turn} />;
   }
   return (
     <>
       {/* Both set the scene's environment props on every render, so they must agree. */}
-      {background && <Environment map={sky.texture} background="only" environmentIntensity={sky.envIntensity} {...turn} />}
+      {background && <Environment map={sky.texture} background="only" backgroundIntensity={sky.backgroundIntensity ?? 1} environmentIntensity={sky.envIntensity} {...turn} />}
       <EnvironmentPortal map={sky.texture} resolution={512} environmentIntensity={sky.envIntensity} {...turn}>
         <mesh rotation-x={-Math.PI / 2} position-y={groundY}>
           <circleGeometry args={[400, 64]} />
