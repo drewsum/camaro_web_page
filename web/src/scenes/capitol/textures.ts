@@ -376,11 +376,47 @@ export function graniteTextures(arched = true) {
     cg.fillStyle = grad;
     path(cg, 0);
     cg.fill();
+    // The opening is set ~0.3 m into the wall: shade the reveal along the
+    // top and the left jamb (the sun's side lit, the far side in shadow).
+    cg.save();
+    path(cg, 0);
+    cg.clip();
+    cg.fillStyle = "rgba(10,12,14,0.55)";
+    cg.fillRect(wx, wy, 10, wh);
+    cg.fillRect(wx, wy, ww, ww * 0.18);
+    cg.restore();
     cg.fillStyle = "#e8e4da";
     cg.fillRect(wx + ww / 2 - 2, wy + 6, 4, wh - 6);
     cg.fillRect(wx, wy + wh * 0.45, ww, 4);
-    cg.fillStyle = "#d9d3c5";
+    // Voussoir joints around the arch, and a projecting keystone.
+    cg.strokeStyle = "rgba(120,112,100,0.6)";
+    cg.lineWidth = 1.5;
+    for (let k = 1; k < 9; k++) {
+      const a = Math.PI + (k / 9) * Math.PI;
+      const cx = wx + ww / 2, cy = wy + ww / 2;
+      cg.beginPath();
+      cg.moveTo(cx + Math.cos(a) * (ww / 2 + 1), cy + Math.sin(a) * (ww / 2 + 1));
+      cg.lineTo(cx + Math.cos(a) * (ww / 2 + 16), cy + Math.sin(a) * (ww / 2 + 16));
+      cg.stroke();
+    }
+    cg.fillStyle = "#efebe2";
+    cg.beginPath();
+    cg.moveTo(wx + ww / 2 - 9, wy - 1);
+    cg.lineTo(wx + ww / 2 + 9, wy - 1);
+    cg.lineTo(wx + ww / 2 + 12, wy - 22);
+    cg.lineTo(wx + ww / 2 - 12, wy - 22);
+    cg.closePath();
+    cg.fill();
+    cg.fillStyle = "rgba(90,84,76,0.5)";
+    cg.fillRect(wx + ww / 2 + 9, wy - 22, 3, 21);
+    // Sill on two small brackets, with its shadow.
+    cg.fillStyle = "#ebe7dd";
     cg.fillRect(wx - 10, wy + wh + 2, ww + 20, 8);
+    cg.fillStyle = "rgba(60,56,50,0.35)";
+    cg.fillRect(wx - 8, wy + wh + 10, ww + 16, 4);
+    cg.fillStyle = "#ddd8cc";
+    cg.fillRect(wx + 4, wy + wh + 10, 8, 10);
+    cg.fillRect(wx + ww - 12, wy + wh + 10, 8, 10);
     rg.fillStyle = "rgb(20,20,20)";
     path(rg, 0);
     rg.fill();
@@ -391,8 +427,72 @@ export function graniteTextures(arched = true) {
   return { map: texture(cc), roughnessMap: texture(rc, false), metalnessMap: texture(mc, false) };
 }
 
+// The ground storey: channelled (rusticated) granite, one bay by one storey,
+// with a square-headed window under a flat arch of radiating voussoirs.
+export function rusticatedTextures() {
+  const w = Math.round(CAPITOL_BAY * PX), h = Math.round(CAPITOL_STOREY * PX);
+  const [cc, cg] = canvas(w, h);
+  const [rc, rg] = canvas(w, h);
+  const [mc, mg] = canvas(w, h);
+  cg.fillStyle = "#dcd7cb";
+  cg.fillRect(0, 0, w, h);
+  speckle(cg, w, h, 73, 9000, 0.24, 0.25);
+  // Deep horizontal channels every 0.6 m: a dark groove over a lit lip.
+  for (let y = 0; y < h; y += 0.6 * PX) {
+    cg.fillStyle = "rgba(70,64,56,0.6)";
+    cg.fillRect(0, y, w, 4);
+    cg.fillStyle = "rgba(255,253,246,0.4)";
+    cg.fillRect(0, y + 4, w, 2);
+  }
+  rg.fillStyle = "rgb(205,205,205)";
+  rg.fillRect(0, 0, w, h);
+  mg.fillStyle = "#000";
+  mg.fillRect(0, 0, w, h);
+  const ww = 1.6 * PX, wh = 2.5 * PX, wx = (w - ww) / 2, wy = h * 0.3;
+  // Flat arch: a fan of voussoirs over the opening.
+  const ax = w / 2, ay = wy + 2.2 * PX;
+  cg.fillStyle = "#e6e1d6";
+  cg.beginPath();
+  cg.moveTo(wx - 14, wy);
+  cg.lineTo(wx + ww + 14, wy);
+  cg.lineTo(wx + ww + 26, wy - 0.75 * PX);
+  cg.lineTo(wx - 26, wy - 0.75 * PX);
+  cg.closePath();
+  cg.fill();
+  cg.strokeStyle = "rgba(90,84,76,0.6)";
+  cg.lineWidth = 1.5;
+  for (let k = -4; k <= 4; k++) {
+    const x = wx + ww / 2 + (k * (ww + 28)) / 9;
+    const t = (wy - 0.75 * PX - ay) / (wy - ay);
+    cg.beginPath();
+    cg.moveTo(x, wy);
+    cg.lineTo(ax + (x - ax) * t, wy - 0.75 * PX);
+    cg.stroke();
+  }
+  const grad = cg.createLinearGradient(0, wy, 0, wy + wh);
+  grad.addColorStop(0, "#4b5861");
+  grad.addColorStop(1, "#1d2226");
+  cg.fillStyle = grad;
+  cg.fillRect(wx, wy, ww, wh);
+  cg.fillStyle = "rgba(10,12,14,0.55)";
+  cg.fillRect(wx, wy, 10, wh);
+  cg.fillRect(wx, wy, ww, 10);
+  cg.fillStyle = "#e3dfd5";
+  cg.fillRect(wx + ww / 2 - 2, wy, 4, wh);
+  cg.fillRect(wx, wy + wh * 0.4, ww, 4);
+  cg.fillStyle = "#ebe7dd";
+  cg.fillRect(wx - 8, wy + wh, ww + 16, 8);
+  rg.fillStyle = "rgb(20,20,20)";
+  rg.fillRect(wx, wy, ww, wh);
+  mg.fillStyle = "rgb(140,140,140)";
+  mg.fillRect(wx, wy, ww, wh);
+  return { map: texture(cc), roughnessMap: texture(rc, false), metalnessMap: texture(mc, false) };
+}
+
 // The dome's skin, wrapped once around (u) and from base to crown (v):
-// granite with 16 raised ribs and rows of coffered panels.
+// coursed granite, each of the 16 bays between the (modelled) ribs a little
+// shaded toward its edges so it reads as a sunk panel.
+export const DOME_RIBS = 16;
 export function domeTexture() {
   const [c, g] = canvas(1024, 512);
   g.fillStyle = "#e6e2d8";
@@ -400,12 +500,16 @@ export function domeTexture() {
   speckle(g, 1024, 512, 81, 12000, 0.2, 0.25);
   g.fillStyle = "rgba(120,112,100,0.28)";
   for (let y = 0; y < 512; y += 24) g.fillRect(0, y, 1024, 1.5);
-  for (let k = 0; k < 16; k++) {
-    const x = (k / 16) * 1024;
-    g.fillStyle = "rgba(255,255,255,0.55)";
-    g.fillRect(x - 5, 0, 7, 512);
-    g.fillStyle = "rgba(90,84,76,0.45)";
-    g.fillRect(x + 2, 0, 3, 512);
+  const bay = 1024 / DOME_RIBS;
+  for (let k = 0; k < DOME_RIBS; k++) {
+    const x = k * bay;
+    const grad = g.createLinearGradient(x, 0, x + bay, 0);
+    grad.addColorStop(0, "rgba(80,74,66,0.22)");
+    grad.addColorStop(0.15, "rgba(80,74,66,0)");
+    grad.addColorStop(0.85, "rgba(80,74,66,0)");
+    grad.addColorStop(1, "rgba(80,74,66,0.22)");
+    g.fillStyle = grad;
+    g.fillRect(x, 0, bay, 512);
   }
   return texture(c);
 }
