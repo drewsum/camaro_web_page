@@ -35,6 +35,7 @@ import { InstancedModel, polyHavenModel, useModelParts } from "./common/polyHave
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
+import { preloadPbr, usePbrMaterial } from "./common/pbr";
 import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 
 // A cruise down a winding two-lane California coast road: cliffs dropping to
@@ -61,7 +62,7 @@ const S1 = L + 1700;
 // shoulder [6, 8.5], then hills; cliff from -4.5 down to the sea.
 const ROAD_LEFT = -2;
 const ROAD_WIDTH = 8;
-const ROAD_TILE = 8;
+const ROAD_TILE = 20; // metres of road one overlay tile covers; must divide the lap (and be a multiple of the 4 m asphalt scan)
 
 const TAU = Math.PI * 2;
 const UP = new Vector3(0, 1, 0);
@@ -166,29 +167,116 @@ function noiseTexture(seed: number, base: string, spread: number) {
   return t;
 }
 
-// 32 px per metre: asphalt grain, white edge lines, double yellow centre.
-function roadTexture() {
+// The pavement itself is scanned asphalt and gravel (Poly Haven, CC0); the
+// markings and wear are drawn on a transparent overlay above it, so they
+// stay sharp regardless of the scan's tiling.
+const ASPHALT = "asphalt_04";
+const GRAVEL = "gravel_floor_02";
+preloadPbr(ASPHALT);
+preloadPbr(GRAVEL, "1k");
+
+// One road tile (ROAD_WIDTH x ROAD_TILE m) of overlay at 64 px per metre:
+// worn white edge lines, the double yellow, darker polished wheel paths with
+// an oil-drip stripe down each lane, and tar-snake crack sealing.
+function roadOverlayTexture() {
+  const PX = 64;
+  const W = ROAD_WIDTH * PX;
+  const H = ROAD_TILE * PX;
   const c = document.createElement("canvas");
-  c.width = c.height = 256;
+  c.width = W;
+  c.height = H;
   const g = c.getContext("2d")!;
-  g.fillStyle = "#3b3c3e";
-  g.fillRect(0, 0, 256, 256);
+  const px = (u: number) => (u - ROAD_LEFT) * PX;
   const rand = mulberry32(7);
-  for (let n = 0; n < 9000; n++) {
-    const v = 40 + Math.floor(rand() * 45);
-    g.fillStyle = `rgb(${v},${v},${v + 2})`;
-    g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 2, 1 + rand() * 2);
+
+  // Lanes are centred at u = 0 (ours) and u = 4.
+  for (const lane of [0, 4]) {
+    for (const wheel of [-0.78, 0.78]) {
+      const x0 = lane + wheel;
+      const grad = g.createLinearGradient(px(x0 - 0.45), 0, px(x0 + 0.45), 0);
+      grad.addColorStop(0, "rgba(10,10,10,0)");
+      grad.addColorStop(0.5, "rgba(10,10,10,0.16)");
+      grad.addColorStop(1, "rgba(10,10,10,0)");
+      g.fillStyle = grad;
+      g.fillRect(px(x0 - 0.45), 0, 0.9 * PX, H);
+      for (let n = 0; n < 20; n++) {
+        g.fillStyle = `rgba(8,8,8,${0.03 + rand() * 0.06})`;
+        g.fillRect(px(x0 + (rand() - 0.5) * 0.7), 0, 1 + rand() * 3, H);
+      }
+    }
+    const drip = g.createLinearGradient(px(lane - 0.35), 0, px(lane + 0.35), 0);
+    drip.addColorStop(0, "rgba(14,12,10,0)");
+    drip.addColorStop(0.5, "rgba(14,12,10,0.2)");
+    drip.addColorStop(1, "rgba(14,12,10,0)");
+    g.fillStyle = drip;
+    g.fillRect(px(lane - 0.35), 0, 0.7 * PX, H);
+    for (let n = 0; n < 60; n++) {
+      g.fillStyle = `rgba(12,10,8,${0.04 + rand() * 0.08})`;
+      g.beginPath();
+      g.ellipse(px(lane + (rand() - 0.5) * 0.4), rand() * H, 1.5 + rand() * 3, 4 + rand() * 14, 0, 0, Math.PI * 2);
+      g.fill();
+    }
   }
-  g.fillStyle = "#e9e7df";
-  g.fillRect(8, 0, 4, 256);
-  g.fillRect(256 - 12, 0, 4, 256);
-  g.fillStyle = "#e3b02a";
-  g.fillRect(122, 0, 3, 256);
-  g.fillRect(131, 0, 3, 256);
+
+  // Tar snakes: wandering black crack sealant, mostly along the lanes with a
+  // few transverse cracks. Drawn three times (shifted a tile up and down) so
+  // they wrap seamlessly.
+  const snakes: [number, number][][] = [];
+  // Short steps with a wandering heading, so they read as sealed cracks
+  // rather than strokes.
+  const walk = (u: number, v: number, du: number, dv: number, steps: number) => {
+    const pts: [number, number][] = [[u, v]];
+    let a = Math.atan2(dv, du);
+    for (let i = 0; i < steps; i++) {
+      a += (rand() - 0.5) * 0.9;
+      a += (Math.atan2(dv, du) - a) * 0.35; // pulled back toward the crack's direction
+      u += Math.cos(a) * 0.12;
+      v += Math.sin(a) * 0.12;
+      pts.push([u, v]);
+    }
+    snakes.push(pts);
+  };
+  for (const u of [2.2, 1.8, -1.6, 5.6]) walk(u + (rand() - 0.5) * 0.15, rand() * ROAD_TILE, 0, 1, 25 + Math.floor(rand() * 50));
+  for (let n = 0; n < 5; n++) {
+    const dir = rand() < 0.5 ? 1 : -1;
+    walk(dir > 0 ? -1.9 + rand() * 4 : 5.9 - rand() * 4, rand() * ROAD_TILE, dir, (rand() - 0.5) * 0.3, 6 + Math.floor(rand() * 16));
+  }
+  g.lineCap = g.lineJoin = "round";
+  for (const pts of snakes) {
+    const width = 0.02 + rand() * 0.03;
+    for (const shift of [-ROAD_TILE, 0, ROAD_TILE]) {
+      g.strokeStyle = "rgba(12,12,13,0.82)";
+      g.lineWidth = width * PX;
+      g.beginPath();
+      pts.forEach(([u, v], i) => (i ? g.lineTo : g.moveTo).call(g, px(u), (v + shift) * PX));
+      g.stroke();
+    }
+  }
+
+  // Paint, then wear: chips and bare patches where tyres cross it.
+  const line = (u: number, width: number, color: string) => {
+    g.fillStyle = color;
+    g.fillRect(px(u - width / 2), 0, width * PX, H);
+    // Fine speckled wear: knock back small spots partway, so the asphalt
+    // grain shows through the paint.
+    g.globalCompositeOperation = "destination-out";
+    for (let n = 0; n < 700; n++) {
+      g.fillStyle = `rgba(0,0,0,${0.2 + rand() * 0.5})`;
+      g.beginPath();
+      g.arc(px(u - width / 2) + rand() * width * PX, rand() * H, 0.4 + rand() * 1.1, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalCompositeOperation = "source-over";
+  };
+  line(ROAD_LEFT + 0.2, 0.1, "rgba(238,236,228,0.9)");
+  line(ROAD_LEFT + ROAD_WIDTH - 0.2, 0.1, "rgba(238,236,228,0.9)");
+  line(1.9, 0.1, "rgba(226,172,38,0.92)");
+  line(2.1, 0.1, "rgba(226,172,38,0.92)");
+
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = t.wrapT = RepeatWrapping;
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   return t;
 }
 
@@ -210,16 +298,17 @@ function Road() {
       rail: ribbon({ ds: 2, us: [-4.2, -4.2], y: (_s, p, _u, j) => p.y + (j ? 0.45 : 0.8) }),
     };
   }, []);
-  const asphalt = useMemo(roadTexture, []);
-  const gravel = useMemo(() => noiseTexture(5, "#6f685d", 0.45), []);
+  // Road UVs span ROAD_WIDTH x ROAD_TILE m; shoulder UVs are metres / 3.
+  const asphalt = usePbrMaterial(ASPHALT, { tile: 4, size: [ROAD_WIDTH, ROAD_TILE], normalScale: 0.8, brightness: 0.8 });
+  const gravel = usePbrMaterial(GRAVEL, { res: "1k", tile: 2, size: [3, 3], tint: "#d8cdbb" });
+  const overlay = useMemo(roadOverlayTexture, []);
   return (
     <>
+      <mesh geometry={road} receiveShadow material={asphalt} />
       <mesh geometry={road} receiveShadow>
-        <meshStandardMaterial map={asphalt} roughness={0.85} />
+        <meshStandardMaterial map={overlay} transparent depthWrite={false} roughness={0.75} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-2} />
       </mesh>
-      <mesh geometry={shoulders} receiveShadow>
-        <meshStandardMaterial map={gravel} roughness={1} />
-      </mesh>
+      <mesh geometry={shoulders} receiveShadow material={gravel} />
       <mesh geometry={rail} castShadow>
         <meshStandardMaterial color="#b9bec2" metalness={0.7} roughness={0.35} side={DoubleSide} />
       </mesh>
