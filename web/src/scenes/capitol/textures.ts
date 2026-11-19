@@ -232,9 +232,11 @@ function drawFacade(style: FacadeStyle, seed: number) {
   const bw = BAY * PX, bh = STOREY * PX;
   const w = Math.round(FACADE_BAYS * bw), h = Math.round(FACADE_STOREYS * bh);
   const [cc, cg] = canvas(w, h);
-  // Roughness in green, metalness in blue: one map serves both.
+  // Roughness in green, metalness in blue: one map serves both. Red is the
+  // glow of the rooms lit after dark (see Buildings' night emission).
   const [rc, rg] = canvas(w, h);
   const rand = mulberry32(seed);
+  const glow = mulberry32(seed + 500); // its own stream, so the daytime look is unchanged
   cg.fillStyle = style.wall;
   cg.fillRect(0, 0, w, h);
   rg.fillStyle = "rgb(0,225,0)";
@@ -290,14 +292,14 @@ function drawFacade(style: FacadeStyle, seed: number) {
     }
     for (let b = 0; b < FACADE_BAYS; b++) {
       const ox = b * bw;
-      for (const win of style.windows) drawWindow(cg, rg, style, rand, ox + win.x * bw, oy + win.y * bh, win.w * bw, win.h * bh);
+      for (const win of style.windows) drawWindow(cg, rg, style, rand, glow, ox + win.x * bw, oy + win.y * bh, win.w * bw, win.h * bh);
     }
   }
   const map = texture(cc), rm = texture(rc, false);
   return { map, roughnessMap: rm, metalnessMap: rm };
 }
 
-function drawWindow(cg: Ctx, rg: Ctx, style: FacadeStyle, rand: () => number, x: number, y: number, ww: number, hh: number) {
+function drawWindow(cg: Ctx, rg: Ctx, style: FacadeStyle, rand: () => number, glow: () => number, x: number, y: number, ww: number, hh: number) {
   if (style.lintel) {
     cg.fillStyle = style.lintel;
     cg.fillRect(x - 6, y - 10, ww + 12, 7);
@@ -367,6 +369,14 @@ function drawWindow(cg: Ctx, rg: Ctx, style: FacadeStyle, rand: () => number, x:
       cg.fillStyle = streak;
       cg.fillRect(sx, y + hh + 8, 3 + rand() * 6, len);
     }
+  }
+  // After dark about a third of the rooms are lit, some brighter than others
+  // (the ones lit by day always).
+  if (r < 0.1 || glow() < 0.3) {
+    rg.globalCompositeOperation = "lighter";
+    rg.fillStyle = `rgb(${80 + Math.floor(glow() * 150)},0,0)`;
+    rg.fillRect(x, y, ww, hh);
+    rg.globalCompositeOperation = "source-over";
   }
 }
 
@@ -445,6 +455,13 @@ export function storefrontTextures(seed: number) {
   cg.fillRect(gx + gw * door + 6, gy + gh * 0.08, gw * 0.22 - 12, gh + bulk - gh * 0.1);
   rg.fillStyle = "rgb(0,15,140)";
   rg.fillRect(gx, gy, gw, gh);
+  // Shops stay lit after dark: the window and the sign (red = night glow).
+  rg.globalCompositeOperation = "lighter";
+  rg.fillStyle = "rgb(115,0,0)";
+  rg.fillRect(gx, gy, gw, gh);
+  rg.fillStyle = "rgb(90,0,0)";
+  rg.fillRect(w * 0.04, signTop, w * 0.92, signH);
+  rg.globalCompositeOperation = "source-over";
   if (awning) {
     // Seen flat on the wall: the awning's sloped face, then its valance.
     const ay = gy - 4, ah = gh * 0.22, stripe = w / 24;

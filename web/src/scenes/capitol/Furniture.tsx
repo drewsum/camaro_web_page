@@ -16,6 +16,7 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useDrive } from "../../car/driveClock";
 import { groundY } from "./data";
+import { GroundGlows, NearestLights } from "../common/night";
 import { RED_WAIT, RING, ringCentre, ringTrack, type Intersection } from "./ringTrack";
 
 // Traffic signals at the Square's eight junctions and its ornamental street
@@ -206,8 +207,13 @@ function lampSpots() {
   return out;
 }
 
-function Lamps() {
+const GLOBE_Y = 4.82;
+const LAMPLIGHT = "#ffc583";
+
+function Lamps({ night }: { night: boolean }) {
   const spots = useMemo(lampSpots, []);
+  const bases = useMemo(() => spots.map((m) => new Vector3().setFromMatrixPosition(m)), [spots]);
+  const globes = useMemo(() => bases.map((p) => p.clone().setY(p.y + GLOBE_Y)), [bases]);
   const { post, globe } = useMemo(() => {
     const post = mergeGeometries(
       [
@@ -217,7 +223,7 @@ function Lamps() {
         new CylinderGeometry(0.02, 0.26, 0.3, 10).translate(0, 5.25, 0),
       ].map((g) => g.toNonIndexed()),
     );
-    const globe = new SphereGeometry(0.24, 16, 12).scale(1, 1.25, 1).translate(0, 4.82, 0);
+    const globe = new SphereGeometry(0.24, 16, 12).scale(1, 1.25, 1).translate(0, GLOBE_Y, 0);
     return { post, globe };
   }, []);
   const a = useRef<InstancedMesh>(null);
@@ -235,17 +241,23 @@ function Lamps() {
         <meshStandardMaterial color="#1c1d1c" roughness={0.5} metalness={0.5} />
       </instancedMesh>
       <instancedMesh ref={b} args={[globe, undefined, spots.length]}>
-        <meshStandardMaterial color="#f2efe6" roughness={0.25} transparent opacity={0.9} />
+        <meshStandardMaterial color="#f2efe6" roughness={0.25} transparent opacity={0.9} emissive={LAMPLIGHT} emissiveIntensity={night ? 7 : 0} />
       </instancedMesh>
+      {night && (
+        <>
+          <GroundGlows spots={bases} radius={7.5} color={LAMPLIGHT} opacity={0.42} />
+          <NearestLights spots={globes} count={4} color={LAMPLIGHT} intensity={40} distance={26} />
+        </>
+      )}
     </>
   );
 }
 
-export default function Furniture() {
+export default function Furniture({ night = false }: { night?: boolean }) {
   return (
     <>
       <Signals />
-      <Lamps />
+      <Lamps night={night} />
     </>
   );
 }

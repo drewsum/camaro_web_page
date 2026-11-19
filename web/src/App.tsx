@@ -55,8 +55,10 @@ export default function App() {
   const [sceneId, setSceneId] = useState(savedSceneId);
   const [lightsOn, setLightsOn] = useState(false);
   const [domeOn, setDomeOn] = useState(false);
+  const [nightOn, setNightOn] = useState(false);
   const [dpr, setDpr] = useState(MAX_DPR);
   const scene = SCENES.find((s) => s.id === sceneId) ?? SCENES[0];
+  const night = !!scene.nightOption && nightOn;
   const lights = scene.night || lightsOn;
   const page = useHashPage();
 
@@ -93,7 +95,7 @@ export default function App() {
             onFallback={() => setDpr(1)}
           />
           <Suspense fallback={null}>
-            <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} />
+            <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} night={night} />
           </Suspense>
         </Canvas>
       </div>
@@ -141,6 +143,20 @@ export default function App() {
           />
           Lights
         </label>
+        {scene.nightOption && (
+          <label>
+            <input
+              type="checkbox"
+              checked={nightOn}
+              onChange={(e) => {
+                // Dark out: headlights on (and back off with the daylight).
+                setNightOn(e.target.checked);
+                setLightsOn(e.target.checked);
+              }}
+            />
+            Night
+          </label>
+        )}
         <label>
           <input type="checkbox" checked={domeOn} onChange={(e) => setDomeOn(e.target.checked)} />
           Dome light

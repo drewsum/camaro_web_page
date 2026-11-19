@@ -8,7 +8,8 @@ import { DriveProvider, driveState, useDrive } from "../car/driveClock";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
-import { polyHavenHdri, useHdriSky, type HdriSky } from "./common/hdri";
+import { polyHavenHdri, type HdriSky } from "./common/hdri";
+import { useSceneSky } from "./common/night";
 import SkyReflections from "./common/SkyReflections";
 import { ringTrack as track } from "./capitol/ringTrack";
 import Ground from "./capitol/Ground";
@@ -51,8 +52,8 @@ function City({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<D
   );
 }
 
-function Square({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(SKY, SUN_AZIMUTH, EXPOSURE);
+function Square({ lightsOn, domeOn, night = false }: SceneProps) {
+  const sky = useSceneSky(SKY, SUN_AZIMUTH, EXPOSURE, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track} roughness={0.7}>
@@ -74,10 +75,10 @@ function Square({ lightsOn, domeOn }: SceneProps) {
       />
       <City sky={sky} sunLight={sun}>
         <Ground />
-        <Buildings />
-        <Capitol />
+        <Buildings night={night} />
+        <Capitol night={night} />
         <Trees />
-        <Furniture />
+        <Furniture night={night} />
       </City>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
       <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />

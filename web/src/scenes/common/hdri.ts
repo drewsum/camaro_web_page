@@ -20,6 +20,7 @@ export interface HdriSky {
   envIntensity: number; // for the environment the clipped sky lights the car with
   horizon: Color; // linear HDR colour just above the horizon (for custom shaders' haze)
   fog: Color; // the same colour as it appears on screen, for three's built-in fog
+  backgroundIntensity?: number; // how bright the sky is drawn behind the scene (default 1)
 }
 
 // three applies built-in fog after tone mapping, so its colour has to be the

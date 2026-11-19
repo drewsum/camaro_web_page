@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { BufferAttribute, BufferGeometry, MeshStandardMaterial, ShapeUtils, Vector2, type Material } from "three";
+import { useEffect, useMemo } from "react";
+import { BufferAttribute, BufferGeometry, Color, MeshStandardMaterial, ShapeUtils, Vector2, type Material } from "three";
 import { groundY, hash, MAP, signedArea, type Building, type Pt } from "./data";
 import { BAY, FACADE_BAYS, FACADE_STOREYS, facadeTextures, FACADES, garageTextures, roofTexture, SHOP_H, SHOP_W, storefrontTextures, STOREY } from "./textures";
 
@@ -124,18 +124,37 @@ export function buildingGeometries() {
   return { facade: facade.map((b) => b.geometry()), shops: shops.map((b) => b.geometry()), garage: garage.geometry(), roofs: roofs.geometry() };
 }
 
-export default function Buildings() {
+// Lit rooms and shop windows after dark: the facade's roughness/metalness map
+// carries their glow in its red channel, so it doubles as the emissive map.
+function glowsAtNight(m: MeshStandardMaterial, color: string) {
+  m.emissive = new Color(color);
+  m.emissiveMap = m.roughnessMap;
+  m.emissiveIntensity = 0;
+  m.onBeforeCompile = (s) => {
+    s.fragmentShader = s.fragmentShader.replace(
+      "#include <emissivemap_fragment>",
+      "#ifdef USE_EMISSIVEMAP\n\ttotalEmissiveRadiance *= texture2D( emissiveMap, vEmissiveMapUv ).r;\n#endif",
+    );
+  };
+  m.customProgramCacheKey = () => "glow-in-red";
+  return m;
+}
+
+export default function Buildings({ night = false }: { night?: boolean }) {
   const parts = useMemo(() => {
     const g = buildingGeometries();
     const list: { geo: BufferGeometry; mat: Material }[] = [];
-    facadeTextures().forEach((t, i) => list.push({ geo: g.facade[i], mat: new MeshStandardMaterial({ ...t, roughness: 1, metalness: 1, envMapIntensity: 1, vertexColors: true }) }));
+    facadeTextures().forEach((t, i) => list.push({ geo: g.facade[i], mat: glowsAtNight(new MeshStandardMaterial({ ...t, roughness: 1, metalness: 1, envMapIntensity: 1, vertexColors: true }), "#ffcf8f") }));
     for (let i = 0; i < SHOP_VARIANTS; i++) {
-      list.push({ geo: g.shops[i], mat: new MeshStandardMaterial({ ...storefrontTextures(200 + i), roughness: 1, metalness: 1 }) });
+      list.push({ geo: g.shops[i], mat: glowsAtNight(new MeshStandardMaterial({ ...storefrontTextures(200 + i), roughness: 1, metalness: 1 }), "#ffe2b8") });
     }
     list.push({ geo: g.garage, mat: new MeshStandardMaterial({ ...garageTextures(), roughness: 0.9 }) });
     list.push({ geo: g.roofs, mat: new MeshStandardMaterial({ map: roofTexture(), roughness: 0.95 }) });
     return list;
   }, []);
+  useEffect(() => {
+    for (const { mat } of parts) if ((mat as MeshStandardMaterial).emissiveMap) (mat as MeshStandardMaterial).emissiveIntensity = night ? 0.5 : 0;
+  }, [parts, night]);
   return (
     <>
       {parts.map(({ geo, mat }, i) => (

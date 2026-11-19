@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   BoxGeometry,
+  Color,
+  Group,
   BufferAttribute,
   BufferGeometry,
   CircleGeometry,
@@ -19,6 +21,7 @@ import {
   Shape,
   ShapeGeometry,
   SphereGeometry,
+  SpotLight,
   TorusGeometry,
   Vector2,
   Vector3,
@@ -402,7 +405,37 @@ function lucarnes(a: number, b: number, th: number) {
   return { glass: merge(glass), frames: merge(frames) };
 }
 
-export default function Capitol() {
+// Floodlit after dark, as the real one is: four lamps on the lawns between
+// the wings throw warm light up the drum and dome, and every stone surface
+// gets a faint glow of its own colour so the far sides don't go black.
+const FLOODLIGHT = new Color("#ffd9ad");
+const FLOODLIT = 0.06;
+
+function Floodlights() {
+  const lights = useMemo(() => {
+    const { cx, cz, ground: g } = bounds();
+    return [0.25, 0.75, 1.25, 1.75].map((k) => {
+      const a = k * Math.PI;
+      const l = new SpotLight(FLOODLIGHT, 9000, 0, 0.42, 0.7, 2);
+      l.position.set(cx + Math.cos(a) * 62, g + 1, cz + Math.sin(a) * 62);
+      l.target.position.set(cx, g + 44, cz);
+      return l;
+    });
+  }, []);
+  return (
+    <>
+      {lights.map((l, i) => (
+        <group key={i}>
+          <primitive object={l} />
+          <primitive object={l.target} />
+        </group>
+      ))}
+    </>
+  );
+}
+
+export default function Capitol({ night = false }: { night?: boolean }) {
+  const group = useRef<Group>(null);
   const scan = usePbrTextures(TOOLING, "1k");
   const { parts, objects } = useMemo(() => {
     const { cx, cz, ground: g } = bounds();
@@ -595,15 +628,31 @@ export default function Capitol() {
     objects.push(tiledInstances(baluster(), plain, bal.balusters, 40, { castShadow: false, hideBeyond: 220 }));
     return { parts: list, objects };
   }, [scan]);
+  useEffect(() => {
+    const seen = new Set<MeshStandardMaterial>();
+    group.current?.traverse((o) => {
+      const m = (o as Mesh).material;
+      if (!(m instanceof MeshStandardMaterial) || seen.has(m)) return;
+      seen.add(m);
+      if (!m.userData.floodlit) {
+        m.userData.floodlit = true;
+        m.emissive = m.map ? FLOODLIGHT.clone() : m.color.clone().multiply(FLOODLIGHT);
+        m.emissiveMap = m.map;
+        m.needsUpdate = true;
+      }
+      m.emissiveIntensity = night ? FLOODLIT : 0;
+    });
+  }, [parts, objects, night]);
   return (
-    <>
+    <group ref={group}>
       {parts.map(({ geo, mat, cast }, i) => (
         <mesh key={i} geometry={geo} material={mat} castShadow={cast ?? true} receiveShadow={mat !== SHADOW_ONLY} />
       ))}
       {objects.map((o, i) => (
         <primitive key={`o${i}`} object={o} />
       ))}
-    </>
+      {night && <Floodlights />}
+    </group>
   );
 }
 

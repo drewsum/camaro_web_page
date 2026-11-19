@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
@@ -6,13 +6,11 @@ import {
   BackSide,
   BoxGeometry,
   CanvasTexture,
-  Color,
-  Matrix4,
   MeshStandardMaterial,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector3,
   type Group,
-  type InstancedMesh,
   type MeshBasicMaterial,
 } from "three";
 import CamaroModel from "../components/CamaroModel";
@@ -22,7 +20,10 @@ import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import Countryside, { type CountrysideProps } from "./common/Countryside";
 import GrassField from "./common/GrassField";
-import { polyHavenHdri, useHdriSky } from "./common/hdri";
+import { GroundGlows, NearestLights, useSceneSky } from "./common/night";
+import Spectators, { type Seat } from "./drag/Spectators";
+import RaceControl from "./drag/RaceControl";
+import { polyHavenHdri } from "./common/hdri";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
@@ -291,36 +292,18 @@ function Scoreboard({ x, runner }: { x: number; runner: Runner }) {
 
 // Aluminium bleachers along the starting line with a crowd on them.
 function Grandstand() {
-  const crowd = useRef<InstancedMesh>(null);
-  const heads = useRef<InstancedMesh>(null);
   const ROWS = 7;
   const LENGTH = 70;
   const X = WALL_X[0] - 6;
-  const count = ROWS * 90;
-  useLayoutEffect(() => {
+  const seats = useMemo(() => {
     const rand = mulberry32(1320);
-    const shirts = ["#8c3a32", "#3a5670", "#d8d4c8", "#3b3b3b", "#a88f4a", "#4d6a3e", "#5e4a6e", "#9a6a44", "#6f7378"].map((c) => new Color(c));
-    const skin = ["#e2b89a", "#c9946f", "#8d5e3f", "#f0c8a8", "#b07a55"].map((c) => new Color(c));
-    const m = new Matrix4();
-    let n = 0;
-    for (let r = 0; r < ROWS; r++) {
+    const out: Seat[] = [];
+    for (let r = 0; r < ROWS; r++)
       for (let i = 0; i < 90; i++) {
         if (rand() < 0.35) continue;
-        const z = -15 + (i / 90) * LENGTH + rand() * 0.3;
-        m.makeTranslation(X - r * 0.8 - 0.3, 0.45 * (r + 1) + 0.45, z);
-        crowd.current!.setMatrixAt(n, m);
-        crowd.current!.setColorAt(n, shirts[Math.floor(rand() * shirts.length)]);
-        heads.current!.setMatrixAt(n, m.clone().multiply(new Matrix4().makeTranslation(0, 0.58, 0)));
-        heads.current!.setColorAt(n, skin[Math.floor(rand() * skin.length)]);
-        n++;
+        out.push({ x: X - r * 0.8, y: 0.45 * (r + 1), z: -15 + (i / 90) * LENGTH + rand() * 0.3 });
       }
-    }
-    for (const mesh of [crowd.current!, heads.current!]) {
-      mesh.count = n;
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      mesh.computeBoundingSphere();
-    }
+    return out;
   }, [X]);
   return (
     <group>
@@ -330,42 +313,51 @@ function Grandstand() {
           <meshStandardMaterial color="#b8bcc0" metalness={0.6} roughness={0.4} />
         </mesh>
       ))}
-      <instancedMesh ref={crowd} args={[undefined, undefined, count]} castShadow>
-        <capsuleGeometry args={[0.19, 0.4, 4, 8]} />
-        <meshStandardMaterial roughness={0.9} />
-      </instancedMesh>
-      <instancedMesh ref={heads} args={[undefined, undefined, count]}>
-        <sphereGeometry args={[0.11, 10, 8]} />
-        <meshStandardMaterial roughness={0.8} />
-      </instancedMesh>
+      <Spectators seats={seats} />
     </group>
   );
 }
+// Floodlight poles down both sides; after dark their lamps light the lanes.
+const POLE_H = 12;
+const FLOODLAMP = "#eef2ff";
 
-function LightPoles() {
+function LightPoles({ night }: { night: boolean }) {
   const spots = useMemo(() => {
     const out: [number, number][] = [];
-    for (let z = -40; z < STRIP_TO; z += 70) for (const x of [WALL_X[0] - 2.5, WALL_X[1] + 2.5]) out.push([x, z]);
+    for (let z = -40; z < STRIP_TO; z += 35) for (const x of [WALL_X[0] - 2.5, WALL_X[1] + 2.5]) out.push([x, z]);
     return out;
   }, []);
+  // The lamp heads lean out over the track; their light falls on the lanes.
+  const heads = useMemo(() => spots.map(([x, z]) => new Vector3(x + (x < 0 ? 1.2 : -1.2), POLE_H - 0.2, z)), [spots]);
+  const pools = useMemo(() => heads.map((p) => new Vector3(p.x + (p.x < 0 ? 3 : -3), 0.01, p.z)), [heads]);
+  const lens = useMemo(() => new MeshStandardMaterial({ color: "#d8dce4", emissive: FLOODLAMP, roughness: 0.3 }), []);
+  lens.emissiveIntensity = night ? 9 : 0;
   return (
     <>
       {spots.map(([x, z]) => (
         <group key={`${x}${z}`} position={[x, 0, z]}>
-          <mesh position-y={6} castShadow>
-            <cylinderGeometry args={[0.12, 0.16, 12, 8]} />
+          <mesh position-y={POLE_H / 2} castShadow>
+            <cylinderGeometry args={[0.12, 0.16, POLE_H, 8]} />
             <meshStandardMaterial color="#8a8d90" metalness={0.6} roughness={0.4} />
           </mesh>
-          <mesh position={[x < 0 ? 0.6 : -0.6, 12, 0]}>
+          <mesh position={[x < 0 ? 0.6 : -0.6, POLE_H, 0]}>
             <boxGeometry args={[1.4, 0.3, 0.6]} />
             <meshStandardMaterial color="#3a3c3e" />
           </mesh>
+          <mesh position={[x < 0 ? 1.2 : -1.2, POLE_H - 0.16, 0]} rotation-x={Math.PI / 2} material={lens}>
+            <planeGeometry args={[0.5, 0.45]} />
+          </mesh>
         </group>
       ))}
+      {night && (
+        <>
+          <GroundGlows spots={pools} radius={16} color={FLOODLAMP} opacity={0.16} />
+          <NearestLights spots={heads} count={4} kind="spot" color={FLOODLAMP} intensity={260} distance={70} angle={1.05} />
+        </>
+      )}
     </>
   );
 }
-
 // ---- Motion -----------------------------------------------------------------
 
 // Slides the strip past the Camaro, moves the Mustang along its lane and
@@ -402,8 +394,8 @@ function Pass({ children, lightsOn }: { children: ReactNode; lightsOn: boolean }
   );
 }
 
-function Strip({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(SKY, 1.1, EXPOSURE);
+function Strip({ lightsOn, domeOn, night = false }: SceneProps) {
+  const sky = useSceneSky(SKY, 1.1, EXPOSURE, night);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <DriveProvider profile={race.heroProfile} roughness={0.6}>
@@ -434,7 +426,8 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
         <Scoreboard x={WALL_X[0] - 3} runner={CAMARO} />
         <Scoreboard x={WALL_X[1] + 3} runner={MUSTANG} />
         <Grandstand />
-        <LightPoles />
+        <LightPoles night={night} />
+        <RaceControl position={[WALL_X[1] + 6.5, 0, START_Z + 10]} night={night} />
         <Countryside config={COUNTRYSIDE} />
       </Pass>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />

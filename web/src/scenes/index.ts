@@ -5,6 +5,7 @@ import { CREDITS, type Credit } from "./credits";
 export interface SceneProps {
   lightsOn: boolean;
   domeOn: boolean;
+  night?: boolean; // after dark: a moonlit sky and the street lights on
 }
 
 export interface SceneDef {
@@ -12,19 +13,21 @@ export interface SceneDef {
   label: string;
   Component: ComponentType<SceneProps>;
   night: boolean; // night scenes always run with the car's lights on
+  nightOption?: boolean; // offers a Night tickbox (see SceneProps.night)
   credits?: Credit[]; // third-party assets the scene loads
 }
 
 // Environments offered in the scene dropdown. The first one is the default.
 export const SCENES: SceneDef[] = [
   { id: "showroom", label: "Showroom", Component: ShowroomScene, night: false },
-  { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, credits: [CREDITS.polyHaven] },
-  { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, credits: [CREDITS.mach1, CREDITS.polyHaven] },
+  { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
+  { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, nightOption: true, credits: [CREDITS.mach1, CREDITS.polyHaven] },
   {
     id: "capitol",
     label: "Capitol Square",
     Component: lazy(() => import("./CapitolScene")),
     night: false,
+    nightOption: true,
     credits: [CREDITS.osm, CREDITS.elevation, CREDITS.polyHaven],
   },
   {

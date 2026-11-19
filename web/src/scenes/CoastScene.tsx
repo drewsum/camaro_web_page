@@ -31,7 +31,8 @@ import type { TrackPoint } from "../car/track";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
-import { useHdriSky, polyHavenHdri, type HdriSky } from "./common/hdri";
+import { polyHavenHdri, type HdriSky } from "./common/hdri";
+import { useSceneSky } from "./common/night";
 import { InstancedModel, LodInstancedModel, polyHavenModel, useModelParts, type Level } from "./common/polyHaven";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
@@ -549,6 +550,8 @@ const oceanFragment = /* glsl */ `
   uniform vec2 uLapOffset;
   uniform vec3 uSun;
   uniform vec3 uHaze;
+  uniform vec3 uDeep;
+  uniform vec3 uGlint;
   uniform float uFogNear;
   uniform float uFogFar;
   uniform vec3 uWaves[${WAVES.length}];
@@ -568,17 +571,20 @@ const oceanFragment = /* glsl */ `
     vec3 nrm = normalize(vec3(-grad.x * detail * 0.3, 1.0, -grad.y * detail * 0.3));
     vec3 view = normalize(cameraPosition - vWorld);
     float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(nrm, view), 0.0), 5.0);
-    vec3 deep = vec3(0.012, 0.07, 0.11);
-    vec3 col = mix(deep, uHaze * 0.9, fresnel);
+    vec3 col = mix(uDeep, uHaze * 0.9, fresnel);
     float glint = pow(max(dot(reflect(-view, nrm), uSun), 0.0), 500.0);
-    col += vec3(1.0, 0.92, 0.8) * glint * 12.0;
+    col += uGlint * glint;
     gl_FragColor = vec4(mix(col, uHaze, smoothstep(uFogNear, uFogFar, dist)), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
 
-function Ocean({ sky }: { sky: HdriSky }) {
+// Deep water and the sun's (or moon's) glint off the swell, by day and night.
+const DEEP = { day: new Vector3(0.012, 0.07, 0.11), night: new Vector3(0.0015, 0.006, 0.012) };
+const GLINT = { day: new Vector3(12, 11, 9.6), night: new Vector3(1.6, 1.8, 2.4) };
+
+function Ocean({ sky, night }: { sky: HdriSky; night: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   // Flat, so where the inside of a bend folds the strip over itself the
   // overlapping water is identical and the fold can't be seen.
@@ -592,11 +598,13 @@ function Ocean({ sky }: { sky: HdriSky }) {
       uLapOffset: { value: [0, 0] },
       uSun: { value: new Vector3() },
       uHaze: { value: sky.horizon },
+      uDeep: { value: night ? DEEP.night : DEEP.day },
+      uGlint: { value: night ? GLINT.night : GLINT.day },
       uFogNear: { value: FOG_NEAR },
       uFogFar: { value: FOG_FAR },
       uWaves: { value: WAVES.map(([x, z, a]) => new Vector3(x, z, a)) },
     }),
-    [sky],
+    [sky, night],
   );
   // R3F copies each uniform into the material, so update the material's own.
   useFrame(({ clock }) => {
@@ -640,8 +648,8 @@ function World({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<
   );
 }
 
-function CoastWorld({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(SKY, -0.5, EXPOSURE);
+function CoastWorld({ lightsOn, domeOn, night = false }: SceneProps) {
+  const sky = useSceneSky(SKY, -0.5, EXPOSURE, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track}>
@@ -664,7 +672,7 @@ function CoastWorld({ lightsOn, domeOn }: SceneProps) {
         <Road />
         <RoadFurniture />
         <Terrain />
-        <Ocean sky={sky} />
+        <Ocean sky={sky} night={night} />
         <Optional>
           <Vegetation />
         </Optional>
