@@ -6,6 +6,7 @@ import {
   CircleGeometry,
   Matrix4,
   PointLight,
+  SpotLight,
   Vector3,
   type Material,
   type MeshStandardMaterial,
@@ -15,12 +16,20 @@ import type { CarRig } from "./carRig";
 
 // Real light for the car's lamps so they glow on the ground around it, not
 // just on the lenses. Headlights already have beams (CamaroModel); the other
-// lamps share one point light per cluster and side to keep the light count
-// low: front amber (park/turn + front marker), rear red (tail/brake/turn +
-// rear marker) and reverse.
+// lamps share one light per cluster and side to keep the light count low:
+// front amber (park/turn + front marker), rear red (tail/brake/turn + rear
+// marker) and reverse.
+//
+// The lights don't cast shadows, so a bare point light at the bulb would also
+// light the lamp next door through the housing wall (red tail light showing
+// in the reverse lens). Each glow is a wide spotlight aimed out of the lens,
+// so neighbouring lamps, which sit off to the side, fall outside its cone.
 
 // Candela of ground glow per unit of lamp emissive intensity.
 const GLOW_PER_EMISSIVE = 1.1;
+// Half-angle of the glow cone, and how far below level it's aimed (rad).
+const GLOW_CONE = 1.0;
+const GLOW_TILT = 0.3;
 
 const CLUSTER: Record<string, string> = {
   park_turn: "front",
@@ -31,7 +40,7 @@ const CLUSTER: Record<string, string> = {
 };
 
 export interface LampGlow {
-  light: PointLight;
+  light: SpotLight;
   lamps: MeshStandardMaterial[];
 }
 
@@ -54,7 +63,7 @@ function materialBounds(mesh: Mesh, material: Material, space: Object3D, box: Bo
 
 // Builds (or, since the GLTF scene is cached, finds) the glow lights on the body.
 export function makeLampGlows(rig: CarRig, scene: Object3D): LampGlow[] {
-  const existing = rig.body.children.filter((c): c is PointLight => c instanceof PointLight && c.name.startsWith("LampGlow_"));
+  const isGlow = (name: string) => (o: Object3D): o is SpotLight => o instanceof SpotLight && o.name === name;
   scene.updateMatrixWorld(true);
 
   const clusters = new Map<string, { lamps: MeshStandardMaterial[]; box: Box3; color: Color }>();
@@ -75,22 +84,25 @@ export function makeLampGlows(rig: CarRig, scene: Object3D): LampGlow[] {
     if (c.box.isEmpty()) return [];
     const name = `LampGlow_${key}`;
     const anchor = rig.anchors[`Glow_${key}`];
-    let light = (anchor ?? rig.body).children.find((l): l is PointLight => l instanceof PointLight && l.name === name);
-    light ??= existing.find((l) => l.name === name);
+    let light = (anchor ?? rig.body).children.find(isGlow(name));
     if (!light) {
-      light = new PointLight(c.color, 0, 4.5, 2);
+      light = new SpotLight(c.color, 0, 4.5, GLOW_CONE, 0.7, 2);
       light.name = name;
+      const centre = c.box.getCenter(new Vector3());
       if (anchor) {
         // The model marks the bulb, just behind the lens, so the light shines
         // out through the lens and the body panels around it stay dark.
         anchor.add(light);
       } else {
-        // Fallback: just outside the lens, pushed away from the body's centre.
-        const centre = c.box.getCenter(new Vector3());
-        const out = new Vector3(centre.x, 0, centre.z).normalize().multiplyScalar(0.25);
-        light.position.copy(centre).add(out);
+        // Fallback: just outside the lens.
+        light.position.copy(centre).add(new Vector3(0, 0, Math.sign(centre.z) * 0.05));
         rig.body.add(light);
       }
+      // Aim straight out of the car's nose or tail, tipped down to the road.
+      const pos = rig.body.worldToLocal(light.getWorldPosition(new Vector3()));
+      light.target.position.copy(pos).add(new Vector3(0, -Math.sin(GLOW_TILT), Math.sign(centre.z) * Math.cos(GLOW_TILT)));
+      light.target.name = `${name}_target`;
+      rig.body.add(light.target);
     }
     return [{ light, lamps: c.lamps }];
   });
