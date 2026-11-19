@@ -32,7 +32,7 @@ import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import { useHdriSky, polyHavenHdri, type HdriSky } from "./common/hdri";
-import { InstancedModel, polyHavenModel, useModelParts } from "./common/polyHaven";
+import { InstancedModel, LodInstancedModel, polyHavenModel, useModelParts, type Level } from "./common/polyHaven";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
@@ -434,40 +434,28 @@ function Terrain() {
 
 // ---- Vegetation and rocks (Poly Haven, CC0) -------------------------------
 
-// Instances are grouped by stretch of road so the ones out of view can be
-// hidden; the models are detailed, so drawing a whole lap's worth is costly.
-const CHUNK = 200;
-
 interface Spot {
   s: number;
   matrix: Matrix4;
 }
 
-function ChunkedModel({ url, spots }: { url: string; spots: (modelSize: number) => Spot[] }) {
+// The scanned shrubs and boulders are 2k-27k triangles each and there are
+// thousands of them, most far off in the haze. Each is drawn in full near
+// the camera and from simplified copies further out, and not at all out of
+// view or past where the fog has swallowed it.
+const SCENERY_LEVELS: Level[] = [
+  { ratio: 1, upTo: 90 },
+  { ratio: 0.3, upTo: 300 },
+  { ratio: 0.12, upTo: FOG_FAR * 0.6 },
+];
+
+function ScatteredModel({ url, spots }: { url: string; spots: (modelSize: number) => Spot[] }) {
   const { parts, bounds } = useModelParts(url);
-  const chunks = useMemo(() => {
-    const out: Matrix4[][] = [];
+  const matrices = useMemo(() => {
     const size = bounds.getSize(new Vector3());
-    for (const { s, matrix } of spots(Math.max(size.x, size.y, size.z))) (out[Math.floor((s - S0) / CHUNK)] ??= []).push(matrix);
-    return out;
+    return spots(Math.max(size.x, size.y, size.z)).map((p) => p.matrix);
   }, [spots, bounds]);
-  const groups = useRef<(Group | null)[]>([]);
-  useFrame(() => {
-    groups.current.forEach((g, c) => {
-      if (!g) return;
-      const start = S0 + c * CHUNK;
-      g.visible = start + CHUNK > here.s - 250 && start < here.s + FOG_FAR * 0.6;
-    });
-  });
-  return (
-    <>
-      {Array.from(chunks, (matrices, c) => (
-        <group key={c} ref={(g) => void (groups.current[c] = g)}>
-          {matrices && <InstancedModel parts={parts} matrices={matrices} />}
-        </group>
-      ))}
-    </>
-  );
+  return <LodInstancedModel parts={parts} bounds={bounds} matrices={matrices} levels={SCENERY_LEVELS} />;
 }
 
 // Scrub on the hills, densest near the road. Spots come from a 5 m grid keyed
@@ -519,10 +507,10 @@ function Vegetation() {
   return (
     <>
       {SHRUBS.map((url, i) => (
-        <ChunkedModel key={`shrub${i}`} url={url} spots={shrubs[i]} />
+        <ScatteredModel key={`shrub${i}`} url={url} spots={shrubs[i]} />
       ))}
       {ROCKS.map((url, i) => (
-        <ChunkedModel key={`rock${i}`} url={url} spots={rocks[i]} />
+        <ScatteredModel key={`rock${i}`} url={url} spots={rocks[i]} />
       ))}
     </>
   );

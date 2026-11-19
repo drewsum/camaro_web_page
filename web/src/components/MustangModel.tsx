@@ -5,7 +5,7 @@ import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig"
 import { useDrivingPose } from "../car/useDrivingPose";
 import { MUSTANG_CHASSIS } from "../car/suspension";
 import type { DriveProfile } from "../car/driveClock";
-import { DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
+import { castsVisibleShadow, DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
 import { markCar } from "../car/layers";
 
 // Ddiaz Design's '69 Mach 1 428 Cobra Jet (CC BY-NC-SA 4.0), rigged like the
@@ -24,7 +24,7 @@ export default function MustangModel({ lightsOn = false, profile }: Props) {
   const rig = useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
-      obj.castShadow = true;
+      obj.castShadow = castsVisibleShadow(obj);
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
       materials.forEach(dropTransmission);

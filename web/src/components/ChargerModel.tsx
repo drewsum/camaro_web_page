@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Mesh } from "three";
-import { DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
+import { castsVisibleShadow, DRACO_URL, dropTransmission, fixTexturedBlending } from "./CamaroModel";
 import { markCar } from "../car/layers";
 
 // Ddiaz Design's '69 Dodge Charger R/T (CC BY-NC-SA 4.0), prepared by
@@ -14,7 +14,7 @@ export default function ChargerModel() {
   useMemo(() => {
     scene.traverse((obj) => {
       if (!(obj instanceof Mesh)) return;
-      obj.castShadow = true;
+      obj.castShadow = castsVisibleShadow(obj);
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
       materials.forEach(dropTransmission);

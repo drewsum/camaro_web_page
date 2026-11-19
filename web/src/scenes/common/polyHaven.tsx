@@ -1,6 +1,22 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { use, useLayoutEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { Box3, LoadingManager, Mesh, type BufferGeometry, type InstancedMesh, type Loader, type Material, type Matrix4 } from "three";
+import {
+  Box3,
+  BufferAttribute,
+  BufferGeometry,
+  Frustum,
+  Group,
+  InstancedMesh,
+  LoadingManager,
+  Matrix4,
+  Mesh,
+  Sphere,
+  Vector3,
+  type Loader,
+  type Material,
+} from "three";
+import { MeshoptSimplifier } from "three/examples/jsm/libs/meshopt_simplifier.module.js";
 
 // CC0 models from Poly Haven, fetched from their CDN at runtime (1k textures).
 
@@ -42,6 +58,101 @@ export function useModelParts(url: string) {
     }
     return { parts, bounds };
   }, [scene]);
+}
+
+// ---- Levels of detail -------------------------------------------------------
+
+// A part's geometry with its triangles cut to about `ratio` of the original,
+// sharing the original's vertex data. meshoptimizer's "sloppy" simplifier
+// ignores topology, which suits scanned foliage and rock seen from afar: it
+// keeps the overall mass and silhouette rather than every leaf.
+function simplified(geometry: BufferGeometry, ratio: number) {
+  if (ratio >= 1 || !geometry.index) return geometry;
+  const pos = geometry.attributes.position;
+  const positions = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) positions.set([pos.getX(i), pos.getY(i), pos.getZ(i)], i * 3);
+  const indices = new Uint32Array(geometry.index.array);
+  const target = Math.max(3, Math.floor((indices.length * ratio) / 3) * 3);
+  const [out] = MeshoptSimplifier.simplifySloppy(indices, positions, 3, null, target, 0.02);
+  const g = new BufferGeometry();
+  for (const [name, attr] of Object.entries(geometry.attributes)) g.setAttribute(name, attr);
+  g.setIndex(new BufferAttribute(out, 1));
+  return g;
+}
+
+export interface Level {
+  ratio: number; // share of the model's triangles drawn at this level
+  upTo: number; // used out to this distance from the camera, in metres
+}
+
+const frustum = new Frustum();
+const projView = new Matrix4();
+const worldMatrix = new Matrix4();
+const centre = new Vector3();
+
+// Every part of a model once per matrix, like InstancedModel, but each
+// instance is drawn at the level of detail its distance from the camera
+// calls for, and not at all when out of view or beyond the last level. The
+// choice is made per instance every frame (a few thousand distance checks),
+// so there's one draw call per part per level however many instances there
+// are, and nothing out of view is drawn.
+export function LodInstancedModel({ parts, bounds, matrices, levels }: { parts: ModelPart[]; bounds: Box3; matrices: Matrix4[]; levels: Level[] }) {
+  use(MeshoptSimplifier.ready);
+  const group = useRef<Group>(null);
+  const built = useMemo(() => {
+    const radius = bounds.getBoundingSphere(new Sphere()).radius;
+    const local = bounds.getCenter(new Vector3());
+    const instances = matrices.map((m) => ({
+      matrix: m.elements,
+      centre: local.clone().applyMatrix4(m),
+      radius: radius * m.getMaxScaleOnAxis(),
+    }));
+    const meshes = levels.map((level) =>
+      parts.map((p) => {
+        const mesh = new InstancedMesh(simplified(p.geometry, level.ratio), p.material, matrices.length);
+        mesh.frustumCulled = false; // culled per instance below
+        mesh.count = 0;
+        return mesh;
+      }),
+    );
+    return { instances, meshes };
+  }, [parts, bounds, matrices, levels]);
+
+  useFrame(({ camera }) => {
+    const g = group.current;
+    if (!g) return;
+    worldMatrix.copy(g.matrixWorld);
+    frustum.setFromProjectionMatrix(projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    const scale = worldMatrix.getMaxScaleOnAxis();
+    const counts = levels.map(() => 0);
+    const sphere = new Sphere();
+    for (const inst of built.instances) {
+      centre.copy(inst.centre).applyMatrix4(worldMatrix);
+      sphere.set(centre, inst.radius * scale);
+      if (!frustum.intersectsSphere(sphere)) continue;
+      const d = Math.max(0, centre.distanceTo(camera.position) - sphere.radius);
+      const k = levels.findIndex((l) => d <= l.upTo);
+      if (k < 0) continue;
+      const slot = counts[k]++;
+      for (const mesh of built.meshes[k]) mesh.instanceMatrix.array.set(inst.matrix, slot * 16);
+    }
+    built.meshes.forEach((row, k) => {
+      for (const mesh of row) {
+        mesh.count = counts[k];
+        mesh.instanceMatrix.clearUpdateRanges();
+        mesh.instanceMatrix.addUpdateRange(0, counts[k] * 16);
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    });
+  });
+
+  return (
+    <group ref={group}>
+      {built.meshes.flat().map((m, i) => (
+        <primitive key={i} object={m} />
+      ))}
+    </group>
+  );
 }
 
 // Draws every part of a model once per matrix.

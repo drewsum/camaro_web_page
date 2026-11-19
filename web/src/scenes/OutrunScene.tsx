@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
@@ -289,6 +289,7 @@ function makeSanitizePass() {
 export default function OutrunScene({ domeOn }: SceneProps) {
   useCameraStart(-4, 1.8, -8);
   const sanitize = useMemo(makeSanitizePass, []);
+  const dpr = useThree((s) => s.viewport.dpr);
   return (
     <DriveProvider speed={SPEED}>
       <fog attach="fog" args={[HORIZON, FOG_NEAR, FOG_FAR]} />
@@ -309,7 +310,10 @@ export default function OutrunScene({ domeOn }: SceneProps) {
       <CamaroModel lightsOn domeOn={domeOn} />
       <CarContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
-      <EffectComposer multisampling={4}>
+      {/* Multisampling resolves into a half-float buffer, costly on phones;
+          on a dense display the pixels are small enough that 2x smooths the
+          neon edges as well as 4x does. */}
+      <EffectComposer multisampling={dpr >= 1.75 ? 2 : 4}>
         <primitive object={sanitize} />
         <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.9} />
         <ToneMapping />

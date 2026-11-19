@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
+import { markCar } from "../../car/layers";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   Box3,
@@ -129,6 +130,9 @@ export default function Onlooker({ model, position, faceToward, pointAt, recolor
     const rest = new Map<Object3D, Quaternion>(Object.values(b).map((o) => [o, o.quaternion.clone()]));
     const beer = new Mesh(can, canMaterial);
     beer.castShadow = true;
+    // People get the soft contact shadow under them too.
+    markCar(body);
+    markCar(beer);
     const scale = height / size.y;
     // Stand on the ground, centred over the feet.
     const base = at("Foot.L").add(at("Foot.R")).multiplyScalar(0.5);

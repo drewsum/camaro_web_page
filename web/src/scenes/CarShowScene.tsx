@@ -1,8 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
+import CarContactShadows from "../components/CarContactShadows";
+import { markCar } from "../car/layers";
 import { GroundedSkybox } from "three/examples/jsm/objects/GroundedSkybox.js";
-import { Vector3 } from "three";
+import { Vector3, type Group } from "three";
 import CamaroModel from "../components/CamaroModel";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
@@ -37,8 +39,11 @@ function Canopy({ position, rotationY }: { position: [number, number]; rotationY
     [-1, 1],
     [1, 1],
   ];
+  // The canopy, table and chairs get the soft contact shadow too.
+  const group = useRef<Group>(null);
+  useLayoutEffect(() => void (group.current && markCar(group.current)), []);
   return (
-    <group position={[position[0], 0, position[1]]} rotation-y={rotationY}>
+    <group ref={group} position={[position[0], 0, position[1]]} rotation-y={rotationY}>
       {legs.map(([x, z]) => (
         <mesh key={`${x}${z}`} position={[(x * size) / 2, 1.1, (z * size) / 2]} castShadow>
           <cylinderGeometry args={[0.025, 0.025, 2.2, 8]} />
@@ -202,7 +207,7 @@ function Show({ lightsOn, domeOn }: SceneProps) {
         />
       </Optional>
 
-      <ContactShadows position={[2, 0.006, 0]} opacity={0.5} scale={30} resolution={1024} blur={2} far={2} />
+      <CarContactShadows position={[2, 0.006, 0]} opacity={0.5} scale={30} resolution={1024} blur={2} far={2} />
     </>
   );
 }

@@ -37,11 +37,12 @@ export function dropTransmission(material: Material) {
 }
 
 // Badges, emblems, lamp internals and the wheel-arch lips are dense (about a
-// third of the car's triangles) but tiny or skin-tight: at the sun shadow
-// map's ~3 cm texels their shadows vanish inside the body's, so drawing them
-// into it every frame buys nothing.
-function castsVisibleShadow(mesh: Mesh) {
-  if (mesh.name.startsWith("WheelArch_trim")) return false;
+// third of the Camaro's triangles) but tiny or skin-tight, and the engines
+// sit under closed hoods: at the sun shadow map's ~3 cm texels their shadows
+// vanish inside the body's, so drawing them into it every frame buys
+// nothing. Used for every car model.
+export function castsVisibleShadow(mesh: Mesh) {
+  if (/WheelArch_trim|engine/i.test(mesh.name)) return false;
   mesh.geometry.computeBoundingBox();
   const size = mesh.geometry.boundingBox!.getSize(new Vector3()).multiply(mesh.getWorldScale(new Vector3()));
   return Math.max(size.x, size.y, size.z) >= 0.3;

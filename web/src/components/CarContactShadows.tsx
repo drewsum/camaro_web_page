@@ -68,11 +68,16 @@ export default function CarContactShadows({ position, scale = 10, opacity = 1, b
     group.current.visible = false;
     scene.background = null;
     scene.overrideMaterial = parts.depth;
+    // Rendering the scene redraws every shadow map, so without this the
+    // sun's shadow map was drawn once here and again for the main view.
+    const autoShadows = gl.shadowMap.autoUpdate;
+    gl.shadowMap.autoUpdate = false;
     gl.setRenderTarget(parts.target);
     gl.render(scene, parts.camera);
     blurPass(blur);
     blurPass(blur * 0.4);
     gl.setRenderTarget(null);
+    gl.shadowMap.autoUpdate = autoShadows;
     group.current.visible = true;
     scene.overrideMaterial = override;
     scene.background = background;
