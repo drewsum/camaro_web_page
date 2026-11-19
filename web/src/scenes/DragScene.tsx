@@ -20,6 +20,8 @@ import { DriveProvider, useDrive } from "../car/driveClock";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
+import Countryside, { type CountrysideProps } from "./common/Countryside";
+import GrassField from "./common/GrassField";
 import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
@@ -59,6 +61,19 @@ const PAD_TO = START_Z + 100;
 const CONCRETE = "brushed_concrete";
 const ASPHALT = "asphalt_track";
 const WALL = "concrete_wall_008";
+
+// Farm country either side of the strip: woods and hedgerows from 45 m out,
+// a power line along the right, and hills closing off the far horizon.
+const COUNTRYSIDE: CountrysideProps = {
+  seed: 11,
+  centre: [LANE / 2, 400],
+  hills: { from: 520, to: 2000, height: 65 },
+  trees: { from: 0, to: 1100, woodlots: 26, hedgerows: 18, singles: 70 },
+  clear: (x, z) => Math.abs(x - LANE / 2) < 45 && z > -300 && z < 1050,
+  farm: { x: -190, z: 320, rotation: 0.3 },
+  powerLine: { from: [75, -500], to: [75, 1400] },
+  bales: { x: -130, z: 130, spread: 140, count: 25 },
+};
 preloadPbr(CONCRETE);
 preloadPbr(ASPHALT);
 preloadPbr(WALL, "1k");
@@ -184,11 +199,7 @@ function Walls() {
         <mesh key={x} position={[x, 0.42, (STRIP_FROM + STRIP_TO) / 2]} geometry={geometry} material={material} castShadow receiveShadow />
       ))}
       {/* Grass beyond the walls */}
-      <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, -0.02, (STRIP_FROM + STRIP_TO) / 2]} receiveShadow>
-        <planeGeometry args={[3000, 3000]} />
-        {/* Pushed back so it never shows through the strip in the distance. */}
-        <meshStandardMaterial color="#5f6b3a" roughness={1} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={4} />
-      </mesh>
+      <GrassField size={4000} position={[LANE / 2, -0.02, (STRIP_FROM + STRIP_TO) / 2]} behind />
     </>
   );
 }
@@ -396,7 +407,7 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <DriveProvider profile={race.heroProfile} roughness={0.6}>
-      <fog attach="fog" args={[sky.fog, 200, 1400]} />
+      <fog attach="fog" args={[sky.fog, 250, 2400]} />
       <SkyReflections sky={sky} ground="#44453f" />
       <directionalLight
         position={sun}
@@ -424,6 +435,7 @@ function Strip({ lightsOn, domeOn }: SceneProps) {
         <Scoreboard x={WALL_X[1] + 3} runner={MUSTANG} />
         <Grandstand />
         <LightPoles />
+        <Countryside config={COUNTRYSIDE} />
       </Pass>
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
       <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />

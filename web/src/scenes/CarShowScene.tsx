@@ -9,30 +9,42 @@ import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import { polyHavenHdri, useHdriSky } from "./common/hdri";
 import SkyReflections from "./common/SkyReflections";
-import { preloadPbr, usePbrMaterial } from "./common/pbr";
+import GrassField from "./common/GrassField";
 import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import MustangModel from "../components/MustangModel";
 import ChargerModel from "../components/ChargerModel";
 import Onlooker, { onlookerModel } from "./carshow/Onlooker";
+import Countryside, { type CountrysideProps } from "./common/Countryside";
 
 // Parked on the grass at a summer car show among other muscle cars (a
 // Challenger R/T fetched from a public repo, plus Ddiaz Design's '69 Charger
 // R/T and our rigged '69 Mach 1 Cobra Jet), while a few old guys with beers
 // look it over. An open mown field runs out to the horizon under a real sky
 // (Poly Haven's "kloofendal_48d_partly_cloudy_puresky" HDRI), the grass
-// their scanned "leafy_grass".
+// their scanned "leafy_grass" (see GrassField).
 
 const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
 const SUN_AZIMUTH = 0.9; // mid-afternoon, over the camera's right shoulder
 const EXPOSURE = 0.85;
-const GRASS = "leafy_grass";
 const FIELD = 8000; // metres across: out to the horizon, so no sky shows under its edge
-preloadPbr(GRASS);
 // The haze the far field fades into, matched by eye to this sky just above
 // the horizon on screen (the sky's own averaged horizon colour comes out much
 // whiter, which drew a bright line along the edge of the field).
 const HAZE = "#9ea3b6";
+
+// Farmland around the show field: hills, woods, a farm and a power line,
+// all kept 70 m clear of the cars and canopies.
+const COUNTRYSIDE: CountrysideProps = {
+  seed: 3,
+  centre: [2, -2],
+  hills: { from: 170, to: 1000, height: 55 },
+  trees: { from: 75, to: 600, woodlots: 10, hedgerows: 8, singles: 35 },
+  clear: (x, z) => Math.hypot(x - 2, z + 2) < 70,
+  farm: { x: -250, z: -330, rotation: 0.6 },
+  powerLine: { from: [-520, -150], to: [520, -270] },
+  bales: { x: 130, z: -170, spread: 120, count: 30 },
+};
 
 // ---- Props ----------------------------------------------------------------
 
@@ -111,38 +123,6 @@ function Canopy({ position, rotationY }: { position: [number, number]; rotationY
 
 // ---- Scene ----------------------------------------------------------------
 
-// The open field: scanned grass tiled every 2 m, broken up by much broader
-// patches (the same scan, blurred and stretched to tens of metres) so it
-// doesn't read as a repeating tile toward the horizon, with faint mowing stripes.
-function GrassField() {
-  const material = usePbrMaterial(GRASS, { tile: 2, size: [FIELD, FIELD], normalScale: 0.9, tint: "#b4d68a", brightness: 1.1 });
-  useMemo(() => {
-    material.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <map_fragment>",
-        /* glsl */ `#include <map_fragment>
-        {
-          vec3 avg = textureLod(map, vec2(0.5), 16.0).rgb;
-          vec3 broad = texture(map, vMapUv * 0.071 + 0.17, 5.0).rgb + texture(map, vMapUv * 0.023 + 0.53, 6.0).rgb;
-          const vec3 LUMA = vec3(0.3, 0.59, 0.11);
-          float patchy = dot(broad, LUMA) / max(2.0 * dot(avg, LUMA), 1e-3);
-          diffuseColor.rgb *= mix(1.0, clamp(patchy, 0.7, 1.35), 0.6);
-          // Mown in 3 m passes, alternately toward and away from the camera.
-          float pass = smoothstep(0.4, 0.6, abs(fract(vMapUv.x / 1.5) - 0.5) * 2.0);
-          diffuseColor.rgb *= mix(0.93, 1.05, pass);
-        }`,
-      );
-    };
-    material.customProgramCacheKey = () => "carshow-grass";
-    material.needsUpdate = true;
-  }, [material]);
-  return (
-    <mesh rotation-x={-Math.PI / 2} material={material} receiveShadow>
-      <planeGeometry args={[FIELD, FIELD]} />
-    </mesh>
-  );
-}
-
 // Points on the hero car (centred at the origin, nose toward +Z). The
 // onlookers stand on its passenger side (-X), facing the default camera.
 const HOOD = new Vector3(0, 0.95, 1.4);
@@ -162,9 +142,10 @@ function Show({ lightsOn, domeOn }: SceneProps) {
     <>
       {/* Exponential haze, so the far field fades into the sky over a soft
           band rather than a hard line where the fog finally reaches full. */}
-      <fogExp2 attach="fog" args={[HAZE, 0.0028]} />
+      <fogExp2 attach="fog" args={[HAZE, 0.0018]} />
       <SkyReflections sky={sky} ground="#2c3a1a" />
-      <GrassField />
+      <GrassField size={FIELD} mown />
+      <Countryside config={COUNTRYSIDE} />
       <directionalLight
         position={sun}
         intensity={sky.sunIntensity}

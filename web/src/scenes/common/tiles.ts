@@ -1,4 +1,4 @@
-import { Group, InstancedMesh, LOD, Matrix4, Object3D, Vector3, type BufferGeometry, type Material } from "three";
+import { Group, InstancedMesh, LOD, Matrix4, Object3D, Vector3, type BufferGeometry, type Color, type Material } from "three";
 
 // Instances spread over a whole map, split into square tiles of `cell`
 // metres, one InstancedMesh each. A single map-wide InstancedMesh can never
@@ -10,22 +10,26 @@ export function tiledInstances(
   material: Material,
   matrices: Matrix4[],
   cell: number,
-  { castShadow = true, receiveShadow = true, hideBeyond }: { castShadow?: boolean; receiveShadow?: boolean; hideBeyond?: number } = {},
+  { castShadow = true, receiveShadow = true, hideBeyond, colors }: { castShadow?: boolean; receiveShadow?: boolean; hideBeyond?: number; colors?: Color[] } = {},
 ) {
-  const tiles = new Map<string, Matrix4[]>();
+  const tiles = new Map<string, number[]>();
   const p = new Vector3();
-  for (const m of matrices) {
+  matrices.forEach((m, n) => {
     p.setFromMatrixPosition(m);
     const key = `${Math.floor(p.x / cell)},${Math.floor(p.z / cell)}`;
     let list = tiles.get(key);
     if (!list) tiles.set(key, (list = []));
-    list.push(m);
-  }
+    list.push(n);
+  });
   const group = new Group();
   for (const list of tiles.values()) {
     const mesh = new InstancedMesh(geometry, material, list.length);
-    list.forEach((m, i) => mesh.setMatrixAt(i, m));
+    list.forEach((n, i) => {
+      mesh.setMatrixAt(i, matrices[n]);
+      if (colors) mesh.setColorAt(i, colors[n]);
+    });
     mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
     mesh.castShadow = castShadow;
     mesh.receiveShadow = receiveShadow;

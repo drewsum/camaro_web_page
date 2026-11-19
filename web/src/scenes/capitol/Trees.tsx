@@ -32,7 +32,7 @@ function limb(from: Vector3, to: Vector3, r0: number, r1: number) {
 }
 
 // Cards scattered through an ellipsoid crown.
-function crown(rand: () => number, centre: Vector3, radii: Vector3, count: number, size: number, cone = false) {
+export function crown(rand: () => number, centre: Vector3, radii: Vector3, count: number, size: number, cone = false) {
   const pos: number[] = [], nor: number[] = [], uv: number[] = [];
   const q = new Quaternion();
   for (let n = 0; n < count; n++) {
@@ -66,26 +66,27 @@ function crown(rand: () => number, centre: Vector3, radii: Vector3, count: numbe
   return g;
 }
 
-function deciduous(seed: number) {
+// \cards\ and \size\: fewer, bigger leaf cards for trees only seen from afar.
+export function deciduous(seed: number, cards = 230, size = 1.85, limbs = 6) {
   const rand = mulberry32(seed);
   const trunkTop = 3.6 + rand() * 1.2;
   const wood = [limb(new Vector3(0, -0.3, 0), new Vector3(0, trunkTop, 0), 0.42, 0.3)];
   const centre = new Vector3(0, trunkTop + 4.6, 0);
   const radii = new Vector3(4.6 + rand(), 4 + rand() * 0.8, 4.6 + rand());
-  for (let k = 0; k < 6; k++) {
-    const a = (k / 6) * Math.PI * 2 + rand();
+  for (let k = 0; k < limbs; k++) {
+    const a = (k / limbs) * Math.PI * 2 + rand();
     const end = new Vector3(Math.cos(a) * radii.x * 0.6, trunkTop + 2.5 + rand() * 3, Math.sin(a) * radii.z * 0.6);
     wood.push(limb(new Vector3(0, trunkTop - 0.3, 0), end, 0.2, 0.06));
   }
   wood.push(limb(new Vector3(0, trunkTop - 0.2, 0), new Vector3(0.3, trunkTop + 6, -0.2), 0.22, 0.06));
-  return { wood: mergeGeometries(wood.map((g) => g.toNonIndexed())), leaves: crown(rand, centre, radii, 230, 1.85) };
+  return { wood: mergeGeometries(wood.map((g) => g.toNonIndexed())), leaves: crown(rand, centre, radii, cards, size) };
 }
 
-function conifer(seed: number) {
+export function conifer(seed: number, cards = 160, size = 1.6) {
   const rand = mulberry32(seed);
   return {
     wood: limb(new Vector3(0, -0.3, 0), new Vector3(0, 9, 0), 0.25, 0.05).toNonIndexed(),
-    leaves: crown(rand, new Vector3(0, 6, 0), new Vector3(3, 5, 3), 160, 1.6, true),
+    leaves: crown(rand, new Vector3(0, 6, 0), new Vector3(3, 5, 3), cards, size, true),
   };
 }
 
