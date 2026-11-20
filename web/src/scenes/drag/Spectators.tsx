@@ -9,7 +9,7 @@ import { mulberry32 } from "../common/periodic";
 // triangles a person.
 
 type Part = "shirt" | "pants" | "skin" | "hair";
-type Pose = "sit" | "cheer" | "stand";
+type Pose = "sit" | "cheer" | "stand" | "wave"; // cheer: seated, wave: on their feet
 
 // A box from its size and centre, tipped forward by `tilt` (rad) about x.
 function box(w: number, h: number, d: number, x: number, y: number, z: number, tilt = 0) {
@@ -34,7 +34,7 @@ function hair(y: number) {
 
 // Facing +z, origin at the hips (seated) or between the feet (standing).
 function person(pose: Pose): Record<Part, BufferGeometry> {
-  const seated = pose !== "stand";
+  const seated = pose === "sit" || pose === "cheer";
   const hip = seated ? 0 : 0.9;
   const shoulder = hip + 0.5;
   const parts: Record<Part, BufferGeometry[]> = { shirt: [], pants: [], skin: [], hair: [] };
@@ -53,7 +53,7 @@ function person(pose: Pose): Record<Part, BufferGeometry> {
       parts.hair.push(box(0.11, 0.08, 0.22, x, 0.04, 0.04));
     }
     const ax = side * 0.235;
-    if (pose === "cheer" && side > 0) {
+    if ((pose === "cheer" || pose === "wave") && side > 0) {
       // One arm punched up in the air.
       parts.shirt.push(box(0.1, 0.3, 0.1, ax + side * 0.02, shoulder + 0.13, 0));
       parts.skin.push(box(0.085, 0.32, 0.085, ax + side * 0.04, shoulder + 0.42, 0.02));
@@ -83,22 +83,27 @@ export interface Seat {
   x: number;
   y: number; // top of the bench
   z: number;
+  ry?: number; // which way they face (default +x, toward the drag strip)
 }
 
-export default function Spectators({ seats, seed = 1320 }: { seats: Seat[]; seed?: number }) {
-  const poses: Pose[] = ["sit", "cheer", "stand"];
+// `standing`: a crowd on its feet on the ground (y = 0), some cheering,
+// rather than seated on bleachers.
+export default function Spectators({ seats, seed = 1320, standing = false }: { seats: Seat[]; seed?: number; standing?: boolean }) {
+  const poses: Pose[] = ["sit", "cheer", "stand", "wave"];
   const { geometry, placed } = useMemo(() => {
     const rand = mulberry32(seed);
     const geometry = Object.fromEntries(poses.map((p) => [p, person(p)])) as Record<Pose, Record<Part, BufferGeometry>>;
-    const placed: Record<Pose, { matrix: Matrix4; colors: Record<Part, Color> }[]> = { sit: [], cheer: [], stand: [] };
+    const placed: Record<Pose, { matrix: Matrix4; colors: Record<Part, Color> }[]> = { sit: [], cheer: [], stand: [], wave: [] };
     const o = new Object3D();
     const pick = (a: string[]) => new Color(a[Math.floor(rand() * a.length)]);
     for (const s of seats) {
       const r = rand();
-      const pose: Pose = r < 0.12 ? "cheer" : r < 0.2 ? "stand" : "sit";
+      const pose: Pose = standing ? (r < 0.3 ? "wave" : "stand") : r < 0.12 ? "cheer" : r < 0.2 ? "stand" : "sit";
       // Facing the track (+x), give or take; standing folk stand on the bench.
-      o.position.set(s.x + (pose === "stand" ? -0.15 : 0.02), s.y, s.z); // knees over the bench edge
-      o.rotation.set(0, Math.PI / 2 + (rand() - 0.5) * 0.5, 0);
+      const ry = s.ry ?? Math.PI / 2;
+      const back = standing ? 0 : pose === "stand" ? -0.15 : 0.02; // knees over the bench edge
+      o.position.set(s.x + back * Math.sin(ry), s.y, s.z + back * Math.cos(ry));
+      o.rotation.set(0, ry + (rand() - 0.5) * 0.5, 0);
       const k = 0.92 + rand() * 0.14;
       o.scale.set(k, k, k);
       o.updateMatrix();
@@ -106,7 +111,7 @@ export default function Spectators({ seats, seed = 1320 }: { seats: Seat[]; seed
       placed[pose].push({ matrix: o.matrix.clone(), colors: { shirt: pick(SHIRTS), pants: pick(PANTS), skin: pick(SKIN), hair: hairColour } });
     }
     return { geometry, placed };
-  }, [seats, seed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seats, seed, standing]); // eslint-disable-line react-hooks/exhaustive-deps
   const material = useMemo(() => new MeshStandardMaterial({ roughness: 0.85 }), []);
   return (
     <>
