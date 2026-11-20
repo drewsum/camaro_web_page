@@ -26,6 +26,10 @@ export interface SlopeGroundOptions {
   rock?: [number, number]; // likewise for rock
   rockTint?: string;
   dirtTint?: string;
+  // Read a float attribute "rockiness" from the mesh, forcing rock where it's
+  // 1. Only for meshes that have it: WebGL hands a mesh without the attribute
+  // whatever constant was last left at that slot, not necessarily 0.
+  rockiness?: boolean;
 }
 
 const head = /* glsl */ `
@@ -82,7 +86,7 @@ const ground = /* glsl */ `
 
 // A MeshStandardMaterial for terrain with vertex colours (the grass colour)
 // and, optionally, a float attribute "rockiness" forcing rock where it's 1.
-export function useSlopeGround({ dirt = [0.12, 0.3], rock = [0.38, 0.6], rockTint = "#ffffff", dirtTint = "#ffffff" }: SlopeGroundOptions = {}) {
+export function useSlopeGround({ dirt = [0.12, 0.3], rock = [0.38, 0.6], rockTint = "#ffffff", dirtTint = "#ffffff", rockiness = false }: SlopeGroundOptions = {}) {
   const grassTex = usePbrTextures(GRASS);
   const dirtTex = usePbrTextures(DIRT, "1k");
   const rockTex = usePbrTextures(ROCK, "1k");
@@ -104,17 +108,17 @@ export function useSlopeGround({ dirt = [0.12, 0.3], rock = [0.38, 0.6], rockTin
       shader.vertexShader = shader.vertexShader
         .replace(
           "#include <common>",
-          "#include <common>\nattribute float rockiness;\nvarying vec3 vGroundPos;\nvarying vec3 vGroundNormal;\nvarying float vRockiness;",
+          `#include <common>\n${rockiness ? "attribute float rockiness;\n" : ""}varying vec3 vGroundPos;\nvarying vec3 vGroundNormal;\nvarying float vRockiness;`,
         )
         .replace(
           "#include <begin_vertex>",
-          "#include <begin_vertex>\nvGroundPos = position;\nvGroundNormal = normal;\nvRockiness = rockiness;",
+          `#include <begin_vertex>\nvGroundPos = position;\nvGroundNormal = normal;\nvRockiness = ${rockiness ? "rockiness" : "0.0"};`,
         );
       shader.fragmentShader = shader.fragmentShader
         .replace("#include <common>", "#include <common>\n" + head)
         .replace("#include <color_fragment>", ground);
     };
-    material.customProgramCacheKey = () => "slope-ground";
+    material.customProgramCacheKey = () => (rockiness ? "slope-ground-rocky" : "slope-ground");
     return { material, offset: offset.value };
-  }, [grassTex, dirtTex, rockTex, dirt[0], dirt[1], rock[0], rock[1], rockTint, dirtTint]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [grassTex, dirtTex, rockTex, dirt[0], dirt[1], rock[0], rock[1], rockTint, dirtTint, rockiness]); // eslint-disable-line react-hooks/exhaustive-deps
 }

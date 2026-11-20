@@ -473,13 +473,17 @@ function Terrain() {
     return { cliff, hills };
   }, []);
   // Weathered tan rock on the cliffs, and dry ground where the hills steepen.
-  const { material, offset } = useSlopeGround({ rockTint: "#e2d2bc", dirtTint: "#dccdb4" });
+  const tints = { rockTint: "#e2d2bc", dirtTint: "#dccdb4" };
+  const hillGround = useSlopeGround(tints);
+  const cliffGround = useSlopeGround({ ...tints, rockiness: true });
   // The mapping follows the laps the way the ocean's does (see Ocean).
-  useFrame(() => offset.set(mod(here.lap * track.lapShift.x, GROUND_PERIOD), 0, mod(here.lap * track.lapShift.z, GROUND_PERIOD)));
+  useFrame(() => {
+    for (const { offset } of [hillGround, cliffGround]) offset.set(mod(here.lap * track.lapShift.x, GROUND_PERIOD), 0, mod(here.lap * track.lapShift.z, GROUND_PERIOD));
+  });
   return (
     <>
-      <mesh geometry={cliff} material={material} receiveShadow castShadow />
-      <mesh geometry={hills} material={material} receiveShadow />
+      <mesh geometry={cliff} material={cliffGround.material} receiveShadow castShadow />
+      <mesh geometry={hills} material={hillGround.material} receiveShadow />
     </>
   );
 }

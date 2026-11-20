@@ -345,10 +345,12 @@ export function Forest({ kinds, near, shadows = false }: { kinds: ForestKind[]; 
   const last = useMemo(() => new Vector3(1e9, 0, 0), [sets]);
   useFrame(({ camera }) => {
     camera.getWorldPosition(shared.eye.value);
-    if (last.distanceTo(shared.eye.value) < MARGIN / 2) return;
-    last.copy(shared.eye.value);
+    // Measured in the forest's own space: in the driving scenes the camera
+    // stays put and the world moves past it.
     inverse.copy(group.matrixWorld).invert();
     local.copy(shared.eye.value).applyMatrix4(inverse);
+    if (last.distanceTo(local) < MARGIN / 2) return;
+    last.copy(local);
     const reach = (near + MARGIN) ** 2;
     for (const { kind, near: meshes, positions } of sets) {
       let n = 0;

@@ -21,6 +21,7 @@ export interface SceneDef {
 export const SCENES: SceneDef[] = [
   { id: "showroom", label: "Showroom", Component: ShowroomScene, night: false },
   { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
+  { id: "mountain", label: "Mountain pass", Component: lazy(() => import("./MountainScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
   { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, nightOption: true, credits: [CREDITS.mach1, CREDITS.polyHaven] },
   {
     id: "capitol",
