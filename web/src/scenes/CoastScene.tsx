@@ -497,7 +497,9 @@ interface Spot {
 const SCENERY_LEVELS: Level[] = [
   { ratio: 1, upTo: 90 },
   { ratio: 0.3, upTo: 300 },
-  { ratio: 0.12, upTo: FOG_FAR * 0.6 },
+  // Dissolving over its last 400 m, so the scrub thins out into the haze
+  // rather than popping into view.
+  { ratio: 0.12, upTo: FOG_FAR * 0.6, blend: 400 },
 ];
 
 function ScatteredModel({ url, spots }: { url: string; spots: (modelSize: number) => Spot[] }) {

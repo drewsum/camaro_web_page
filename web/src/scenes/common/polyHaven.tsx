@@ -16,6 +16,7 @@ import {
   type Loader,
   type Material,
 } from "three";
+import { fadedMaterial } from "./dither";
 import { MeshoptSimplifier } from "three/examples/jsm/libs/meshopt_simplifier.module.js";
 
 // CC0 models from Poly Haven, fetched from their CDN at runtime (1k textures).
@@ -82,8 +83,11 @@ function simplified(geometry: BufferGeometry, ratio: number) {
 
 export interface Level {
   ratio: number; // share of the model's triangles drawn at this level
-  upTo: number; // used out to this distance from the camera, in metres
+  upTo: number; // used out to this distance from the camera's to the instance's centre, in metres
+  blend?: number; // metres before upTo over which it dissolves into the next level (or into nothing); default a fifth of upTo
 }
+
+const blendOf = (l: Level) => l.blend ?? l.upTo * 0.2;
 
 const frustum = new Frustum();
 const projView = new Matrix4();
@@ -92,7 +96,10 @@ const centre = new Vector3();
 
 // Every part of a model once per matrix, like InstancedModel, but each
 // instance is drawn at the level of detail its distance from the camera
-// calls for, and not at all when out of view or beyond the last level. The
+// calls for, and not at all when out of view or beyond the last level.
+// Within lend metres of a level's limit an instance is drawn at both that
+// level and the next, dithered between them (see dither.ts), so neither the
+// switch nor the last level's cut-off pops. The
 // choice is made per instance every frame (a few thousand distance checks),
 // so there's one draw call per part per level however many instances there
 // are, and nothing out of view is drawn.
@@ -107,9 +114,15 @@ export function LodInstancedModel({ parts, bounds, matrices, levels }: { parts: 
       centre: local.clone().applyMatrix4(m),
       radius: radius * m.getMaxScaleOnAxis(),
     }));
-    const meshes = levels.map((level) =>
+    const meshes = levels.map((level, k) =>
       parts.map((p) => {
-        const mesh = new InstancedMesh(simplified(p.geometry, level.ratio), p.material, matrices.length);
+        const before = levels[k - 1];
+        const material = fadedMaterial(p.material, {
+          fadeIn: before ? [before.upTo - blendOf(before), before.upTo] : undefined,
+          fadeOut: [level.upTo - blendOf(level), level.upTo],
+          centre: local,
+        });
+        const mesh = new InstancedMesh(simplified(p.geometry, level.ratio), material, matrices.length);
         mesh.frustumCulled = false; // culled per instance below
         mesh.count = 0;
         return mesh;
@@ -130,11 +143,13 @@ export function LodInstancedModel({ parts, bounds, matrices, levels }: { parts: 
       centre.copy(inst.centre).applyMatrix4(worldMatrix);
       sphere.set(centre, inst.radius * scale);
       if (!frustum.intersectsSphere(sphere)) continue;
-      const d = Math.max(0, centre.distanceTo(camera.position) - sphere.radius);
-      const k = levels.findIndex((l) => d <= l.upTo);
-      if (k < 0) continue;
-      const slot = counts[k]++;
-      for (const mesh of built.meshes[k]) mesh.instanceMatrix.array.set(inst.matrix, slot * 16);
+      const d = centre.distanceTo(camera.position);
+      levels.forEach((l, k) => {
+        const before = levels[k - 1];
+        if (d > l.upTo || (before && d < before.upTo - blendOf(before))) return;
+        const slot = counts[k]++;
+        for (const mesh of built.meshes[k]) mesh.instanceMatrix.array.set(inst.matrix, slot * 16);
+      });
     }
     built.meshes.forEach((row, k) => {
       for (const mesh of row) {

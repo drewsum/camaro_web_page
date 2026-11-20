@@ -18,11 +18,13 @@ import {
   Scene,
   ShaderMaterial,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   WebGLRenderTarget,
   type Texture,
   type WebGLRenderer,
 } from "three";
+import { DITHER_GLSL } from "./dither";
 
 // Distant trees as impostors: each kind of tree is photographed once, from
 // VIEWS angles around it, into a colour atlas and a normal atlas. Past `near`
@@ -36,6 +38,8 @@ const TILE_PX = 256;
 // The full-detail set is rebuilt whenever the camera has moved half this far,
 // and holds every tree within near + MARGIN, so none goes missing in between.
 const MARGIN = 20;
+// Metres over which a tree dissolves between full detail and its impostor.
+const BLEND = 30;
 
 export interface ForestKind {
   wood?: BufferGeometry;
@@ -160,25 +164,29 @@ function bake(gl: WebGLRenderer, kind: ForestKind): Baked {
 }
 
 // Shared by every material of one forest, set each frame from the camera.
+// Between near - blend and near, the full tree and its impostor are dithered
+// into each other (see dither.ts) so the switch doesn't pop.
 interface Shared {
   eye: { value: Vector3 };
   near: { value: number };
+  fade: { value: Vector2 }; // [near - blend, near]
 }
 
 const impostorVertexHead = /* glsl */ `
   #include <common>
   uniform vec3 uEye;
-  uniform float uNear;
+  uniform vec2 uFade;
   uniform vec3 uSize;
-  varying vec2 vAtlasUv;
-  varying float vView;
+  varying vec2 vQuadUv;
+  varying float vBearing;
+  varying float vFadeDistance;
   varying vec3 vAxisX;
   varying vec3 vAxisZ;
 `;
 
 // Replaces three's projection: the quad stands at the instance's origin,
 // turned about the vertical to face the camera, and is collapsed to a point
-// (drawing nothing) when the camera is close enough for the full tree.
+// (drawing nothing) when the camera is close enough for the full tree alone.
 const impostorProject = /* glsl */ `
   mat4 inst = modelMatrix * instanceMatrix;
   vec3 origin = inst[3].xyz;
@@ -189,12 +197,12 @@ const impostorProject = /* glsl */ `
   vec3 toEye = uEye - origin;
   vec3 hdir = normalize(vec3(toEye.x, 0.0, toEye.z) + vec3(1e-4, 0.0, 0.0));
   vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), hdir));
-  // The camera's bearing in the tree's own frame picks the nearest photo.
-  float phi = atan(dot(hdir, vAxisX), dot(hdir, vAxisZ));
-  vView = mod(floor(phi / (6.2831853 / ${VIEWS}.0) + 0.5), ${VIEWS}.0);
-  vAtlasUv = vec2((vView + uv.x) / ${VIEWS}.0, uv.y);
+  // The camera's bearing in the tree's own frame, in photo steps.
+  vBearing = atan(dot(hdir, vAxisX), dot(hdir, vAxisZ)) / (6.2831853 / ${VIEWS}.0);
+  vQuadUv = uv;
+  vFadeDistance = length(toEye);
   vec3 world = origin + right * (position.x * uSize.x * sx) + vec3(0.0, (uSize.z + position.y * uSize.y) * sy, 0.0);
-  if (length(toEye) < uNear) world = origin;
+  if (vFadeDistance < uFade.x) world = origin;
   vec4 mvPosition = viewMatrix * vec4(world, 1.0);
   gl_Position = projectionMatrix * mvPosition;
 `;
@@ -202,10 +210,28 @@ const impostorProject = /* glsl */ `
 const impostorFragmentHead = /* glsl */ `
   #include <common>
   uniform sampler2D uNormalMap;
-  varying vec2 vAtlasUv;
-  varying float vView;
+  uniform vec2 uFade;
+  varying vec2 vQuadUv;
+  varying float vBearing;
+  varying float vFadeDistance;
   varying vec3 vAxisX;
   varying vec3 vAxisZ;
+  ${DITHER_GLSL}
+`;
+
+// Fades in over the band, and blends between the two photos either side of
+// the camera's bearing by dithering which one each pixel shows, so a tree
+// doesn't flick from one angle to the next as you pass it. Sampled with the
+// quad's own smooth gradients, so the jump between photos in the atlas
+// doesn't upset mipmapping.
+const impostorMap = /* glsl */ `
+  if (!ditherKeep(vFadeDistance, uFade, vec2(0.0))) discard;
+  float bearingStep = floor(vBearing);
+  float view = mod(bearingStep + (ditherNoise(gl_FragCoord.xy + vec2(41.0, 23.0)) < fract(vBearing) ? 1.0 : 0.0), ${VIEWS}.0);
+  vec2 quadUv = vec2(vQuadUv.x / ${VIEWS}.0, vQuadUv.y);
+  vec2 atlasUv = quadUv + vec2(view / ${VIEWS}.0, 0.0);
+  vec2 uvDx = dFdx(quadUv), uvDy = dFdy(quadUv);
+  diffuseColor *= textureGrad(map, atlasUv, uvDx, uvDy);
 `;
 
 // The baked normal is in the photographing camera's frame: x to its right,
@@ -213,8 +239,8 @@ const impostorFragmentHead = /* glsl */ `
 const impostorNormal = /* glsl */ `
   #include <normal_fragment_begin>
   {
-    vec3 nb = texture2D(uNormalMap, vAtlasUv).xyz * 2.0 - 1.0;
-    float pk = floor(vView + 0.5) * (6.2831853 / ${VIEWS}.0);
+    vec3 nb = textureGrad(uNormalMap, atlasUv, uvDx, uvDy).xyz * 2.0 - 1.0;
+    float pk = view * (6.2831853 / ${VIEWS}.0);
     vec3 nLocal = nb.x * vec3(cos(pk), 0.0, -sin(pk)) + nb.y * vec3(0.0, 1.0, 0.0) + nb.z * vec3(sin(pk), 0.0, cos(pk));
     vec3 axisY = normalize(cross(vAxisZ, vAxisX));
     vec3 nWorld = normalize(nLocal.x * vAxisX + nLocal.y * axisY + nLocal.z * vAxisZ);
@@ -226,7 +252,7 @@ function impostorMaterial(bakedKind: Baked, leaf: MeshStandardMaterial, shared: 
   const m = new MeshStandardMaterial({ map: bakedKind.albedo, alphaTest: 0.42, side: DoubleSide, roughness: leaf.roughness, metalness: 0 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uEye = shared.eye;
-    shader.uniforms.uNear = shared.near;
+    shader.uniforms.uFade = shared.fade;
     shader.uniforms.uSize = { value: bakedKind.size };
     shader.uniforms.uNormalMap = { value: bakedKind.normal };
     shader.vertexShader = shader.vertexShader
@@ -234,26 +260,29 @@ function impostorMaterial(bakedKind: Baked, leaf: MeshStandardMaterial, shared: 
       .replace("#include <project_vertex>", impostorProject);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", impostorFragmentHead)
-      .replace("#include <map_fragment>", "diffuseColor *= texture2D(map, vAtlasUv);")
+      .replace("#include <map_fragment>", impostorMap)
       .replace("#include <normal_fragment_begin>", impostorNormal);
   };
   m.customProgramCacheKey = () => "tree-impostor";
   return m;
 }
 
-// The full-detail materials, drawing nothing for a tree past `near`, where
-// its impostor has taken over.
+// The full-detail materials: dissolving over the band and drawing nothing
+// past `near`, where the impostor has taken over.
 function nearMaterial(source: MeshStandardMaterial, shared: Shared) {
   const m = source.clone();
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uEye = shared.eye;
-    shader.uniforms.uNear = shared.near;
+    shader.uniforms.uFade = shared.fade;
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nuniform vec3 uEye;\nuniform float uNear;")
+      .replace("#include <common>", "#include <common>\nuniform vec3 uEye;\nuniform vec2 uFade;\nvarying float vFadeDistance;")
       .replace(
         "#include <begin_vertex>",
-        "#include <begin_vertex>\nif (distance((modelMatrix * instanceMatrix)[3].xyz, uEye) >= uNear) transformed = vec3(0.0);",
+        "#include <begin_vertex>\nvFadeDistance = distance((modelMatrix * instanceMatrix)[3].xyz, uEye);\nif (vFadeDistance >= uFade.y) transformed = vec3(0.0);",
       );
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform vec2 uFade;\nvarying float vFadeDistance;\n" + DITHER_GLSL)
+      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (!ditherKeep(vFadeDistance, vec2(0.0), uFade)) discard;");
   };
   m.customProgramCacheKey = () => "tree-near";
   return m;
@@ -284,7 +313,8 @@ const inverse = new Matrix4();
 export function Forest({ kinds, near, shadows = false }: { kinds: ForestKind[]; near: number; shadows?: boolean }) {
   const gl = useThree((s) => s.gl);
   const { group, sets, shared } = useMemo(() => {
-    const shared: Shared = { eye: { value: new Vector3(0, 1e6, 0) }, near: { value: near } };
+    const blend = Math.min(BLEND, near * 0.3);
+    const shared: Shared = { eye: { value: new Vector3(0, 1e6, 0) }, near: { value: near }, fade: { value: new Vector2(near - blend, near) } };
     const group = new Group();
     const sets: KindMeshes[] = [];
     for (const kind of kinds) {
