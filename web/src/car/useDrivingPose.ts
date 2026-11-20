@@ -58,6 +58,7 @@ export function useDrivingPose(rig: CarRig, { lightsOn, chassis = CAMARO_CHASSIS
     applyPose(rig, {
       steer: Math.atan(rig.wheelbase * s.curvature),
       wheelSpin: (d / rig.wheelRadius) % (2 * Math.PI),
+      rearSpin: ((s.spin ?? 0) / rig.wheelRadius) % (2 * Math.PI),
       heave:
         body.heave +
         k * bumps(d, [

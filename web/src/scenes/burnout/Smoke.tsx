@@ -16,7 +16,6 @@ export interface SmokeEmitter {
   vz: number;
 }
 
-const POOL = 2200;
 const LIFE = 7; // seconds
 
 const vertex = /* glsl */ `
@@ -64,7 +63,17 @@ interface Puff {
   size: number;
 }
 
-export default function Smoke({ emitters, color, wind = [0.9, 0.35] }: { emitters: { current: SmokeEmitter[] }; color: string; wind?: [number, number] }) {
+export default function Smoke({
+  emitters,
+  color,
+  wind = [0.9, 0.35],
+  pool: POOL = 2200,
+}: {
+  emitters: { current: SmokeEmitter[] };
+  color: string;
+  wind?: [number, number];
+  pool?: number; // puffs alive at once; the oldest are reused first
+}) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   const dpr = useThree((s) => s.viewport.dpr);
@@ -86,7 +95,7 @@ export default function Smoke({ emitters, color, wind = [0.9, 0.35] }: { emitter
       blending: NormalBlending,
     });
     return { puffs, geometry, material, pos, sizes, alphas, next: 0, owed: [] as number[] };
-  }, [color]);
+  }, [color, POOL]);
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);

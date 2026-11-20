@@ -158,6 +158,7 @@ export function applyLamps(rig: CarRig, s: LampState) {
 export interface CarPose {
   steer: number; // road-wheel angle in radians, + = turning left
   wheelSpin: number; // accumulated rolling angle in radians (distance travelled / wheelRadius)
+  rearSpin?: number; // extra angle on the rear wheels only (wheelspin, e.g. a burnout)
   roll: number; // body roll in radians, + = leaning right (outward in a left turn)
   pitch: number; // body pitch in radians, + = nose down (braking)
   heave: number; // body vertical offset in metres, - = lower
@@ -176,7 +177,7 @@ export function applyPose(rig: CarRig, p: CarPose) {
   };
   rig.hubs.FL.rotation.y = wheelAngle(1); // driver side is +X
   rig.hubs.FR.rotation.y = wheelAngle(-1);
-  for (const w of Object.values(rig.wheels)) w.rotation.x = p.wheelSpin;
+  for (const id of WHEELS) rig.wheels[id].rotation.x = p.wheelSpin + (id[0] === "R" ? (p.rearSpin ?? 0) : 0);
 
   rig.body.rotation.set(p.pitch, 0, p.roll);
   rig.body.position.y = rig.bodyRestY + p.heave;

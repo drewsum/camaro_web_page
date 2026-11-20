@@ -1,8 +1,9 @@
 import type { DriveProfile, DriveState } from "../../car/driveClock";
 
-// One quarter-mile pass, repeated: stage, count down on the tree, launch,
-// run to the finish, brake through the shutdown area, then fade out and
-// start over. Distances are measured from the staged position.
+// One quarter-mile pass, repeated: a burnout in the water box behind the
+// line, a creep up through the pre-stage and stage beams, the count down on
+// the tree, launch, run to the finish, brake through the shutdown area, then
+// fade out and start over. Distances are measured from the staged position.
 //
 // Each run is simulated once at a fine step and looked up by time. The driver
 // asks for an acceleration (wide-open throttle, a clutch-in shift, lifting at
@@ -11,9 +12,42 @@ import type { DriveProfile, DriveState } from "../../car/driveClock";
 // suspension never sees an instant jump.
 
 export const QUARTER_MILE = 402.34;
-export const STAGE_TIME = 4.2; // seconds from the start of a cycle to green
 export const AMBER_STEP = 0.5; // sportsman tree: ambers 0.5 s apart, then green
 export const FADE = 0.8; // seconds of fade at each end of the cycle
+
+// The burnout and staging, before the tree comes down.
+export const BOX = 11; // m behind the stage beams: the water box
+export const PRE_STAGE = 0.18; // m short of stage where the pre-stage beam breaks
+const BURN_FROM = FADE + 0.3;
+const BURN = 3.2; // s of wheelspin
+const BURN_SPEED = 30; // m/s at the tread, flat out
+const ROLL_FROM = BURN_FROM + BURN + 0.7;
+const ROLL = 4.6; // s to creep up from the box to stage
+const MAX_LAG = 0.5; // the later car's burnout and staging run this much behind
+export const STAGE_TIME = ROLL_FROM + ROLL + MAX_LAG + 1.8; // seconds from the start of a cycle to green
+
+// Tread speed through the burnout, `q` seconds after the throttle goes down.
+function burnSpeed(q: number) {
+  if (q <= 0 || q >= BURN) return 0;
+  return BURN_SPEED * smooth(q / 0.6) * smooth((BURN - q) / 0.5);
+}
+
+// Tread spun through by `q` seconds into the burnout, from a table.
+const SPIN_STEP = 0.002;
+const SPIN = (() => {
+  const n = Math.ceil(BURN / SPIN_STEP) + 2;
+  const table = new Float32Array(n);
+  for (let i = 1; i < n; i++) table[i] = table[i - 1] + burnSpeed((i - 0.5) * SPIN_STEP) * SPIN_STEP;
+  return table;
+})();
+const SPIN_TOTAL = SPIN[SPIN.length - 1];
+function spunBy(q: number) {
+  if (q <= 0) return 0;
+  const x = q / SPIN_STEP;
+  if (x >= SPIN.length - 1) return SPIN_TOTAL;
+  const i = Math.floor(x);
+  return SPIN[i] + (SPIN[i + 1] - SPIN[i]) * (x - i);
+}
 const HOLD = 1.6; // stopped before the fade, so the body can settle
 
 const STEP = 1 / 500;
@@ -30,6 +64,7 @@ export interface Runner {
   shifts: number[]; // road speeds (m/s) at which the driver changes up
   shiftTime: number; // s with the clutch in
   brake: number; // m/s² of shutdown braking
+  stageLag?: number; // s its burnout and staging run behind the cycle's (at most MAX_LAG)
 }
 
 export interface Leg {
@@ -37,6 +72,8 @@ export interface Leg {
   speed: number;
   accel: number;
   braking: boolean;
+  spin: number; // metres of wheelspin at the rear tread so far this cycle
+  spinRate: number; // m/s of wheelspin right now
 }
 
 interface Run {
@@ -49,7 +86,9 @@ interface Run {
   stopped: number; // s from launch to standstill
 }
 
-const smooth = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+function smooth(x: number) {
+  return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+}
 
 function simulate(r: Runner): Run {
   const d: number[] = [0];
@@ -113,15 +152,33 @@ function runOf(r: Runner) {
 
 // Where the car is t seconds after it moves off.
 function runAt(r: Runner, t: number): Leg {
-  if (t <= 0) return { distance: 0, speed: 0, accel: 0, braking: false };
+  const spin = SPIN_TOTAL;
+  if (t <= 0) return { distance: 0, speed: 0, accel: 0, braking: false, spin, spinRate: 0 };
   const run = runOf(r);
   const last = run.d.length - 1;
   const x = t / STEP;
-  if (x >= last) return { distance: run.d[last], speed: 0, accel: 0, braking: true };
+  if (x >= last) return { distance: run.d[last], speed: 0, accel: 0, braking: true, spin, spinRate: 0 };
   const i = Math.floor(x);
   const f = x - i;
   const lerp = (arr: Float32Array) => arr[i] + (arr[i + 1] - arr[i]) * f;
-  return { distance: lerp(run.d), speed: lerp(run.v), accel: lerp(run.a), braking: t >= run.brakeFrom };
+  return { distance: lerp(run.d), speed: lerp(run.v), accel: lerp(run.a), braking: t >= run.brakeFrom, spin, spinRate: 0 };
+}
+
+// Before the tree drops: sitting in the water box, the burnout (front brakes
+// locked, so the brake lamps are lit and the rear squats), then the creep up
+// to the beams. `q` is seconds into the cycle, less the car's stage lag.
+function preludeAt(q: number): Leg {
+  const b = q - BURN_FROM;
+  const spinRate = burnSpeed(b);
+  if (q < ROLL_FROM) {
+    return { distance: -BOX, speed: 0, accel: 2.2 * (spinRate / BURN_SPEED), braking: b > 0 && b < BURN, spin: spunBy(b), spinRate };
+  }
+  const u = Math.min(1, (q - ROLL_FROM) / ROLL);
+  // Smoothstep from the box to the stage beams.
+  const distance = -BOX + BOX * smooth(u);
+  const speed = u < 1 ? (BOX * 6 * u * (1 - u)) / ROLL : 0;
+  const accel = u < 1 ? (BOX * (6 - 12 * u)) / (ROLL * ROLL) : 0;
+  return { distance, speed, accel, braking: u >= 1, spin: SPIN_TOTAL, spinRate: 0 };
 }
 
 // Seconds from moving off to crossing the quarter mile.
@@ -155,8 +212,10 @@ export class Race {
     return ((t % this.cycle) + this.cycle) % this.cycle;
   }
 
-  leg(r: Runner, t: number) {
-    return runAt(r, this.phase(t) - STAGE_TIME - r.reaction);
+  leg(r: Runner, t: number): Leg {
+    const p = this.phase(t);
+    const go = p - STAGE_TIME - r.reaction;
+    return go > 0 ? runAt(r, go) : preludeAt(p - Math.min(MAX_LAG, r.stageLag ?? 0));
   }
 
   // 1 = black. Fades in at the start of a cycle and out at the end.
@@ -169,7 +228,7 @@ export class Race {
     return {
       state: (t: number): DriveState => {
         const l = this.leg(r, t);
-        return { distance: l.distance, speed: l.speed, accel: l.accel, curvature: 0, grade: 0, braking: l.braking };
+        return { distance: l.distance, speed: l.speed, accel: l.accel, curvature: 0, grade: 0, braking: l.braking, spin: l.spin };
       },
     };
   }

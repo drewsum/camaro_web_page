@@ -29,7 +29,8 @@ import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import MustangModel from "../components/MustangModel";
 import { preloadPbr, usePbrMaterial } from "./common/pbr";
-import { AMBER_STEP, finishTime, QUARTER_MILE, Race, STAGE_TIME, trapSpeed, type Runner } from "./drag/race";
+import { AMBER_STEP, BOX, finishTime, PRE_STAGE, QUARTER_MILE, Race, STAGE_TIME, trapSpeed, type Runner } from "./drag/race";
+import Smoke, { type SmokeEmitter } from "./burnout/Smoke";
 
 // Golden-hour quarter mile against a '69 Mach 1 Cobra Jet: stage at the tree, count
 // down, launch, run to the finish and brake through the shutdown, then a
@@ -47,7 +48,7 @@ const WALL_X = [-LANE / 2 - 0.8, LANE * 1.5 + 0.8];
 
 // Both four-speeds, power-shifted; 3.91 and 4.30 rear gears respectively.
 const CAMARO: Runner = { topSpeed: 50, tau: 6, reaction: 0.12, shifts: [16.5, 27, 38], shiftTime: 0.3, brake: 4.2 };
-const MUSTANG: Runner = { topSpeed: 49.2, tau: 5.9, reaction: 0.21, shifts: [15.5, 25.5, 36.5], shiftTime: 0.34, brake: 4.0 };
+const MUSTANG: Runner = { topSpeed: 49.2, tau: 5.9, reaction: 0.21, shifts: [15.5, 25.5, 36.5], shiftTime: 0.34, brake: 4.0, stageLag: 0.5 };
 const race = new Race(CAMARO, MUSTANG);
 const MUSTANG_RUN = race.profile(MUSTANG);
 
@@ -211,7 +212,11 @@ function Tree() {
   const bulbs = useMemo(() => {
     const make = (color: string) => new MeshStandardMaterial({ color: "#222", emissive: color, emissiveIntensity: 0, roughness: 0.3 });
     return {
-      stage: [make("#fff3c4"), make("#fff3c4")],
+      // Pre-stage and stage, for each lane: [Camaro, Mustang].
+      stage: [
+        [make("#fff3c4"), make("#fff3c4")],
+        [make("#fff3c4"), make("#fff3c4")],
+      ],
       amber: [make("#ffad1f"), make("#ffad1f"), make("#ffad1f")],
       green: make("#3dff5a"),
       red: make("#ff2a1f"),
@@ -221,12 +226,20 @@ function Tree() {
   useFrame(({ clock }) => {
     const p = race.phase(clock.elapsedTime - drive.t0);
     const on = (v: boolean, k = 6) => (v ? k : 0);
-    bulbs.stage.forEach((m) => (m.emissiveIntensity = on(p > 1)));
+    // Each lane's top bulbs light as its front tyres break the beams, and
+    // go out again as it leaves.
+    [CAMARO, MUSTANG].forEach((r, lane) => {
+      const d = race.leg(r, clock.elapsedTime - drive.t0).distance;
+      bulbs.stage[0][lane].emissiveIntensity = on(d > -PRE_STAGE - 0.05 && d < 0.5);
+      bulbs.stage[1][lane].emissiveIntensity = on(d > -0.02 && d < 0.3);
+    });
     const firstAmber = STAGE_TIME - 3 * AMBER_STEP;
     bulbs.amber.forEach((m, i) => (m.emissiveIntensity = on(p > firstAmber + i * AMBER_STEP && p < STAGE_TIME)));
     bulbs.green.emissiveIntensity = on(p >= STAGE_TIME && p < STAGE_TIME + 8, 8);
   });
-  const rows: [number, MeshStandardMaterial, number][] = [
+  // Seen from the cars, the tree's +x side (after its half turn) is the
+  // Camaro's lane.
+  const rows: [number, MeshStandardMaterial | MeshStandardMaterial[], number][] = [
     [3.05, bulbs.stage[0], 0.06],
     [2.9, bulbs.stage[1], 0.06],
     [2.65, bulbs.amber[0], 0.09],
@@ -247,7 +260,7 @@ function Tree() {
       </mesh>
       {rows.flatMap(([y, material, r]) =>
         [-0.2, 0.2].map((x) => (
-          <mesh key={`${y}${x}`} position={[x, y, 0.1]} material={material}>
+          <mesh key={`${y}${x}`} position={[x, y, 0.1]} material={Array.isArray(material) ? material[x > 0 ? 0 : 1] : material}>
             <sphereGeometry args={[r, 16, 10]} />
           </mesh>
         )),
@@ -358,6 +371,39 @@ function LightPoles({ night }: { night: boolean }) {
     </>
   );
 }
+// ---- Burnouts -----------------------------------------------------------------
+
+// The water box both cars burn out in: a wet, darker patch behind the line.
+function WaterBox() {
+  return (
+    <mesh rotation-x={-Math.PI / 2} position={[LANE / 2, 0.004, -BOX + REAR_AXLE + 0.8]}>
+      <planeGeometry args={[LANE * 2 + 1, 5]} />
+      <meshStandardMaterial color="#000" transparent opacity={0.28} roughness={0.08} metalness={0.2} depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
+    </mesh>
+  );
+}
+
+const REAR_AXLE = -1.35;
+const TRACK_HALF = 0.76;
+
+// Smoke off both cars' rear tyres while they spin, in the strip's frame (so
+// it hangs over the water box while the cars pull away from it).
+function BurnoutSmoke({ night }: { night: boolean }) {
+  const drive = useDrive();
+  const emitters = useRef<SmokeEmitter[]>([]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime - drive.t0;
+    const list: SmokeEmitter[] = [];
+    [CAMARO, MUSTANG].forEach((r, lane) => {
+      const l = race.leg(r, t);
+      for (const side of [-1, 1])
+        list.push({ x: lane * LANE + side * TRACK_HALF, y: 0.3, z: l.distance + REAR_AXLE, rate: l.spinRate * 8, vx: side * 1.2, vz: -4 });
+    });
+    emitters.current = list;
+  });
+  return <Smoke emitters={emitters} color={night ? "#8e9097" : "#e4e2dc"} wind={[-0.6, 0.4]} pool={5000} />;
+}
+
 // ---- Motion -----------------------------------------------------------------
 
 // Slides the strip past the Camaro, moves the Mustang along its lane and
@@ -420,6 +466,8 @@ function Strip({ lightsOn, domeOn, night = false }: SceneProps) {
         <Pavement from={STRIP_FROM} to={PAD_TO} surface={CONCRETE} tile={2.5} brightness={1.25} rubber={0.8} seed={1} />
         <Pavement from={PAD_TO} to={STRIP_TO} surface={ASPHALT} tile={3} brightness={2.2} rubber={0.45} seed={2} />
         <Line z={START_Z} />
+        <WaterBox />
+        <BurnoutSmoke night={night} />
         <Line z={START_Z + QUARTER_MILE} checkered />
         <Walls />
         <Tree />
