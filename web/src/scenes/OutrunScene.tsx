@@ -1,10 +1,31 @@
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ShaderPass } from "postprocessing";
-import { BackSide, CanvasTexture, Color, PlaneGeometry, RepeatWrapping, SRGBColorSpace, ShaderMaterial } from "three";
+import {
+  AdditiveBlending,
+  BackSide,
+  BufferAttribute,
+  BufferGeometry,
+  CanvasTexture,
+  CatmullRomCurve3,
+  Color,
+  DoubleSide,
+  Matrix4,
+  Object3D,
+  PlaneGeometry,
+  RepeatWrapping,
+  SRGBColorSpace,
+  ShaderMaterial,
+  Shape,
+  ShapeGeometry,
+  TubeGeometry,
+  Vector3,
+  type InstancedMesh,
+} from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import CamaroModel from "../components/CamaroModel";
 import { DriveProvider, driveDistance, useDrive } from "../car/driveClock";
 import type { SceneProps } from ".";
@@ -60,18 +81,26 @@ const sunVertex = /* glsl */ `
 `;
 
 // Yellow-to-pink disc with horizontal slits across the lower half that widen
-// toward the horizon.
+// toward the horizon and slowly slide down it, inside a soft glow.
 const sunFragment = /* glsl */ `
+  uniform float uTime;
   varying vec2 vUv;
   void main() {
     vec2 p = vUv * 2.0 - 1.0;
-    if (length(p) > 1.0) discard;
-    if (vUv.y < 0.55) {
-      float band = fract(vUv.y * 16.0);
-      if (band < (0.55 - vUv.y) * 1.3) discard;
+    float r = length(p) / 0.62; // the disc fills the middle of the quad
+    // Halo around the disc, added over the sky.
+    // Gone well before the quad's edge, so no square shows round it.
+    float halo = exp(-max(r - 1.0, 0.0) * 4.0) * 0.5 * (1.0 - smoothstep(1.15, 1.55, r));
+    vec3 col = mix(vec3(1.0, 0.08, 0.42), vec3(1.0, 0.72, 0.12), smoothstep(0.25, 0.8, vUv.y));
+    float disc = 1.0 - smoothstep(0.985, 1.0, r);
+    float y = p.y / 0.62; // -1 at the disc's bottom, 1 at its top
+    if (y < 0.15) {
+      float band = fract(y * 7.0 + uTime * 0.25);
+      float gap = 0.06 + (0.15 - y) * 0.5;
+      disc *= smoothstep(gap - 0.02, gap + 0.02, band);
     }
-    vec3 col = mix(vec3(1.0, 0.12, 0.5), vec3(1.0, 0.82, 0.25), smoothstep(0.1, 0.95, vUv.y));
-    gl_FragColor = vec4(col * 2.2, 1.0);
+    vec3 c = col * 0.85 * disc + vec3(1.0, 0.15, 0.5) * halo * (1.0 - disc);
+    gl_FragColor = vec4(c, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -79,17 +108,193 @@ const sunFragment = /* glsl */ `
 
 function Sky() {
   const uniforms = useMemo(() => ({ uHorizon: { value: HORIZON } }), []);
+  const sun = useRef<ShaderMaterial>(null);
+  const sunUniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
+  useFrame(({ clock }) => {
+    if (sun.current) sun.current.uniforms.uTime.value = clock.elapsedTime;
+  });
+  // Stars over the upper sky, thinning toward the horizon glow.
+  const stars = useMemo(() => {
+    const rand = mulberry32(77);
+    const n = 1400;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = rand() * Math.PI * 2;
+      const y = 0.12 + Math.pow(rand(), 0.7) * 0.88;
+      const h = Math.sqrt(1 - y * y);
+      pos.set([Math.cos(a) * h * 760, y * 760, Math.sin(a) * h * 760], i * 3);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(pos, 3));
+    return g;
+  }, []);
   return (
     <>
       <mesh>
         <sphereGeometry args={[800, 32, 16]} />
         <shaderMaterial side={BackSide} depthWrite={false} uniforms={uniforms} vertexShader={skyVertex} fragmentShader={skyFragment} />
       </mesh>
-      <mesh position={[0, 40, 600]} rotation-y={Math.PI}>
-        <planeGeometry args={[200, 200]} />
-        <shaderMaterial vertexShader={sunVertex} fragmentShader={sunFragment} />
+      <points geometry={stars}>
+        <pointsMaterial color="#ffd9f6" size={1.6} sizeAttenuation={false} fog={false} transparent opacity={0.8} depthWrite={false} />
+      </points>
+      {/* The disc's bottom sinks behind the far range (MountainRing). */}
+      <mesh position={[0, 52, 620]} rotation-y={Math.PI}>
+        <planeGeometry args={[270, 270]} />
+        {/* Added over the sky, so the glow has no edge. */}
+        <shaderMaterial ref={sun} uniforms={sunUniforms} vertexShader={sunVertex} fragmentShader={sunFragment} depthWrite={false} transparent blending={AdditiveBlending} />
       </mesh>
     </>
+  );
+}
+
+// ---- The far range ----------------------------------------------------------
+
+// Mountains all the way round the horizon, too far off to scroll: a dark
+// silhouette with glowing contour lines and a neon ridge line, the sun
+// setting behind it. Heights are sums of whole-number frequencies round the
+// ring, so it closes without a seam.
+const RING_R = 560;
+const RING_SEGMENTS = 360;
+
+const ringVertex = /* glsl */ `
+  attribute float aTop; // 1 on the ridge, 0 at the foot
+  varying float vTop;
+  varying float vHeight;
+  void main() {
+    vTop = aTop;
+    vHeight = position.y;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ringFragment = /* glsl */ `
+  varying float vTop;
+  varying float vHeight;
+  void main() {
+    vec3 base = mix(vec3(0.03, 0.0, 0.07), vec3(0.16, 0.02, 0.24), smoothstep(0.0, 1.0, vTop));
+    // Contour lines every 9 m, brighter toward the top.
+    float h = vHeight / 9.0;
+    float d = abs(fract(h) - 0.5);
+    float line = 1.0 - smoothstep(0.0, fwidth(h) * 1.2, d - 0.47);
+    vec3 c = base + vec3(1.0, 0.2, 0.8) * line * 0.9 * smoothstep(0.05, 0.6, vTop);
+    // The ridge itself.
+    float ridge = smoothstep(0.965, 1.0, vTop);
+    c += vec3(1.0, 0.35, 0.9) * ridge * 2.5;
+    gl_FragColor = vec4(c, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+function MountainRing() {
+  const geometry = useMemo(() => {
+    const rand = mulberry32(84);
+    const waves = Array.from({ length: 7 }, (_, k) => ({ f: [3, 5, 7, 11, 13, 19, 29][k], a: [26, 18, 14, 9, 7, 5, 3][k], p: rand() * 6.28 }));
+    const pos: number[] = [];
+    const top: number[] = [];
+    const index: number[] = [];
+    for (let i = 0; i <= RING_SEGMENTS; i++) {
+      const a = (i / RING_SEGMENTS) * Math.PI * 2;
+      let h = 34;
+      for (const w of waves) h += w.a * Math.sin(w.f * a + w.p);
+      // Lowest dead ahead, so the sun shows over a notch in the range.
+      const ahead = Math.cos(a - Math.PI / 2); // +z is a = pi/2
+      h = Math.max(6, h * (1 - 0.55 * Math.max(0, ahead) ** 6));
+      const x = Math.cos(a) * RING_R;
+      const z = Math.sin(a) * RING_R;
+      pos.push(x, -2, z, x, h, z);
+      top.push(0, 1);
+      if (i < RING_SEGMENTS) {
+        const v = i * 2;
+        index.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+    g.setAttribute("aTop", new BufferAttribute(new Float32Array(top), 1));
+    g.setIndex(index);
+    return g;
+  }, []);
+  return (
+    <mesh geometry={geometry}>
+      <shaderMaterial vertexShader={ringVertex} fragmentShader={ringFragment} side={DoubleSide} />
+    </mesh>
+  );
+}
+
+// ---- Palms --------------------------------------------------------------------
+
+// Neon palms lining both sides of the road, scrolling past: a dark curved
+// trunk and a crown of drooping glowing fronds. Two a side every period.
+const PALM_PERIOD = 60;
+const PALM_SPACING = 30;
+
+function palmParts() {
+  const trunkPath = new CatmullRomCurve3([new Vector3(0, 0, 0), new Vector3(0.25, 3, 0), new Vector3(0.8, 6.2, 0), new Vector3(1.6, 8.6, 0)]);
+  const trunk = new TubeGeometry(trunkPath, 16, 0.34, 6, false);
+  const leaf = new Shape();
+  leaf.moveTo(0, 0);
+  // A long frond with a saw-toothed edge.
+  const L = 4.2;
+  for (let i = 1; i <= 8; i++) leaf.lineTo((i / 8) * L, 0.45 * Math.sin((i / 8) * Math.PI) + (i % 2) * 0.12);
+  for (let i = 8; i >= 0; i--) leaf.lineTo((i / 8) * L, -0.45 * Math.sin((i / 8) * Math.PI) - (i % 2) * 0.12);
+  const fronds: BufferGeometry[] = [];
+  const n = 8;
+  for (let k = 0; k < n; k++) {
+    const g = new ShapeGeometry(leaf);
+    g.rotateX(-Math.PI / 2); // flat, pointing +x
+    // Bend it down: drop each vertex by the square of its reach.
+    const p = g.attributes.position;
+    for (let v = 0; v < p.count; v++) p.setY(v, p.getY(v) - 0.14 * p.getX(v) ** 2);
+    g.rotateZ(0.35);
+    g.rotateY((k / n) * Math.PI * 2 + (k % 2) * 0.2);
+    g.translate(1.6, 8.6, 0);
+    fronds.push(g);
+  }
+  return { trunk, crown: mergeGeometries(fronds)! };
+}
+
+function Palms() {
+  const { trunk, crown, matrices } = useMemo(() => {
+    const parts = palmParts();
+    const matrices: Matrix4[] = [];
+    const o = new Object3D();
+    for (let z = -2 * PALM_PERIOD; z < 8 * PALM_PERIOD; z += PALM_SPACING) {
+      const k = Math.round(z / PALM_SPACING) & 1; // alternate so the pattern repeats each period
+      for (const side of [-1, 1]) {
+        const x = ROAD_WIDTH / 4 + side * (ROAD_WIDTH / 2 + 11 + k * 3);
+        o.position.set(x, 0, z + (side > 0 ? 0 : PALM_SPACING / 2));
+        // Lean out over the road a little, or away from it.
+        o.rotation.set(0, side > 0 ? Math.PI : 0, 0);
+        o.rotateY(k ? 0.5 : -0.4);
+        const s = k ? 1.15 : 0.95;
+        o.scale.set(s, s, s);
+        o.updateMatrix();
+        matrices.push(o.matrix.clone());
+      }
+    }
+    return { ...parts, matrices };
+  }, []);
+  const trunkRef = useRef<InstancedMesh>(null);
+  const crownRef = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    for (const m of [trunkRef.current, crownRef.current]) {
+      if (!m) continue;
+      matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
+  }, [matrices]);
+  const frondColor = useMemo(() => new Color("#ff2fd0").multiplyScalar(1.4), []);
+  return (
+    <Scroll period={PALM_PERIOD}>
+      <instancedMesh ref={trunkRef} args={[trunk, undefined, matrices.length]}>
+        <meshBasicMaterial color="#1c0830" />
+      </instancedMesh>
+      <instancedMesh ref={crownRef} args={[crown, undefined, matrices.length]}>
+        <meshBasicMaterial color={frondColor} side={DoubleSide} />
+      </instancedMesh>
+    </Scroll>
   );
 }
 
@@ -304,9 +509,11 @@ export default function OutrunScene({ domeOn }: SceneProps) {
       </Environment>
       <ambientLight intensity={0.05} />
       <Sky />
+      <MountainRing />
       <Grid />
       <Road />
       <Mountains />
+      <Palms />
       <CamaroModel lightsOn domeOn={domeOn} />
       <CarContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
