@@ -47,9 +47,9 @@ const STRIP_TO = START_Z + QUARTER_MILE + 450;
 const WALL_X = [-LANE / 2 - 0.8, LANE * 1.5 + 0.8];
 
 // Both four-speeds, power-shifted; 3.91 and 4.30 rear gears respectively.
-// The Camaro's shifts land at ~5700 rpm through the M22 (2.20/1.64/1.28) on
+// The Camaro's shifts land at ~4500 rpm through the M22 (2.20/1.64/1.28) on
 // 275/60R15s, matching the engine sound's drivetrain.
-const CAMARO: Runner = { topSpeed: 50, tau: 6, reaction: 0.12, shifts: [24.5, 33, 42.5], shiftTime: 0.3, brake: 4.2 };
+const CAMARO: Runner = { topSpeed: 50, tau: 6, reaction: 0.12, shifts: [19.5, 26.2, 33.5], shiftTime: 0.3, brake: 4.2 };
 const MUSTANG: Runner = { topSpeed: 49.2, tau: 5.9, reaction: 0.21, shifts: [15.5, 25.5, 36.5], shiftTime: 0.34, brake: 4.0, stageLag: 0.5 };
 const race = new Race(CAMARO, MUSTANG);
 const MUSTANG_RUN = race.profile(MUSTANG);

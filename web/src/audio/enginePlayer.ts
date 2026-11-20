@@ -49,9 +49,13 @@ class EnginePlayer {
   private startLength = 0;
   enabled = false;
 
-  // Must be called from a user gesture (the browser's autoplay policy).
+  get running() {
+    return this.ctx?.state === "running";
+  }
+
+  // Call from a user gesture (the browser's autoplay policy). Safe to call
+  // again: later gestures just retry resuming the audio.
   async enable() {
-    this.enabled = true;
     if (!this.ctx) {
       this.ctx = new AudioContext();
       const comp = this.ctx.createDynamicsCompressor();
@@ -66,11 +70,15 @@ class EnginePlayer {
       this.out.gain.value = 0;
       this.out.connect(this.tone).connect(comp).connect(this.ctx.destination);
     }
-    await this.ctx.resume();
+    // Resolves once the browser allows audio; may wait for a later gesture.
+    void this.ctx.resume();
+    if (this.enabled) return;
+    this.enabled = true;
     try {
       await (this.loading ??= this.load());
     } catch (e) {
       this.loading = null; // try again next time
+      this.enabled = false;
       throw e;
     }
     if (!this.enabled) return;

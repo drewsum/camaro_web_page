@@ -1,10 +1,9 @@
 # Engine sound from engine-sim
 
-The Sound toggle plays loops rendered offline with
+The site's engine sound (always on, starting at the first click, tap or key press) plays loops rendered offline with
 [engine-sim](https://github.com/ange-yaghi/engine-sim) (MIT), from a model of
 the 540 in `camaro_540.mr`. engine-sim itself isn't shipped to the browser.
-The site plays 38 short MP3 loops (about 1.1 MB), loaded only when Sound is
-turned on.
+The site plays 38 short MP3 loops (about 1.1 MB), loaded on that first interaction.
 
 ## The engine model (`camaro_540.mr`)
 

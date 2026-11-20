@@ -57,12 +57,26 @@ export default function App() {
   const [lightsOn, setLightsOn] = useState(false);
   const [domeOn, setDomeOn] = useState(false);
   const [nightOn, setNightOn] = useState(false);
-  const [soundOn, setSoundOn] = useState(false);
   const [dpr, setDpr] = useState(MAX_DPR);
   const scene = SCENES.find((s) => s.id === sceneId) ?? SCENES[0];
   const night = !!scene.nightOption && nightOn;
   const lights = scene.night || lightsOn;
   const page = useHashPage();
+
+  // Engine sound is always on, but browsers only let audio start from a user
+  // gesture, so it starts on the first click, tap or key press anywhere.
+  useEffect(() => {
+    // Touch only counts as a gesture on release, hence pointerup/touchend.
+    const events = ["pointerdown", "pointerup", "touchend", "keydown"] as const;
+    const stop = () => events.forEach((e) => window.removeEventListener(e, start));
+    const start = () => {
+      // Keep listening until the audio is actually running.
+      if (enginePlayer.running) return stop();
+      enginePlayer.enable().catch(() => {});
+    };
+    events.forEach((e) => window.addEventListener(e, start));
+    return stop;
+  }, []);
 
   useEffect(() => {
     if (!page) return;
@@ -162,21 +176,6 @@ export default function App() {
         <label>
           <input type="checkbox" checked={domeOn} onChange={(e) => setDomeOn(e.target.checked)} />
           Dome light
-        </label>
-        <label title="Engine sound, rendered with engine-sim from the 540's specs">
-          <input
-            type="checkbox"
-            checked={soundOn}
-            onChange={(e) => {
-              // Turned on from the click itself: browsers only allow audio
-              // to start from a user gesture.
-              const on = e.target.checked;
-              setSoundOn(on);
-              if (on) enginePlayer.enable().catch(() => setSoundOn(false));
-              else enginePlayer.disable();
-            }}
-          />
-          Sound
         </label>
       </div>
       <footer className="attribution" hidden={!!page}>
