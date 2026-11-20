@@ -6,6 +6,7 @@ import { markCar } from "../car/layers";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 import { useDrivingPose } from "../car/useDrivingPose";
 import { makeDomeLight, makeHeadBeams, makeLampGlows, setDomeLight, updateLampGlows } from "../car/lampGlow";
+import { EngineSound } from "../audio/EngineSound";
 
 export const MODEL_URL = "/models/camaro.glb";
 export const DRACO_URL = "/draco/";
@@ -132,6 +133,7 @@ export default function CamaroModel({ lightsOn = false, domeOn = false, hoodOpen
   return (
     <Center top>
       <primitive object={scene} />
+      <EngineSound />
     </Center>
   );
 }

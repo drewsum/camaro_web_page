@@ -1,0 +1,265 @@
+{
+ "mid_1000": {
+  "rpm": 1000,
+  "layer": "mid",
+  "cycles": 8,
+  "period": 0.96,
+  "level": -11.0
+ },
+ "mid_1500": {
+  "rpm": 1500,
+  "layer": "mid",
+  "cycles": 12,
+  "period": 0.96,
+  "level": 0.45
+ },
+ "mid_2000": {
+  "rpm": 2000,
+  "layer": "mid",
+  "cycles": 17,
+  "period": 1.02,
+  "level": 5.81
+ },
+ "mid_2500": {
+  "rpm": 2500,
+  "layer": "mid",
+  "cycles": 21,
+  "period": 1.0080045351473923,
+  "level": 13.72
+ },
+ "mid_3000": {
+  "rpm": 3000,
+  "layer": "mid",
+  "cycles": 25,
+  "period": 1.0,
+  "level": 15.11
+ },
+ "mid_3500": {
+  "rpm": 3500,
+  "layer": "mid",
+  "cycles": 29,
+  "period": 0.9942857142857143,
+  "level": 21.08
+ },
+ "mid_4000": {
+  "rpm": 4000,
+  "layer": "mid",
+  "cycles": 33,
+  "period": 0.99,
+  "level": 17.19
+ },
+ "mid_4500": {
+  "rpm": 4500,
+  "layer": "mid",
+  "cycles": 38,
+  "period": 1.0133333333333334,
+  "level": 18.46
+ },
+ "mid_5000": {
+  "rpm": 5000,
+  "layer": "mid",
+  "cycles": 42,
+  "period": 1.0080045351473923,
+  "level": 20.53
+ },
+ "mid_5500": {
+  "rpm": 5500,
+  "layer": "mid",
+  "cycles": 46,
+  "period": 1.0036281179138322,
+  "level": 24.26
+ },
+ "mid_6000": {
+  "rpm": 6000,
+  "layer": "mid",
+  "cycles": 50,
+  "period": 1.0,
+  "level": 23.2
+ },
+ "mid_6500": {
+  "rpm": 6500,
+  "layer": "mid",
+  "cycles": 54,
+  "period": 0.9969160997732426,
+  "level": 20.53
+ },
+ "off_1000": {
+  "rpm": 1000,
+  "layer": "off",
+  "cycles": 8,
+  "period": 0.96,
+  "level": -15.77
+ },
+ "off_1500": {
+  "rpm": 1500,
+  "layer": "off",
+  "cycles": 12,
+  "period": 0.96,
+  "level": -0.78
+ },
+ "off_2000": {
+  "rpm": 2000,
+  "layer": "off",
+  "cycles": 17,
+  "period": 1.02,
+  "level": 5.17
+ },
+ "off_2500": {
+  "rpm": 2500,
+  "layer": "off",
+  "cycles": 21,
+  "period": 1.0080045351473923,
+  "level": 15.01
+ },
+ "off_3000": {
+  "rpm": 3000,
+  "layer": "off",
+  "cycles": 25,
+  "period": 1.0,
+  "level": 14.78
+ },
+ "off_3500": {
+  "rpm": 3500,
+  "layer": "off",
+  "cycles": 29,
+  "period": 0.9942857142857143,
+  "level": 23.51
+ },
+ "off_4000": {
+  "rpm": 4000,
+  "layer": "off",
+  "cycles": 33,
+  "period": 0.99,
+  "level": 18.93
+ },
+ "off_4500": {
+  "rpm": 4500,
+  "layer": "off",
+  "cycles": 38,
+  "period": 1.0133333333333334,
+  "level": 22.54
+ },
+ "off_5000": {
+  "rpm": 5000,
+  "layer": "off",
+  "cycles": 42,
+  "period": 1.0080045351473923,
+  "level": 23.06
+ },
+ "off_5500": {
+  "rpm": 5500,
+  "layer": "off",
+  "cycles": 46,
+  "period": 1.0036281179138322,
+  "level": 26.85
+ },
+ "off_6000": {
+  "rpm": 6000,
+  "layer": "off",
+  "cycles": 50,
+  "period": 1.0,
+  "level": 27.35
+ },
+ "off_6500": {
+  "rpm": 6500,
+  "layer": "off",
+  "cycles": 54,
+  "period": 0.9969160997732426,
+  "level": 24.01
+ },
+ "on_1000": {
+  "rpm": 1000,
+  "layer": "on",
+  "cycles": 8,
+  "period": 0.96,
+  "level": 6.69
+ },
+ "on_1500": {
+  "rpm": 1500,
+  "layer": "on",
+  "cycles": 12,
+  "period": 0.96,
+  "level": 21.52
+ },
+ "on_2000": {
+  "rpm": 2000,
+  "layer": "on",
+  "cycles": 17,
+  "period": 1.02,
+  "level": 21.83
+ },
+ "on_2500": {
+  "rpm": 2500,
+  "layer": "on",
+  "cycles": 21,
+  "period": 1.0080045351473923,
+  "level": 30.74
+ },
+ "on_3000": {
+  "rpm": 3000,
+  "layer": "on",
+  "cycles": 25,
+  "period": 1.0,
+  "level": 26.91
+ },
+ "on_3500": {
+  "rpm": 3500,
+  "layer": "on",
+  "cycles": 29,
+  "period": 0.9942857142857143,
+  "level": 29.3
+ },
+ "on_4000": {
+  "rpm": 4000,
+  "layer": "on",
+  "cycles": 33,
+  "period": 0.99,
+  "level": 30.16
+ },
+ "on_4500": {
+  "rpm": 4500,
+  "layer": "on",
+  "cycles": 38,
+  "period": 1.0133333333333334,
+  "level": 34.09
+ },
+ "on_5000": {
+  "rpm": 5000,
+  "layer": "on",
+  "cycles": 42,
+  "period": 1.0080045351473923,
+  "level": 34.41
+ },
+ "on_5500": {
+  "rpm": 5500,
+  "layer": "on",
+  "cycles": 46,
+  "period": 1.0036281179138322,
+  "level": 35.06
+ },
+ "on_6000": {
+  "rpm": 6000,
+  "layer": "on",
+  "cycles": 50,
+  "period": 1.0,
+  "level": 34.28
+ },
+ "on_6500": {
+  "rpm": 6500,
+  "layer": "on",
+  "cycles": 54,
+  "period": 0.9969160997732426,
+  "level": 32.46
+ },
+ "start": {
+  "layer": "start",
+  "period": null,
+  "level": -19.55
+ },
+ "idle": {
+  "layer": "idle",
+  "rpm": 920,
+  "period": 4.0,
+  "level": -17.55
+ }
+}

@@ -1,0 +1,329 @@
+// Drew's 1968 Camaro: Gen VI big block stroked to 540 ci.
+// Bore 4.500", stroke 4.250", 6.535" rods, 9.4:1, AFR 2110 heads (117 cc),
+// Comp custom solid-roller-ish grind 242/250 @ .050, .622/.618, 110 LSA +4,
+// AFR dual plane + 850 double pumper, HEI, Hooker long tubes into 3.25"
+// true duals with Magnaflows. M22 four speed.
+
+import "engine_sim.mr"
+
+units units()
+constants constants()
+impulse_response_library ir_lib()
+
+label cycle(2 * 360 * units.deg)
+
+private node wires {
+    output wire1: ignition_wire();
+    output wire2: ignition_wire();
+    output wire3: ignition_wire();
+    output wire4: ignition_wire();
+    output wire5: ignition_wire();
+    output wire6: ignition_wire();
+    output wire7: ignition_wire();
+    output wire8: ignition_wire();
+}
+
+// Comp Cams custom grind. Lift is at the valve; duration in crank degrees.
+// The harmonic lobe matches the 0.050" durations exactly; gamma 1.3 gets the
+// seat-to-seat timing as close as this lobe shape allows.
+private node comp_540_camshaft {
+    alias output __out:
+        chevy_bbc_camshaft_builder(
+            advance: 0 * units.deg,
+            intake_lobe_profile: harmonic_cam_lobe(
+                duration_at_50_thou: 242 * units.deg,
+                gamma: 1.3,
+                lift: 622 * units.thou,
+                steps: 100),
+            exhaust_lobe_profile: harmonic_cam_lobe(
+                duration_at_50_thou: 250 * units.deg,
+                gamma: 1.3,
+                lift: 618 * units.thou,
+                steps: 100),
+            // 110 LSA installed 4 degrees advanced: ICL 106, ECL 114.
+            intake_lobe_center: 106 * units.deg,
+            exhaust_lobe_center: 114 * units.deg);
+}
+
+// AFR 2110 / 345 cc rectangular port, 2.300/1.880 valves, 117 cc chamber.
+// Flow in cfm at 28" vs valve lift.
+private node afr_2110_head {
+    input intake_camshaft;
+    input exhaust_camshaft;
+    input flip_display: false;
+    alias output __out: head;
+
+    function intake_flow(50 * units.thou)
+    intake_flow
+        .add_flow_sample(0, 0)
+        .add_flow_sample(50, 36)
+        .add_flow_sample(100, 73)
+        .add_flow_sample(150, 112)
+        .add_flow_sample(200, 150)
+        .add_flow_sample(250, 190)
+        .add_flow_sample(300, 228)
+        .add_flow_sample(350, 263)
+        .add_flow_sample(400, 296)
+        .add_flow_sample(450, 322)
+        .add_flow_sample(500, 345)
+        .add_flow_sample(550, 363)
+        .add_flow_sample(600, 378)
+        .add_flow_sample(650, 389)
+        .add_flow_sample(700, 397)
+        .add_flow_sample(750, 400)
+        .add_flow_sample(800, 401)
+
+    function exhaust_flow(50 * units.thou)
+    exhaust_flow
+        .add_flow_sample(0, 0)
+        .add_flow_sample(50, 30)
+        .add_flow_sample(100, 60)
+        .add_flow_sample(150, 93)
+        .add_flow_sample(200, 125)
+        .add_flow_sample(250, 155)
+        .add_flow_sample(300, 183)
+        .add_flow_sample(350, 204)
+        .add_flow_sample(400, 222)
+        .add_flow_sample(450, 238)
+        .add_flow_sample(500, 252)
+        .add_flow_sample(550, 262)
+        .add_flow_sample(600, 270)
+        .add_flow_sample(650, 276)
+        .add_flow_sample(700, 282)
+        .add_flow_sample(750, 285)
+        .add_flow_sample(800, 288)
+
+    cylinder_head head(
+        chamber_volume: 117.0 * units.cc,
+        intake_runner_volume: 345.0 * units.cc,
+        intake_runner_cross_section_area: 25.0 * units.cm2,
+
+        intake_port_flow: intake_flow,
+        exhaust_port_flow: exhaust_flow,
+        intake_camshaft: intake_camshaft,
+        exhaust_camshaft: exhaust_camshaft,
+        flip_display: flip_display
+    )
+}
+
+public node camaro_540 {
+    input idle_cfm: 0.012;
+    input idle_plate: 0.994;
+    input carb_cfm: 850.0;
+    input volume: 1.0;
+    input ir: ir_lib.minimal_muffling_02;
+    alias output __out: engine;
+
+    wires wires()
+
+    engine engine(
+        name: "540 Big Block",
+        starter_torque: 250 * units.lb_ft,
+        starter_speed: 220 * units.rpm,
+        redline: 6500 * units.rpm,
+        fuel: fuel(
+            max_turbulence_effect: 3.0,
+            burning_efficiency_randomness: 0.35,
+            max_burning_efficiency: 0.72),
+        throttle_gamma: 2.0,
+        simulation_frequency: 12000,
+        hf_gain: 0.01,
+        noise: 1.0,
+        jitter: 0.4
+    )
+
+    // Steel crank, 4.25" stroke, lightweight steel flywheel for the M22.
+    crankshaft c0(
+        throw: 2.125 * units.inch,
+        flywheel_mass: 30 * units.lb,
+        mass: 70 * units.lb,
+        friction_torque: 12.0 * units.lb_ft,
+        moment_of_inertia: 0.36,
+        position_x: 0.0,
+        position_y: 0.0,
+        tdc: constants.pi / 4
+    )
+
+    rod_journal rj0(angle: 0.0)
+    rod_journal rj1(angle: -constants.pi / 2)
+    rod_journal rj2(angle: -3.0 * constants.pi / 2)
+    rod_journal rj3(angle: constants.pi)
+
+    c0
+        .add_rod_journal(rj0)
+        .add_rod_journal(rj1)
+        .add_rod_journal(rj2)
+        .add_rod_journal(rj3)
+
+    // Forged pistons, 9.4:1. Compression height puts the crown ~0.016" in
+    // the hole with 6.535" rods on the 9.8" deck.
+    piston_parameters piston_params(
+        mass: 720 * units.g,
+        blowby: 0,
+        compression_height: 1.124 * units.inch,
+        wrist_pin_position: 0.0,
+        displacement: 0.0
+    )
+
+    connecting_rod_parameters cr_params(
+        mass: 840.0 * units.g,
+        moment_of_inertia: 0.0017,
+        center_of_mass: 0.0,
+        length: 6.535 * units.inch
+    )
+
+    cylinder_bank_parameters bank_params(
+        bore: 4.5 * units.inch,
+        deck_height: 9.8 * units.inch
+    )
+
+    // AFR dual plane under an 850 double pumper.
+    intake intake(
+        plenum_volume: 1.2 * units.L,
+        plenum_cross_section_area: 110.0 * units.cm2,
+        intake_flow_rate: k_carb(carb_cfm),
+        idle_flow_rate: k_carb(idle_cfm),
+        idle_throttle_plate_position: idle_plate,
+        throttle_gamma: 2.0,
+        runner_flow_rate: k_carb(420.0),
+        runner_length: 9.0 * units.inch,
+        velocity_decay: 0.1
+    )
+
+    // Hooker long tubes (~32" primaries) into 3.25" true duals and
+    // Magnaflow straight-through mufflers. The driver's side runs a bit
+    // longer around the bellhousing/crossmember.
+    exhaust_system_parameters es_params(
+        outlet_flow_rate: k_carb(1100.0),
+        primary_tube_length: 32.0 * units.inch,
+        primary_flow_rate: k_carb(320.0),
+        velocity_decay: 1.0
+    )
+
+    exhaust_system exhaust0(
+        es_params,
+        length: 156.0 * units.inch,
+        audio_volume: 1.0 * volume,
+        impulse_response: ir)
+    exhaust_system exhaust1(
+        es_params,
+        length: 146.0 * units.inch,
+        audio_volume: 1.0 * volume,
+        impulse_response: ir)
+
+    // Equal-ish length primaries; small differences per tube.
+    label p(1.0 * units.inch)
+
+    cylinder_bank b0(bank_params, angle: -45 * units.deg)
+    b0
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj0, intake: intake, exhaust_system: exhaust0,
+            ignition_wire: wires.wire1, primary_length: p * 33, sound_attenuation: 1.0)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj1, intake: intake, exhaust_system: exhaust0,
+            ignition_wire: wires.wire3, primary_length: p * 31, sound_attenuation: 0.95)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj2, intake: intake, exhaust_system: exhaust0,
+            ignition_wire: wires.wire5, primary_length: p * 32, sound_attenuation: 1.05)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj3, intake: intake, exhaust_system: exhaust0,
+            ignition_wire: wires.wire7, primary_length: p * 34, sound_attenuation: 0.9)
+
+    cylinder_bank b1(bank_params, angle: 45.0 * units.deg)
+    b1
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj0, intake: intake, exhaust_system: exhaust1,
+            ignition_wire: wires.wire2, primary_length: p * 34, sound_attenuation: 0.95)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj1, intake: intake, exhaust_system: exhaust1,
+            ignition_wire: wires.wire4, primary_length: p * 32, sound_attenuation: 1.0)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj2, intake: intake, exhaust_system: exhaust1,
+            ignition_wire: wires.wire6, primary_length: p * 31, sound_attenuation: 1.05)
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj3, intake: intake, exhaust_system: exhaust1,
+            ignition_wire: wires.wire8, primary_length: p * 33, sound_attenuation: 0.9)
+
+    engine
+        .add_cylinder_bank(b0)
+        .add_cylinder_bank(b1)
+
+    engine.add_crankshaft(c0)
+
+    comp_540_camshaft camshaft()
+
+    b0.set_cylinder_head(
+        afr_2110_head(
+            intake_camshaft: camshaft.intake_cam_0,
+            exhaust_camshaft: camshaft.exhaust_cam_0))
+    b1.set_cylinder_head(
+        afr_2110_head(
+            intake_camshaft: camshaft.intake_cam_1,
+            exhaust_camshaft: camshaft.exhaust_cam_1,
+            flip_display: true))
+
+    // HEI: 15 initial, mechanical all in (36 total) by ~3200 rpm.
+    function timing_curve(1000 * units.rpm)
+    timing_curve
+        .add_sample(0000 * units.rpm, 15 * units.deg)
+        .add_sample(1000 * units.rpm, 15 * units.deg)
+        .add_sample(2000 * units.rpm, 26 * units.deg)
+        .add_sample(3000 * units.rpm, 35 * units.deg)
+        .add_sample(4000 * units.rpm, 36 * units.deg)
+        .add_sample(5000 * units.rpm, 36 * units.deg)
+        .add_sample(6000 * units.rpm, 36 * units.deg)
+        .add_sample(7000 * units.rpm, 36 * units.deg)
+
+    engine.add_ignition_module(
+        chevy_bbc_distributor(
+            wires: wires,
+            timing_curve: timing_curve,
+            rev_limit: 6800 * units.rpm))
+}
+
+// 1968 Camaro SS: ~3550 lb with driver, 275/60R15 rears, Dana 60.
+private node camaro_68 {
+    alias output __out:
+        vehicle(
+            mass: 1610 * units.kg,
+            drag_coefficient: 0.42,
+            cross_sectional_area: (72 * units.inch) * (51 * units.inch),
+            diff_ratio: 3.91,
+            tire_radius: 14.0 * units.inch,
+            rolling_resistance: 250 * units.N
+        );
+}
+
+// Muncie M22 close ratio.
+private node m22 {
+    alias output __out:
+        transmission(max_clutch_torque: 900 * units.lb_ft)
+        .add_gear(2.20)
+        .add_gear(1.64)
+        .add_gear(1.28)
+        .add_gear(1.00);
+}
+
+public node main {
+    set_engine(camaro_540())
+    set_vehicle(camaro_68())
+    set_transmission(m22())
+}
+
+main()

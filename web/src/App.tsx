@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { PerformanceMonitor, useProgress } from "@react-three/drei";
 import { SCENES } from "./scenes";
 import { PAGES } from "./pages";
+import { enginePlayer } from "./audio/enginePlayer";
 
 const SCENE_KEY = "camaro.scene";
 // Phones report 3 or more; past 2 the extra pixels cost far more than they show.
@@ -56,6 +57,7 @@ export default function App() {
   const [lightsOn, setLightsOn] = useState(false);
   const [domeOn, setDomeOn] = useState(false);
   const [nightOn, setNightOn] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
   const [dpr, setDpr] = useState(MAX_DPR);
   const scene = SCENES.find((s) => s.id === sceneId) ?? SCENES[0];
   const night = !!scene.nightOption && nightOn;
@@ -160,6 +162,21 @@ export default function App() {
         <label>
           <input type="checkbox" checked={domeOn} onChange={(e) => setDomeOn(e.target.checked)} />
           Dome light
+        </label>
+        <label title="Engine sound, rendered with engine-sim from the 540's specs">
+          <input
+            type="checkbox"
+            checked={soundOn}
+            onChange={(e) => {
+              // Turned on from the click itself: browsers only allow audio
+              // to start from a user gesture.
+              const on = e.target.checked;
+              setSoundOn(on);
+              if (on) enginePlayer.enable().catch(() => setSoundOn(false));
+              else enginePlayer.disable();
+            }}
+          />
+          Sound
         </label>
       </div>
       <footer className="attribution" hidden={!!page}>
