@@ -1,9 +1,23 @@
-import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
 import {
+  AdditiveBlending,
   BoxGeometry,
+  ConeGeometry,
+  IcosahedronGeometry,
+  Object3D,
+  ShaderMaterial,
+  Shape,
+  ShapeGeometry,
+  SphereGeometry,
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
@@ -22,18 +36,30 @@ import {
   type DirectionalLight,
   type Group,
   type InstancedMesh,
-  type ShaderMaterial,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import CamaroModel from "../components/CamaroModel";
-import { DriveProvider, driveState, useDrive } from "../car/driveClock";
+import {
+  constantSpeed,
+  DriveProvider,
+  driveState,
+  useDrive,
+} from "../car/driveClock";
+import MustangModel from "../components/MustangModel";
+import ChargerModel from "../components/ChargerModel";
 import type { TrackPoint } from "../car/track";
 import type { SceneProps } from ".";
 import { useCameraStart } from "./useCameraStart";
 import { useExposure, useFarPlane } from "./common/renderer";
 import { polyHavenHdri, type HdriSky } from "./common/hdri";
 import { GroundGlows, NearestLights, useSceneSky } from "./common/night";
-import { InstancedModel, LodInstancedModel, polyHavenModel, useModelParts, type Level } from "./common/polyHaven";
+import {
+  InstancedModel,
+  LodInstancedModel,
+  polyHavenModel,
+  useModelParts,
+  type Level,
+} from "./common/polyHaven";
 import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
@@ -87,7 +113,8 @@ const here = { s: 0, lap: 0, heading: 0 };
 
 function cliffY(s: number, u: number, road: number, noise = 0) {
   const t = Math.min(1, Math.max(0, (-u - 4.5) / 47.5));
-  const recess = 0.1 * Math.sin((TAU * 5 * s) / L) + 0.07 * Math.sin((TAU * 13 * s) / L + 1);
+  const recess =
+    0.1 * Math.sin((TAU * 5 * s) / L) + 0.07 * Math.sin((TAU * 13 * s) / L + 1);
   const drop = smooth(0.03, 0.7, t + recess);
   return road + (SEA - 5 - road) * drop + noise * 6 * t * (1 - t);
 }
@@ -98,7 +125,11 @@ function hillY(s: number, u: number, road: number) {
     0.5 * Math.sin((TAU * 4 * s) / L + u * 0.031) +
     0.3 * Math.sin((TAU * 9 * s) / L + 1.3 + u * 0.05) +
     0.2 * Math.sin((TAU * 17 * s) / L - u * 0.02);
-  return road - 0.4 + smooth(0, 0.03, r) * (3.4 + 110 * Math.pow(r, 1.5) + (5 + 28 * r) * roll);
+  return (
+    road -
+    0.4 +
+    smooth(0, 0.03, r) * (3.4 + 110 * Math.pow(r, 1.5) + (5 + 28 * r) * roll)
+  );
 }
 
 // ---- Geometry along the road ---------------------------------------------
@@ -108,7 +139,13 @@ interface RibbonOptions {
   us: number[]; // lateral positions of the columns
   y: (s: number, p: TrackPoint, u: number, j: number, key: number) => number;
   uv?: (s: number, u: number) => [number, number];
-  color?: (y: number, p: TrackPoint, u: number, j: number, key: number) => Color;
+  color?: (
+    y: number,
+    p: TrackPoint,
+    u: number,
+    j: number,
+    key: number,
+  ) => Color;
 }
 
 // A grid of rows across the road from S0 to S1, positioned in track space.
@@ -197,7 +234,15 @@ function roadOverlayTexture() {
     for (let n = 0; n < 60; n++) {
       g.fillStyle = `rgba(12,10,8,${0.04 + rand() * 0.08})`;
       g.beginPath();
-      g.ellipse(px(lane + (rand() - 0.5) * 0.4), rand() * H, 1.5 + rand() * 3, 4 + rand() * 14, 0, 0, Math.PI * 2);
+      g.ellipse(
+        px(lane + (rand() - 0.5) * 0.4),
+        rand() * H,
+        1.5 + rand() * 3,
+        4 + rand() * 14,
+        0,
+        0,
+        Math.PI * 2,
+      );
       g.fill();
     }
   }
@@ -208,7 +253,13 @@ function roadOverlayTexture() {
   const snakes: [number, number][][] = [];
   // Short steps with a wandering heading, so they read as sealed cracks
   // rather than strokes.
-  const walk = (u: number, v: number, du: number, dv: number, steps: number) => {
+  const walk = (
+    u: number,
+    v: number,
+    du: number,
+    dv: number,
+    steps: number,
+  ) => {
     const pts: [number, number][] = [[u, v]];
     let a = Math.atan2(dv, du);
     for (let i = 0; i < steps; i++) {
@@ -220,10 +271,23 @@ function roadOverlayTexture() {
     }
     snakes.push(pts);
   };
-  for (const u of [2.2, 1.8, -1.6, 5.6]) walk(u + (rand() - 0.5) * 0.15, rand() * ROAD_TILE, 0, 1, 25 + Math.floor(rand() * 50));
+  for (const u of [2.2, 1.8, -1.6, 5.6])
+    walk(
+      u + (rand() - 0.5) * 0.15,
+      rand() * ROAD_TILE,
+      0,
+      1,
+      25 + Math.floor(rand() * 50),
+    );
   for (let n = 0; n < 5; n++) {
     const dir = rand() < 0.5 ? 1 : -1;
-    walk(dir > 0 ? -1.9 + rand() * 4 : 5.9 - rand() * 4, rand() * ROAD_TILE, dir, (rand() - 0.5) * 0.3, 6 + Math.floor(rand() * 16));
+    walk(
+      dir > 0 ? -1.9 + rand() * 4 : 5.9 - rand() * 4,
+      rand() * ROAD_TILE,
+      dir,
+      (rand() - 0.5) * 0.3,
+      6 + Math.floor(rand() * 16),
+    );
   }
   g.lineCap = g.lineJoin = "round";
   for (const pts of snakes) {
@@ -232,7 +296,9 @@ function roadOverlayTexture() {
       g.strokeStyle = "rgba(12,12,13,0.82)";
       g.lineWidth = width * PX;
       g.beginPath();
-      pts.forEach(([u, v], i) => (i ? g.lineTo : g.moveTo).call(g, px(u), (v + shift) * PX));
+      pts.forEach(([u, v], i) =>
+        (i ? g.lineTo : g.moveTo).call(g, px(u), (v + shift) * PX),
+      );
       g.stroke();
     }
   }
@@ -247,7 +313,13 @@ function roadOverlayTexture() {
     for (let n = 0; n < 700; n++) {
       g.fillStyle = `rgba(0,0,0,${0.2 + rand() * 0.5})`;
       g.beginPath();
-      g.arc(px(u - width / 2) + rand() * width * PX, rand() * H, 0.4 + rand() * 1.1, 0, Math.PI * 2);
+      g.arc(
+        px(u - width / 2) + rand() * width * PX,
+        rand() * H,
+        0.4 + rand() * 1.1,
+        0,
+        Math.PI * 2,
+      );
       g.fill();
     }
     g.globalCompositeOperation = "source-over";
@@ -275,26 +347,63 @@ function Road() {
         uv: (s, u) => [(u - ROAD_LEFT) / ROAD_WIDTH, s / ROAD_TILE],
       }),
       shoulders: mergeGeometries([
-        ribbon({ ds: 2, us: [-4.5, ROAD_LEFT], y: flat(-0.02), uv: (s, u) => [u / 3, s / 3] }),
-        ribbon({ ds: 2, us: [ROAD_LEFT + ROAD_WIDTH, 8.5], y: flat(-0.02), uv: (s, u) => [u / 3, s / 3] }),
+        ribbon({
+          ds: 2,
+          us: [-4.5, ROAD_LEFT],
+          y: flat(-0.02),
+          uv: (s, u) => [u / 3, s / 3],
+        }),
+        ribbon({
+          ds: 2,
+          us: [ROAD_LEFT + ROAD_WIDTH, 8.5],
+          y: flat(-0.02),
+          uv: (s, u) => [u / 3, s / 3],
+        }),
       ]),
       // Guardrail beam: a vertical strip just inside the ocean-side shoulder.
-      rail: ribbon({ ds: 2, us: [-4.2, -4.2], y: (_s, p, _u, j) => p.y + (j ? 0.45 : 0.8) }),
+      rail: ribbon({
+        ds: 2,
+        us: [-4.2, -4.2],
+        y: (_s, p, _u, j) => p.y + (j ? 0.45 : 0.8),
+      }),
     };
   }, []);
   // Road UVs span ROAD_WIDTH x ROAD_TILE m; shoulder UVs are metres / 3.
-  const asphalt = usePbrMaterial(ASPHALT, { tile: 4, size: [ROAD_WIDTH, ROAD_TILE], normalScale: 0.8, brightness: 0.8 });
-  const gravel = usePbrMaterial(GRAVEL, { res: "1k", tile: 2, size: [3, 3], tint: "#d8cdbb" });
+  const asphalt = usePbrMaterial(ASPHALT, {
+    tile: 4,
+    size: [ROAD_WIDTH, ROAD_TILE],
+    normalScale: 0.8,
+    brightness: 0.8,
+  });
+  const gravel = usePbrMaterial(GRAVEL, {
+    res: "1k",
+    tile: 2,
+    size: [3, 3],
+    tint: "#d8cdbb",
+  });
   const overlay = useMemo(roadOverlayTexture, []);
   return (
     <>
       <mesh geometry={road} receiveShadow material={asphalt} />
       <mesh geometry={road} receiveShadow>
-        <meshStandardMaterial map={overlay} transparent depthWrite={false} roughness={0.75} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-2} />
+        <meshStandardMaterial
+          map={overlay}
+          transparent
+          depthWrite={false}
+          roughness={0.75}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-2}
+        />
       </mesh>
       <mesh geometry={shoulders} receiveShadow material={gravel} />
       <mesh geometry={rail} castShadow>
-        <meshStandardMaterial color="#b9bec2" metalness={0.7} roughness={0.35} side={DoubleSide} />
+        <meshStandardMaterial
+          color="#b9bec2"
+          metalness={0.7}
+          roughness={0.35}
+          side={DoubleSide}
+        />
       </mesh>
     </>
   );
@@ -302,10 +411,19 @@ function Road() {
 
 // An instance transform at distance s, offset u from the road centreline and
 // turned to follow it.
-function placeAlong(s: number, u: number, y: number, scale: Vector3, extraYaw = 0, tilt?: Euler) {
+function placeAlong(
+  s: number,
+  u: number,
+  y: number,
+  scale: Vector3,
+  extraYaw = 0,
+  tilt?: Euler,
+) {
   const p = track.at(s);
   const [x, , z] = track.offset(p, u);
-  const q = new Quaternion().setFromEuler(new Euler(0, p.heading + extraYaw, 0));
+  const q = new Quaternion().setFromEuler(
+    new Euler(0, p.heading + extraYaw, 0),
+  );
   if (tilt) q.multiply(new Quaternion().setFromEuler(tilt));
   return new Matrix4().compose(new Vector3(x, y, z), q, scale);
 }
@@ -316,7 +434,8 @@ const POLE_U = 11;
 
 function spotsEvery(spacing: number) {
   const out: number[] = [];
-  for (let s = Math.ceil(S0 / spacing) * spacing; s <= S1; s += spacing) out.push(s);
+  for (let s = Math.ceil(S0 / spacing) * spacing; s <= S1; s += spacing)
+    out.push(s);
   return out;
 }
 
@@ -333,25 +452,37 @@ function RoadFurniture() {
     for (let i = 0; i < poleSpots.length - 1; i++) {
       const [sa, sb] = [poleSpots[i], poleSpots[i + 1]];
       for (const side of [-0.95, 0.95]) {
-        const end = (s: number) => new Vector3(...track.offset(track.at(s), POLE_U + side)).setY(poleBase(s) + 9.3);
+        const end = (s: number) =>
+          new Vector3(...track.offset(track.at(s), POLE_U + side)).setY(
+            poleBase(s) + 9.3,
+          );
         const a = end(sa);
         const b = end(sb);
         const mid = end((sa + sb) / 2).setY((a.y + b.y) / 2 - 1.2);
         // A quadratic's midpoint sits halfway to its control point, so double the sag.
         mid.y -= 1.2;
-        spans.push(new TubeGeometry(new QuadraticBezierCurve3(a, mid, b), 12, 0.012, 4));
+        spans.push(
+          new TubeGeometry(new QuadraticBezierCurve3(a, mid, b), 12, 0.012, 4),
+        );
       }
     }
     return {
       pole: new CylinderGeometry(0.11, 0.14, 10, 8).translate(0, 4.6, 0),
-      arm: new BoxGeometry(0.12, 0.12, 2.2).rotateY(Math.PI / 2).translate(0, 9.25, 0),
+      arm: new BoxGeometry(0.12, 0.12, 2.2)
+        .rotateY(Math.PI / 2)
+        .translate(0, 9.25, 0),
       wood: new MeshStandardMaterial({ color: "#5b4632", roughness: 0.9 }),
       wires: mergeGeometries(spans),
     };
   }, [poleSpots]);
   useLayoutEffect(() => {
     const one = new Vector3(1, 1, 1);
-    postSpots.forEach((s, i) => posts.current!.setMatrixAt(i, placeAlong(s, -4.32, track.at(s).y + 0.38, one)));
+    postSpots.forEach((s, i) =>
+      posts.current!.setMatrixAt(
+        i,
+        placeAlong(s, -4.32, track.at(s).y + 0.38, one),
+      ),
+    );
     poleSpots.forEach((s, i) => {
       const m = placeAlong(s, POLE_U, poleBase(s), one);
       poles.current!.setMatrixAt(i, m);
@@ -364,11 +495,19 @@ function RoadFurniture() {
   }, [postSpots, poleSpots]);
   return (
     <>
-      <instancedMesh ref={posts} args={[undefined, undefined, postSpots.length]} castShadow>
+      <instancedMesh
+        ref={posts}
+        args={[undefined, undefined, postSpots.length]}
+        castShadow
+      >
         <boxGeometry args={[0.15, 0.76, 0.15]} />
         <meshStandardMaterial color="#8f9497" metalness={0.5} roughness={0.5} />
       </instancedMesh>
-      <instancedMesh ref={poles} args={[pole, wood, poleSpots.length]} castShadow />
+      <instancedMesh
+        ref={poles}
+        args={[pole, wood, poleSpots.length]}
+        castShadow
+      />
       <instancedMesh ref={arms} args={[arm, wood, poleSpots.length]} />
       <mesh geometry={wires}>
         <meshStandardMaterial color="#1d1d1d" roughness={0.6} />
@@ -390,14 +529,21 @@ function StreetLights({ night }: { night: boolean }) {
   const lenses = useRef<InstancedMesh>(null);
   const spots = useMemo(() => spotsEvery(LAMP_SPACING), []);
   const { lamps, pools, tilts } = useMemo(() => {
-    const roadAt = (s: number) => new Vector3(...track.offset(track.at(s), 4.5)).setY(track.at(s).y);
+    const roadAt = (s: number) =>
+      new Vector3(...track.offset(track.at(s), 4.5)).setY(track.at(s).y);
     return {
-      lamps: spots.map((s) => new Vector3(...track.offset(track.at(s), LAMP_U)).setY(poleBase(s) + LAMP_HEIGHT - 0.3)),
+      lamps: spots.map((s) =>
+        new Vector3(...track.offset(track.at(s), LAMP_U)).setY(
+          poleBase(s) + LAMP_HEIGHT - 0.3,
+        ),
+      ),
       // The pool of light lands mostly on the road, inboard of the lamp,
       // tilted to the road's grade so it doesn't sink into a slope.
       pools: spots.map(roadAt),
       tilts: spots.map((s) => {
-        const t = roadAt(s + 4).sub(roadAt(s - 4)).normalize();
+        const t = roadAt(s + 4)
+          .sub(roadAt(s - 4))
+          .normalize();
         const n = UP.clone().addScaledVector(t, -t.dot(UP)).normalize();
         return new Quaternion().setFromUnitVectors(UP, n);
       }),
@@ -407,9 +553,25 @@ function StreetLights({ night }: { night: boolean }) {
     const one = new Vector3(1, 1, 1);
     spots.forEach((s, i) => {
       const base = poleBase(s);
-      arms.current!.setMatrixAt(i, placeAlong(s, (POLE_U + LAMP_U) / 2, base + LAMP_HEIGHT + 0.25, one, 0, new Euler(0, 0, 0.08)));
-      heads.current!.setMatrixAt(i, placeAlong(s, LAMP_U + 0.15, base + LAMP_HEIGHT, one));
-      lenses.current!.setMatrixAt(i, placeAlong(s, LAMP_U + 0.1, base + LAMP_HEIGHT - 0.11, one));
+      arms.current!.setMatrixAt(
+        i,
+        placeAlong(
+          s,
+          (POLE_U + LAMP_U) / 2,
+          base + LAMP_HEIGHT + 0.25,
+          one,
+          0,
+          new Euler(0, 0, 0.08),
+        ),
+      );
+      heads.current!.setMatrixAt(
+        i,
+        placeAlong(s, LAMP_U + 0.15, base + LAMP_HEIGHT, one),
+      );
+      lenses.current!.setMatrixAt(
+        i,
+        placeAlong(s, LAMP_U + 0.1, base + LAMP_HEIGHT - 0.11, one),
+      );
     });
     for (const m of [arms.current!, heads.current!, lenses.current!]) {
       m.instanceMatrix.needsUpdate = true;
@@ -418,22 +580,53 @@ function StreetLights({ night }: { night: boolean }) {
   }, [spots]);
   return (
     <>
-      <instancedMesh ref={arms} args={[undefined, undefined, spots.length]} castShadow>
+      <instancedMesh
+        ref={arms}
+        args={[undefined, undefined, spots.length]}
+        castShadow
+      >
         <boxGeometry args={[POLE_U - LAMP_U + 0.2, 0.08, 0.08]} />
-        <meshStandardMaterial color="#9a9fa3" metalness={0.6} roughness={0.45} />
+        <meshStandardMaterial
+          color="#9a9fa3"
+          metalness={0.6}
+          roughness={0.45}
+        />
       </instancedMesh>
-      <instancedMesh ref={heads} args={[undefined, undefined, spots.length]} castShadow>
+      <instancedMesh
+        ref={heads}
+        args={[undefined, undefined, spots.length]}
+        castShadow
+      >
         <boxGeometry args={[0.8, 0.18, 0.36]} />
         <meshStandardMaterial color="#a7abae" metalness={0.5} roughness={0.5} />
       </instancedMesh>
       <instancedMesh ref={lenses} args={[undefined, undefined, spots.length]}>
         <boxGeometry args={[0.6, 0.05, 0.28]} />
-        <meshStandardMaterial color="#d9d4c8" emissive={SODIUM} emissiveIntensity={night ? 9 : 0} roughness={0.2} />
+        <meshStandardMaterial
+          color="#d9d4c8"
+          emissive={SODIUM}
+          emissiveIntensity={night ? 9 : 0}
+          roughness={0.2}
+        />
       </instancedMesh>
       {night && (
         <>
-          <GroundGlows spots={pools} tilts={tilts} radius={11} color={SODIUM} opacity={0.2} />
-          <NearestLights spots={lamps} count={2} kind="spot" color={SODIUM} intensity={140} distance={34} angle={1.05} />
+          <GroundGlows
+            spots={pools}
+            tilts={tilts}
+            radius={11}
+            color={SODIUM}
+            opacity={0.2}
+          />
+          <NearestLights
+            spots={lamps}
+            count={2}
+            kind="spot"
+            color={SODIUM}
+            intensity={140}
+            distance={34}
+            angle={1.05}
+          />
         </>
       )}
     </>
@@ -443,13 +636,21 @@ function StreetLights({ night }: { night: boolean }) {
 function Terrain() {
   const { cliff, hills } = useMemo(() => {
     const grass = new Color("#8f8a4c");
-    const gold = [new Color("#94804c"), new Color("#877444"), new Color("#a08a55"), new Color("#7d6f45")];
+    const gold = [
+      new Color("#94804c"),
+      new Color("#877444"),
+      new Color("#a08a55"),
+      new Color("#7d6f45"),
+    ];
     const cliffUs = [-4.5, -6, -9, -13, -18, -24, -30, -37, -44, -52];
-    const hillUs = [8.5, 10, 13, 18, 26, 36, 50, 66, 85, 108, 135, 165, 200, 240];
+    const hillUs = [
+      8.5, 10, 13, 18, 26, 36, 50, 66, 85, 108, 135, 165, 200, 240,
+    ];
     const cliffRibbon = ribbon({
       ds: 4,
       us: cliffUs,
-      y: (s, p, u, j, key) => cliffY(s, u, p.y, j === 0 ? 0 : hash(key, j) - 0.5),
+      y: (s, p, u, j, key) =>
+        cliffY(s, u, p.y, j === 0 ? 0 : hash(key, j) - 0.5),
       color: () => grass,
     });
     // Rock all the way down from just below the grassy top, however flat it
@@ -468,7 +669,8 @@ function Terrain() {
       ds: 10,
       us: hillUs,
       y: (s, p, u) => hillY(s, u, p.y),
-      color: (_y, _p, _u, j, key) => gold[Math.floor(hash(key, j + 90) * gold.length)],
+      color: (_y, _p, _u, j, key) =>
+        gold[Math.floor(hash(key, j + 90) * gold.length)],
     });
     return { cliff, hills };
   }, []);
@@ -478,11 +680,21 @@ function Terrain() {
   const cliffGround = useSlopeGround({ ...tints, rockiness: true });
   // The mapping follows the laps the way the ocean's does (see Ocean).
   useFrame(() => {
-    for (const { offset } of [hillGround, cliffGround]) offset.set(mod(here.lap * track.lapShift.x, GROUND_PERIOD), 0, mod(here.lap * track.lapShift.z, GROUND_PERIOD));
+    for (const { offset } of [hillGround, cliffGround])
+      offset.set(
+        mod(here.lap * track.lapShift.x, GROUND_PERIOD),
+        0,
+        mod(here.lap * track.lapShift.z, GROUND_PERIOD),
+      );
   });
   return (
     <>
-      <mesh geometry={cliff} material={cliffGround.material} receiveShadow castShadow />
+      <mesh
+        geometry={cliff}
+        material={cliffGround.material}
+        receiveShadow
+        castShadow
+      />
       <mesh geometry={hills} material={hillGround.material} receiveShadow />
     </>
   );
@@ -506,13 +718,26 @@ const SCENERY_LEVELS: Level[] = [
   { ratio: 0.12, upTo: FOG_FAR * 0.6, blend: 400 },
 ];
 
-function ScatteredModel({ url, spots }: { url: string; spots: (modelSize: number) => Spot[] }) {
+function ScatteredModel({
+  url,
+  spots,
+}: {
+  url: string;
+  spots: (modelSize: number) => Spot[];
+}) {
   const { parts, bounds } = useModelParts(url);
   const matrices = useMemo(() => {
     const size = bounds.getSize(new Vector3());
     return spots(Math.max(size.x, size.y, size.z)).map((p) => p.matrix);
   }, [spots, bounds]);
-  return <LodInstancedModel parts={parts} bounds={bounds} matrices={matrices} levels={SCENERY_LEVELS} />;
+  return (
+    <LodInstancedModel
+      parts={parts}
+      bounds={bounds}
+      matrices={matrices}
+      levels={SCENERY_LEVELS}
+    />
+  );
 }
 
 // Scrub on the hills, densest near the road. Spots come from a 5 m grid keyed
@@ -523,12 +748,25 @@ function shrubSpots(which: number, of: number, density: number) {
     for (let s = Math.ceil(S0 / 5) * 5; s <= S1; s += 5) {
       const key = Math.round(mod(s, L) / 5);
       for (let j = 0; j < 3; j++) {
-        if (hash(key, j) > density || Math.floor(hash(key, j + 30) * of) !== which) continue;
+        if (
+          hash(key, j) > density ||
+          Math.floor(hash(key, j + 30) * of) !== which
+        )
+          continue;
         const ss = s + hash(key, j + 20) * 5;
         const u = 10.5 + Math.pow(hash(key, j + 10), 1.4) * 150;
         const size = (1.8 + hash(key, j + 40) * 4) / height;
         const y = hillY(ss, u, track.at(ss).y) - 0.15;
-        out.push({ s: ss, matrix: placeAlong(ss, u, y, new Vector3(size, size, size), hash(key, j + 60) * TAU) });
+        out.push({
+          s: ss,
+          matrix: placeAlong(
+            ss,
+            u,
+            y,
+            new Vector3(size, size, size),
+            hash(key, j + 60) * TAU,
+          ),
+        });
       }
     }
     return out;
@@ -542,24 +780,49 @@ function rockSpots(which: number) {
     for (let s = Math.ceil(S0 / 10) * 10; s <= S1; s += 10) {
       const key = Math.round(mod(s, L) / 10);
       for (let j = 0; j < 3; j++) {
-        if (hash(key, j + 100) > 0.22 || Math.floor(hash(key, j + 130) * 2) !== which) continue;
+        if (
+          hash(key, j + 100) > 0.22 ||
+          Math.floor(hash(key, j + 130) * 2) !== which
+        )
+          continue;
         const ss = s + hash(key, j + 110) * 10;
         const u = -9 - hash(key, j + 120) * 50;
         const size = (1.5 + hash(key, j + 140) * 5) / height;
-        const y = Math.max(SEA - 1.5, cliffY(ss, u, track.at(ss).y)) - size * height * 0.25;
-        const tilt = new Euler(hash(key, j + 150) * 0.6, hash(key, j + 160) * TAU, hash(key, j + 170) * 0.6);
-        out.push({ s: ss, matrix: placeAlong(ss, u, y, new Vector3(size, size * 0.8, size), 0, tilt) });
+        const y =
+          Math.max(SEA - 1.5, cliffY(ss, u, track.at(ss).y)) -
+          size * height * 0.25;
+        const tilt = new Euler(
+          hash(key, j + 150) * 0.6,
+          hash(key, j + 160) * TAU,
+          hash(key, j + 170) * 0.6,
+        );
+        out.push({
+          s: ss,
+          matrix: placeAlong(
+            ss,
+            u,
+            y,
+            new Vector3(size, size * 0.8, size),
+            0,
+            tilt,
+          ),
+        });
       }
     }
     return out;
   };
 }
 
-const SHRUBS = ["shrub_03", "shrub_03", "shrub_04", "shrub_02"].map(polyHavenModel);
+const SHRUBS = ["shrub_03", "shrub_03", "shrub_04", "shrub_02"].map(
+  polyHavenModel,
+);
 const ROCKS = ["rock_07", "rock_09"].map(polyHavenModel);
 
 function Vegetation() {
-  const shrubs = useMemo(() => SHRUBS.map((_, i) => shrubSpots(i, SHRUBS.length, 0.7)), []);
+  const shrubs = useMemo(
+    () => SHRUBS.map((_, i) => shrubSpots(i, SHRUBS.length, 0.7)),
+    [],
+  );
   const rocks = useMemo(() => ROCKS.map((_, i) => rockSpots(i)), []);
   return (
     <>
@@ -637,15 +900,26 @@ const oceanFragment = /* glsl */ `
 `;
 
 // Deep water and the sun's (or moon's) glint off the swell, by day and night.
-const DEEP = { day: new Vector3(0.012, 0.07, 0.11), night: new Vector3(0.0015, 0.006, 0.012) };
-const GLINT = { day: new Vector3(12, 11, 9.6), night: new Vector3(1.6, 1.8, 2.4) };
+const DEEP = {
+  day: new Vector3(0.012, 0.07, 0.11),
+  night: new Vector3(0.0015, 0.006, 0.012),
+};
+const GLINT = {
+  day: new Vector3(12, 11, 9.6),
+  night: new Vector3(1.6, 1.8, 2.4),
+};
 
 function Ocean({ sky, night }: { sky: HdriSky; night: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   // Flat, so where the inside of a bend folds the strip over itself the
   // overlapping water is identical and the fold can't be seen.
   const geometry = useMemo(
-    () => ribbon({ ds: 20, us: [-30, -60, -120, -250, -500, -1000, -2000, -3500, -5500], y: () => SEA }),
+    () =>
+      ribbon({
+        ds: 20,
+        us: [-30, -60, -120, -250, -500, -1000, -2000, -3500, -5500],
+        y: () => SEA,
+      }),
     [],
   );
   const uniforms = useMemo(
@@ -667,13 +941,348 @@ function Ocean({ sky, night }: { sky: HdriSky; night: boolean }) {
     const u = material.current?.uniforms;
     if (!u) return;
     u.uTime.value = clock.elapsedTime;
-    u.uLapOffset.value = [mod(here.lap * track.lapShift.x, OCEAN_PERIOD), mod(here.lap * track.lapShift.z, OCEAN_PERIOD)];
+    u.uLapOffset.value = [
+      mod(here.lap * track.lapShift.x, OCEAN_PERIOD),
+      mod(here.lap * track.lapShift.z, OCEAN_PERIOD),
+    ];
     (u.uSun.value as Vector3).copy(sky.sun).applyAxisAngle(UP, -here.heading);
   });
   return (
     <mesh geometry={geometry}>
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={oceanVertex} fragmentShader={oceanFragment} side={DoubleSide} />
+      <shaderMaterial
+        ref={material}
+        uniforms={uniforms}
+        vertexShader={oceanVertex}
+        fragmentShader={oceanFragment}
+        side={DoubleSide}
+      />
     </mesh>
+  );
+}
+
+// ---- The lighthouse -----------------------------------------------------------
+
+// A white lighthouse with red bands on a rocky islet offshore, off a long
+// straight so it stands clear of the bends. After dark its lamp turns, two
+// beams sweeping over the sea. Placed once per lap copy of the scenery.
+const LIGHTHOUSE_S = 2400;
+const LIGHTHOUSE_U = -185;
+const TOWER_BASE = 5;
+const TOWER_H = 20;
+const LANTERN_Y = TOWER_BASE + TOWER_H + 1.6;
+
+const beamVertex = /* glsl */ `
+  varying float vAlong;
+  void main() {
+    vAlong = uv.y; // 1 at the lamp, 0 at the far end
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const beamFragment = /* glsl */ `
+  varying float vAlong;
+  void main() {
+    float a = 0.45 * pow(vAlong, 1.8);
+    gl_FragColor = vec4(vec3(1.0, 0.93, 0.78) * a, 1.0);
+  }
+`;
+
+function lighthouseParts(night: boolean) {
+  const m = (color: string, roughness = 0.7) =>
+    new MeshStandardMaterial({ color, roughness });
+  const beam = new ConeGeometry(16, 300, 20, 1, true);
+  beam.translate(0, -150, 0); // apex at the lamp
+  beam.rotateZ(Math.PI / 2); // pointing along +x
+  return {
+    white: m("#eeece6"),
+    red: m("#b3262a", 0.6),
+    dark: m("#2a2c2e", 0.5),
+    rock: new MeshStandardMaterial({
+      color: "#6c645a",
+      roughness: 0.95,
+      flatShading: true,
+    }),
+    glass: new MeshStandardMaterial({
+      color: "#fff4d8",
+      emissive: "#ffe2a8",
+      emissiveIntensity: night ? 6 : 0.25,
+      roughness: 0.1,
+      metalness: 0.2,
+    }),
+    islet: new IcosahedronGeometry(1, 2),
+    beam,
+    beamMaterial: new ShaderMaterial({
+      vertexShader: beamVertex,
+      fragmentShader: beamFragment,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+    }),
+  };
+}
+
+function Lighthouse({ night }: { night: boolean }) {
+  const parts = useMemo(() => lighthouseParts(night), [night]);
+  return (
+    <>
+      {[LIGHTHOUSE_S - L, LIGHTHOUSE_S].map((s) => {
+        const p = track.at(s);
+        const [x, , z] = track.offset(p, LIGHTHOUSE_U);
+        return (
+          <group key={s} position={[x, SEA, z]} rotation-y={p.heading}>
+            <Tower parts={parts} night={night} />
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
+function Tower({
+  parts,
+  night,
+}: {
+  parts: ReturnType<typeof lighthouseParts>;
+  night: boolean;
+}) {
+  const beams = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (beams.current) beams.current.rotation.y = clock.elapsedTime * 0.55;
+  });
+  // The tower's radius at a height, for the bands.
+  const r = (y: number) => 3 - ((y - TOWER_BASE) / TOWER_H) * 1;
+  return (
+    <group>
+      <mesh
+        position={[0, 0, 0]}
+        scale={[30, 7, 22]}
+        geometry={parts.islet}
+        material={parts.rock}
+        castShadow
+        receiveShadow
+      />
+      <mesh
+        position={[16, 0, 8]}
+        scale={[9, 3.5, 7]}
+        rotation-y={0.8}
+        geometry={parts.islet}
+        material={parts.rock}
+      />
+      <mesh
+        position={[-12, 0, -14]}
+        scale={[7, 2.5, 6]}
+        rotation-y={2.1}
+        geometry={parts.islet}
+        material={parts.rock}
+      />
+      <mesh
+        position-y={TOWER_BASE + TOWER_H / 2}
+        material={parts.white}
+        castShadow
+      >
+        <cylinderGeometry args={[2, 3, TOWER_H, 28]} />
+      </mesh>
+      {[10, 17].map((y) => (
+        <mesh key={y} position-y={y} material={parts.red}>
+          <cylinderGeometry
+            args={[r(y + 1.5) + 0.03, r(y - 1.5) + 0.03, 3, 28]}
+          />
+        </mesh>
+      ))}
+      <mesh position-y={TOWER_BASE + TOWER_H + 0.15} material={parts.dark}>
+        <cylinderGeometry args={[3, 3, 0.3, 28]} />
+      </mesh>
+      <mesh position-y={TOWER_BASE + TOWER_H + 1.1} material={parts.dark}>
+        <torusGeometry args={[2.9, 0.05, 6, 32]} />
+      </mesh>
+      <mesh position-y={LANTERN_Y} material={parts.glass}>
+        <cylinderGeometry args={[1.6, 1.6, 2.4, 16]} />
+      </mesh>
+      <mesh position-y={LANTERN_Y + 2} material={parts.red}>
+        <coneGeometry args={[2, 1.6, 16]} />
+      </mesh>
+      <mesh position-y={LANTERN_Y + 3} material={parts.dark}>
+        <sphereGeometry args={[0.3, 10, 8]} />
+      </mesh>
+      {/* The keeper's house beside it. */}
+      <group position={[-8, 5.2, 4]} rotation-y={0.3}>
+        <mesh position-y={2} material={parts.white} castShadow>
+          <boxGeometry args={[8, 4, 6]} />
+        </mesh>
+        <mesh
+          position-y={5}
+          rotation-y={Math.PI / 4}
+          scale={[1, 1, 0.75]}
+          material={parts.red}
+          castShadow
+        >
+          <coneGeometry args={[5.6, 2.2, 4]} />
+        </mesh>
+      </group>
+      {night && (
+        <group ref={beams} position-y={LANTERN_Y}>
+          <mesh geometry={parts.beam} material={parts.beamMaterial} />
+          <mesh
+            geometry={parts.beam}
+            material={parts.beamMaterial}
+            rotation-y={Math.PI}
+          />
+          <pointLight color="#ffe2a8" intensity={400} distance={80} decay={2} />
+        </group>
+      )}
+    </group>
+  );
+}
+
+// ---- Oncoming traffic ---------------------------------------------------------
+
+// Now and then a car comes the other way in the far lane: the Mach 1 (its
+// wheels rolling) and the Charger, half a lap apart, each going round the
+// lap backward at a steady speed. Each is drawn at the copy of its spot on
+// the scenery that's nearest ahead of the Camaro.
+const ONCOMING_U = 4; // the far lane's centre
+const ONCOMING_SPEED = 23;
+const MUSTANG_DRIVE = constantSpeed(ONCOMING_SPEED);
+
+function Oncoming({ phase, children }: { phase: number; children: ReactNode }) {
+  const drive = useDrive();
+  const group = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    const t = clock.elapsedTime - drive.t0;
+    // Its copy from 150 m behind the Camaro to a lap ahead of that.
+    const s0 = mod(phase - ONCOMING_SPEED * t, L);
+    const s = s0 + Math.ceil((here.s - 150 - s0) / L) * L;
+    const p = track.at(s);
+    const [x, , z] = track.offset(p, ONCOMING_U);
+    g.position.set(x, p.y, z);
+    g.rotation.set(0, p.heading + Math.PI, 0);
+  });
+  return <group ref={group}>{children}</group>;
+}
+
+function Traffic({ night }: { night: boolean }) {
+  return (
+    <>
+      <Optional>
+        <Oncoming phase={L * 0.3}>
+          <MustangModel profile={MUSTANG_DRIVE} lightsOn={night} />
+        </Oncoming>
+      </Optional>
+      <Optional>
+        <Oncoming phase={L * 0.8}>
+          <ChargerModel />
+        </Oncoming>
+      </Optional>
+    </>
+  );
+}
+
+// ---- Gulls --------------------------------------------------------------------
+
+// A loose flock wheeling over the cliff edge and the water below it, on the
+// ocean side of the car, gliding with now and then a few wingbeats. They
+// ride along in the car's frame, slowly dropping back and coming round again
+// from far ahead.
+const GULLS = 16;
+
+function gullWing() {
+  const s = new Shape();
+  s.moveTo(0.05, 0.16);
+  s.lineTo(0.45, 0.12);
+  s.lineTo(0.9, -0.04);
+  s.lineTo(0.8, -0.16);
+  s.lineTo(0.35, -0.12);
+  s.lineTo(0.05, -0.14);
+  const g = new ShapeGeometry(s);
+  g.rotateX(Math.PI / 2); // span along +x, chord along z
+  return g;
+}
+
+function Gulls() {
+  const body = useRef<InstancedMesh>(null);
+  const right = useRef<InstancedMesh>(null);
+  const left = useRef<InstancedMesh>(null);
+  const parts = useMemo(() => {
+    const rand = mulberry32(31);
+    const birds = Array.from({ length: GULLS }, () => ({
+      cx: -16 - rand() * 55,
+      cy: 9 + rand() * 22,
+      cz: rand() * 240,
+      r: 5 + rand() * 12,
+      w: (rand() < 0.5 ? -1 : 1) * (0.25 + rand() * 0.3),
+      ph: rand() * 100,
+    }));
+    const wing = gullWing();
+    return {
+      birds,
+      body: new SphereGeometry(0.12, 8, 6).scale(1, 0.85, 3.4),
+      right: wing,
+      left: wing.clone().scale(-1, 1, 1),
+      white: new MeshStandardMaterial({ color: "#f4f4f2", roughness: 0.8 }),
+      grey: new MeshStandardMaterial({
+        color: "#c9ced2",
+        roughness: 0.8,
+        side: DoubleSide,
+      }),
+    };
+  }, []);
+  const tmp = useMemo(
+    () => ({ o: new Object3D(), m: new Matrix4(), flap: new Matrix4() }),
+    [],
+  );
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const [b, wr, wl] = [body.current, right.current, left.current];
+    if (!b || !wr || !wl) return;
+    parts.birds.forEach((g, i) => {
+      const a = g.w * t + g.ph;
+      const cz = mod(g.cz - 2.5 * t, 240) - 80;
+      const x = g.cx + g.r * Math.cos(a);
+      const z = cz + g.r * Math.sin(a);
+      const y = g.cy + 1.2 * Math.sin(0.6 * t + g.ph);
+      const vx = -g.r * g.w * Math.sin(a);
+      const vz = g.r * g.w * Math.cos(a) - 2.5;
+      tmp.o.position.set(x, y, z);
+      tmp.o.rotation.set(0, Math.atan2(vx, vz), Math.sign(g.w) * 0.35, "YXZ");
+      tmp.o.updateMatrix();
+      b.setMatrixAt(i, tmp.o.matrix);
+      // Mostly gliding with the wings held up a touch; a few beats now and then.
+      const beating = mod(t * 0.22 + g.ph, 1) < 0.25;
+      const flap = beating ? 0.6 * Math.sin(t * 11 + g.ph) : 0.12;
+      wr.setMatrixAt(
+        i,
+        tmp.m.copy(tmp.o.matrix).multiply(tmp.flap.makeRotationZ(flap)),
+      );
+      wl.setMatrixAt(
+        i,
+        tmp.m.copy(tmp.o.matrix).multiply(tmp.flap.makeRotationZ(-flap)),
+      );
+    });
+    for (const m of [b, wr, wl]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
+  });
+  return (
+    <>
+      <instancedMesh
+        ref={body}
+        args={[parts.body, parts.white, GULLS]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={right}
+        args={[parts.right, parts.grey, GULLS]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={left}
+        args={[parts.left, parts.grey, GULLS]}
+        frustumCulled={false}
+      />
+    </>
   );
 }
 
@@ -682,7 +1291,15 @@ function Ocean({ sky, night }: { sky: HdriSky; night: boolean }) {
 // Moves the world (and turns the sky and sun with it) so the car's current
 // spot on the road sits at the origin, facing +Z. Runs before the other frame
 // callbacks so they all see this frame's position.
-function World({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<DirectionalLight | null>; children: ReactNode }) {
+function World({
+  sky,
+  sunLight,
+  children,
+}: {
+  sky: HdriSky;
+  sunLight: RefObject<DirectionalLight | null>;
+  children: ReactNode;
+}) {
   const drive = useDrive();
   const group = useRef<Group>(null);
   const turn = useMemo(() => new Matrix4(), []);
@@ -692,10 +1309,15 @@ function World({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<
     here.s = distance - here.lap * L;
     const p = track.at(here.s);
     here.heading = p.heading;
-    group.current?.matrix.makeTranslation(-p.x, -p.y, -p.z).premultiply(turn.makeRotationY(-p.heading));
+    group.current?.matrix
+      .makeTranslation(-p.x, -p.y, -p.z)
+      .premultiply(turn.makeRotationY(-p.heading));
     scene.environmentRotation.y = sky.rotation.y - p.heading;
     scene.backgroundRotation.y = sky.rotation.y - p.heading;
-    sunLight.current?.position.copy(sky.sun).applyAxisAngle(UP, -p.heading).multiplyScalar(40);
+    sunLight.current?.position
+      .copy(sky.sun)
+      .applyAxisAngle(UP, -p.heading)
+      .multiplyScalar(40);
   }, -1);
   return (
     <group ref={group} matrixAutoUpdate={false}>
@@ -730,12 +1352,21 @@ function CoastWorld({ lightsOn, domeOn, night = false }: SceneProps) {
         <StreetLights night={night} />
         <Terrain />
         <Ocean sky={sky} night={night} />
+        <Lighthouse night={night} />
+        <Traffic night={night} />
         <Optional>
           <Vegetation />
         </Optional>
       </World>
+      {!night && <Gulls />}
       <CamaroModel lightsOn={lightsOn} domeOn={domeOn} />
-      <CarContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={10} blur={2.2} far={2} />
+      <CarContactShadows
+        position={[0, 0.01, 0]}
+        opacity={0.45}
+        scale={10}
+        blur={2.2}
+        far={2}
+      />
     </DriveProvider>
   );
 }
@@ -747,7 +1378,14 @@ export default function CoastScene(props: SceneProps) {
   return (
     <>
       <CoastWorld {...props} />
-      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={16} maxPolarAngle={Math.PI / 2.05} />
+      <OrbitControls
+        makeDefault
+        enablePan={false}
+        enableDamping
+        minDistance={3}
+        maxDistance={16}
+        maxPolarAngle={Math.PI / 2.05}
+      />
     </>
   );
 }
