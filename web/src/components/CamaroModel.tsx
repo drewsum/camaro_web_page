@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Center, useGLTF } from "@react-three/drei";
-import { Mesh, Vector3, type Material, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
+import { Box3, Mesh, Object3D, Vector3, type Material, type MeshPhysicalMaterial, type MeshStandardMaterial } from "three";
 import { markCar } from "../car/layers";
 import { applyLamps, findCarRig, LAMPS_DRIVING, LAMPS_OFF } from "../car/carRig";
 import { useDrivingPose } from "../car/useDrivingPose";
@@ -51,11 +51,48 @@ export function castsVisibleShadow(mesh: Mesh) {
 interface Props {
   lightsOn?: boolean;
   domeOn?: boolean;
+  hoodOpen?: number; // radians the hood is propped open (0 = shut)
+}
+
+// The hood swings on a hinge along its back edge, by the windscreen. The model
+// has it as one mesh pivoting about the body's origin, so it's hung from a
+// new pivot at the hinge, once (the loaded scene is shared between pages).
+function hoodHinge(scene: Object3D): Object3D | null {
+  if (scene.userData.hoodHinge !== undefined) return scene.userData.hoodHinge;
+  const hood = scene.getObjectByName("Hood");
+  if (!hood?.parent) return (scene.userData.hoodHinge = null);
+  const parent = hood.parent;
+  scene.updateMatrixWorld(true);
+  // The hood's extent in its parent's frame.
+  const box = new Box3();
+  const toParent = parent.matrixWorld.clone().invert();
+  hood.traverse((o) => {
+    if (!(o instanceof Mesh)) return;
+    o.geometry.computeBoundingBox();
+    box.union(o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).applyMatrix4(toParent));
+  });
+  // Which end is the back? The end nearer the cabin, i.e. nearer the body's
+  // centre along the car's length (the parent's longest horizontal axis).
+  const size = box.getSize(new Vector3());
+  const centre = box.getCenter(new Vector3());
+  const along: "x" | "z" = size.x > size.z ? "x" : "z";
+  const back = Math.abs(box.min[along]) < Math.abs(box.max[along]) ? box.min[along] : box.max[along];
+  const hinge = new Object3D();
+  hinge.name = "HoodHinge";
+  hinge.position.copy(centre).setY(box.max.y);
+  hinge.position[along] = back;
+  parent.add(hinge);
+  hinge.updateMatrixWorld(true);
+  hinge.attach(hood);
+  hinge.userData.axis = along === "z" ? "x" : "z";
+  // Opening lifts the front: the sign depends on which way the front points.
+  hinge.userData.sign = (back === box.min[along] ? -1 : 1) * (along === "z" ? 1 : -1);
+  return (scene.userData.hoodHinge = hinge);
 }
 
 // Centered on the origin with the tires resting on y = 0. Inside a
 // DriveProvider the wheels roll and the body rides over the road.
-export default function CamaroModel({ lightsOn = false, domeOn = false }: Props) {
+export default function CamaroModel({ lightsOn = false, domeOn = false, hoodOpen = 0 }: Props) {
   const { scene } = useGLTF(MODEL_URL, DRACO_URL);
   const { rig, beams, glows, dome } = useMemo(() => {
     scene.traverse((obj) => {
@@ -80,6 +117,17 @@ export default function CamaroModel({ lightsOn = false, domeOn = false }: Props)
   }, [rig, beams, lightsOn]);
 
   useEffect(() => setDomeLight(dome, domeOn), [dome, domeOn]);
+
+  useEffect(() => {
+    const hinge = hoodHinge(scene);
+    if (!hinge) return;
+    const axis = hinge.userData.axis as "x" | "z";
+    hinge.rotation[axis] = hinge.userData.sign * hoodOpen;
+    // Shut again for the next page that shows the car.
+    return () => {
+      hinge.rotation[axis] = 0;
+    };
+  }, [scene, hoodOpen]);
 
   return (
     <Center top>

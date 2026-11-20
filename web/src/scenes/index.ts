@@ -40,5 +40,13 @@ export const SCENES: SceneDef[] = [
     night: false,
     credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.quaternius, CREDITS.polyHaven],
   },
+  {
+    id: "gasstation",
+    label: "Old gas station",
+    Component: lazy(() => import("./GasStationScene")),
+    night: false,
+    nightOption: true,
+    credits: [CREDITS.mach1, CREDITS.polyHaven],
+  },
   { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true },
 ];
