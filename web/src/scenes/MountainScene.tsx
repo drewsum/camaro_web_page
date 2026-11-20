@@ -280,8 +280,9 @@ function Range({ sky }: { sky: HdriSky }) {
     const SEG = 320, ROWS = 7;
     const pos: number[] = [], col: number[] = [], haze: number[] = [], index: number[] = [];
     const rock = new Color("#5f6670"), snow = new Color("#f2f4f8"), c = new Color();
+    // Whole numbers of peaks around the ring, so it closes without a seam.
     const ridge = (a: number, k: number) =>
-      Math.abs(Math.sin(a * 3 + k)) * 0.5 + Math.abs(Math.sin(a * 7.3 + 2 * k)) * 0.3 + Math.abs(Math.sin(a * 17.9 + k * 3)) * 0.2;
+      Math.abs(Math.sin(a * 3 + k)) * 0.5 + Math.abs(Math.sin(a * 7 + 2 * k)) * 0.3 + Math.abs(Math.sin(a * 18 + k * 3)) * 0.2;
     for (let j = 0; j <= ROWS; j++) {
       const t = j / ROWS;
       const r = 3500 + 3500 * t;

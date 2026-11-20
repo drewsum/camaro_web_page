@@ -191,7 +191,8 @@ function Mesas({ sky }: { sky: HdriSky }) {
     const SEG = 480, ROWS = 6;
     const pos: number[] = [], col: number[] = [], haze: number[] = [], index: number[] = [];
     const c = new Color();
-    const n = (a: number, k: number) => 0.5 + 0.3 * Math.sin(a * 5 + k) + 0.2 * Math.sin(a * 13.7 + 2 * k);
+    // Whole numbers of cycles around the ring, so it closes without a seam.
+    const n = (a: number, k: number) => 0.5 + 0.3 * Math.sin(a * 5 + k) + 0.2 * Math.sin(a * 14 + 2 * k);
     for (let j = 0; j <= ROWS; j++) {
       const t = j / ROWS;
       const r = 4000 + 5000 * t;
