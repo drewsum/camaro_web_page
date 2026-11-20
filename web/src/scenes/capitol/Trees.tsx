@@ -4,13 +4,12 @@ import {
   BufferGeometry,
   CylinderGeometry,
   DoubleSide,
-  Group,
   Matrix4,
   MeshStandardMaterial,
   Quaternion,
   Vector3,
 } from "three";
-import { tiledInstances } from "../common/tiles";
+import { Forest } from "../common/impostors";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { mulberry32 } from "../common/periodic";
 import { groundY, hash, MAP } from "./data";
@@ -113,25 +112,10 @@ export default function Trees() {
     }
     return { kinds, placed };
   }, []);
-  return (
-    <>
-      {kinds.map((k, i) => (
-        <TreeKind key={i} wood={k.wood} leaves={k.leaves} bark={k.bark} leaf={k.leaf} matrices={placed[i]} />
-      ))}
-    </>
-  );
+  const forest = useMemo(() => kinds.map((k, i) => ({ wood: k.wood, leaves: k.leaves, bark: k.bark, leaf: k.leaf, matrices: placed[i] })), [kinds, placed]);
+  // Past NEAR metres (beyond the shadow camera's patch around the car) each
+  // tree is drawn as an impostor.
+  return <Forest kinds={forest} near={NEAR} shadows />;
 }
 
-// Tiled so the trees out of view, and those outside the shadow camera's
-// patch around the car, are skipped rather than drawn every frame.
-const TREE_TILE = 90;
-
-function TreeKind({ wood, leaves, bark, leaf, matrices }: { wood: BufferGeometry; leaves: BufferGeometry; bark: MeshStandardMaterial; leaf: MeshStandardMaterial; matrices: Matrix4[] }) {
-  const group = useMemo(() => {
-    const g = new Group();
-    g.add(tiledInstances(wood, bark, matrices, TREE_TILE), tiledInstances(leaves, leaf, matrices, TREE_TILE));
-    return g;
-  }, [wood, leaves, bark, leaf, matrices]);
-  if (!matrices.length) return null;
-  return <primitive object={group} />;
-}
+const NEAR = 85;

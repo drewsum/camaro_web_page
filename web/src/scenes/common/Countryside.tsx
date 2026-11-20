@@ -6,7 +6,6 @@ import {
   CylinderGeometry,
   Euler,
   Float32BufferAttribute,
-  Group,
   Matrix4,
   MeshStandardMaterial,
   Quaternion,
@@ -14,6 +13,7 @@ import {
 } from "three";
 import { mulberry32 } from "./periodic";
 import { tiledInstances } from "./tiles";
+import { Forest, type ForestKind } from "./impostors";
 import { conifer, crown, deciduous } from "../capitol/Trees";
 import { barkTexture, leafTexture } from "../capitol/textures";
 
@@ -21,7 +21,7 @@ import { barkTexture, leafTexture } from "../capitol/textures";
 // straight out to a bare horizon: a ring of low hills rising into the haze,
 // woodlots, hedgerows and lone trees, bushes, a farmstead, a power line and
 // some round hay bales. Kept cheap: the trees and bushes are a few hundred
-// leaf cards at most, instanced in tiles (culled block by block), and the
+// leaf cards at most, drawn as impostors past 140 m (see impostors.tsx), and the
 // hills are a single ring of a few thousand triangles.
 
 export interface CountrysideProps {
@@ -108,10 +108,6 @@ function hillsGeometry(p: CountrysideProps) {
 // The Square's leaf-card trees, with fewer and bigger cards: these are only
 // ever seen from 70 m or more. Planted with a scale in metres of height.
 const BROADLEAF_KINDS = 3;
-// Instances are grouped in square tiles this many metres across, each culled
-// as a whole: big enough to keep the draw calls down, small enough to skip
-// what's behind the camera.
-const TILE = 320;
 
 interface Planted {
   matrix: Matrix4;
@@ -181,51 +177,50 @@ function treeSpots(p: CountrysideProps) {
   return { broadleaf, conifer, shrubs };
 }
 
+// Trees and bushes nearer than this are drawn in full, the rest as impostors.
+// The countryside starts 70 m or more from where the cars are.
+const NEAR = 140;
+
 function Trees({ spots }: { spots: ReturnType<typeof treeSpots> }) {
-  const groups = useMemo(() => {
+  const kinds = useMemo(() => {
     const bark = new MeshStandardMaterial({ map: barkTexture(), roughness: 0.95 });
-    const leaf = (seed: number, hues: [number, number]) =>
-      new MeshStandardMaterial({ map: leafTexture(seed, hues), alphaTest: 0.45, side: DoubleSide, roughness: 0.85 });
-    const kinds = [
-      ...Array.from({ length: BROADLEAF_KINDS }, (_, i) => ({ ...deciduous(70 + i, 85, 2.9, 4), leafMat: leaf(80 + i, [70 + i * 10, 104 + i * 8]) })),
-      { ...conifer(90, 70, 2.3), leafMat: leaf(95, [118, 148]) },
+    const leaf = (seed: number, hues: [number, number], roughness = 0.85) =>
+      new MeshStandardMaterial({ map: leafTexture(seed, hues), alphaTest: 0.45, side: DoubleSide, roughness });
+    const trees = [
+      ...Array.from({ length: BROADLEAF_KINDS }, (_, i) => ({ ...deciduous(70 + i, 85, 2.9, 4), leaf: leaf(80 + i, [70 + i * 10, 104 + i * 8]) })),
+      { ...conifer(90, 70, 2.3), leaf: leaf(95, [118, 148]) },
     ];
-    const planted: Planted[][] = kinds.map(() => []);
+    const planted: Planted[][] = trees.map(() => []);
     spots.broadleaf.forEach((t, n) => planted[n % BROADLEAF_KINDS].push(t));
     planted[BROADLEAF_KINDS] = spots.conifer;
-    const group = new Group();
-    kinds.forEach((k, i) => {
-      if (!planted[i].length) return;
+    const kinds: ForestKind[] = trees.map((k, i) => {
+      // Planted with a scale in metres of height.
       k.leaves.computeBoundingBox();
       const unit = new Matrix4().makeScale(...(Array(3).fill(1 / k.leaves.boundingBox!.max.y) as [number, number, number]));
-      const matrices = planted[i].map((t) => t.matrix.clone().multiply(unit));
-      const colors = planted[i].map((t) => t.color);
-      group.add(
-        tiledInstances(k.wood!, bark, matrices, TILE, { castShadow: false, receiveShadow: false }),
-        tiledInstances(k.leaves, k.leafMat, matrices, TILE, { castShadow: false, receiveShadow: false, colors }),
-      );
+      return {
+        wood: k.wood,
+        leaves: k.leaves,
+        bark,
+        leaf: k.leaf,
+        matrices: planted[i].map((t) => t.matrix.clone().multiply(unit)),
+        colors: planted[i].map((t) => t.color),
+      };
     });
-    return group;
-  }, [spots]);
-  return <primitive object={groups} />;
-}
-
-// Bushes: just a low crown of leaf cards, a few dozen triangles each.
-function Bushes({ matrices }: { matrices: Matrix4[] }) {
-  const group = useMemo(() => {
+    // Bushes: just a low crown of leaf cards, a few dozen triangles each.
     const rand = mulberry32(61);
-    const g = new Group();
-    const material = new MeshStandardMaterial({ map: leafTexture(66, [88, 120]), alphaTest: 0.45, side: DoubleSide, roughness: 0.9 });
-    const kinds = [0, 1].map((k) => crown(rand, new Vector3(0, 0.42, 0), new Vector3(0.62 + k * 0.1, 0.42, 0.55), 34, 0.55));
-    kinds.forEach((geometry, k) => {
-      const mine = matrices.filter((_, n) => n % kinds.length === k);
-      if (mine.length) g.add(tiledInstances(geometry, material, mine, TILE, { castShadow: false, receiveShadow: false }));
+    const bushLeaf = leaf(66, [88, 120], 0.9);
+    [0, 1].forEach((k) => {
+      kinds.push({
+        leaves: crown(rand, new Vector3(0, 0.42, 0), new Vector3(0.62 + k * 0.1, 0.42, 0.55), 34, 0.55),
+        bark,
+        leaf: bushLeaf,
+        matrices: spots.shrubs.filter((_, n) => n % 2 === k),
+      });
     });
-    return g;
-  }, [matrices]);
-  return <primitive object={group} />;
+    return kinds;
+  }, [spots]);
+  return <Forest kinds={kinds} near={NEAR} />;
 }
-
 // ---- Farm and clutter ------------------------------------------------------------
 
 function prism(w: number, h: number, l: number) {
@@ -372,7 +367,6 @@ export default function Countryside({ config: props }: { config: CountrysideProp
       <Farm {...props.farm} y={heightAt(props, props.farm.x, props.farm.z)} />
       <PowerLine p={props} />
       <Bales p={props} />
-      <Bushes matrices={spots.shrubs} />
     </>
   );
 }
