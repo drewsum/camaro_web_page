@@ -365,14 +365,29 @@ function MountainWorld({ lightsOn, domeOn, night = false }: SceneProps) {
   );
 }
 
+// Keeps the orbiting camera out of the hillside, which rises close beside the
+// road: the car sits at the origin facing +Z with the road's +u along +X, so
+// the ground under the camera is the terrain at (here.s + z, u = x). Runs
+// after the orbit controls (priority -1) have moved the camera; a positive
+// priority would switch off R3F's own rendering.
+function CameraAboveGround() {
+  useFrame(({ camera }) => {
+    const road = track.at(here.s).y;
+    const ground = groundY(here.s + camera.position.z, camera.position.x) - road;
+    if (camera.position.y < ground + 1.2) camera.position.y = ground + 1.2;
+  });
+  return null;
+}
+
 export default function MountainScene(props: SceneProps) {
-  useCameraStart(5.5, 2, -7.5);
+  useCameraStart(7, 3.2, -10.5);
   useFarPlane(9000); // the range on the horizon
   useExposure(EXPOSURE);
   return (
     <>
       <MountainWorld {...props} />
-      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={10} maxPolarAngle={Math.PI / 2.1} />
+      <CameraAboveGround />
+      <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={18} maxPolarAngle={Math.PI / 2.05} />
     </>
   );
 }
