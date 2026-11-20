@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import CarContactShadows from "../components/CarContactShadows";
@@ -10,22 +10,13 @@ import {
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
-  CatmullRomCurve3,
   Color,
   DoubleSide,
-  Matrix4,
-  Object3D,
   PlaneGeometry,
   RepeatWrapping,
   SRGBColorSpace,
   ShaderMaterial,
-  Shape,
-  ShapeGeometry,
-  TubeGeometry,
-  Vector3,
-  type InstancedMesh,
 } from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import CamaroModel from "../components/CamaroModel";
 import { DriveProvider, driveDistance, useDrive } from "../car/driveClock";
 import type { SceneProps } from ".";
@@ -219,82 +210,6 @@ function MountainRing() {
     <mesh geometry={geometry}>
       <shaderMaterial vertexShader={ringVertex} fragmentShader={ringFragment} side={DoubleSide} />
     </mesh>
-  );
-}
-
-// ---- Palms --------------------------------------------------------------------
-
-// Neon palms lining both sides of the road, scrolling past: a dark curved
-// trunk and a crown of drooping glowing fronds. Two a side every period.
-const PALM_PERIOD = 60;
-const PALM_SPACING = 30;
-
-function palmParts() {
-  const trunkPath = new CatmullRomCurve3([new Vector3(0, 0, 0), new Vector3(0.25, 3, 0), new Vector3(0.8, 6.2, 0), new Vector3(1.6, 8.6, 0)]);
-  const trunk = new TubeGeometry(trunkPath, 16, 0.34, 6, false);
-  const leaf = new Shape();
-  leaf.moveTo(0, 0);
-  // A long frond with a saw-toothed edge.
-  const L = 4.2;
-  for (let i = 1; i <= 8; i++) leaf.lineTo((i / 8) * L, 0.45 * Math.sin((i / 8) * Math.PI) + (i % 2) * 0.12);
-  for (let i = 8; i >= 0; i--) leaf.lineTo((i / 8) * L, -0.45 * Math.sin((i / 8) * Math.PI) - (i % 2) * 0.12);
-  const fronds: BufferGeometry[] = [];
-  const n = 8;
-  for (let k = 0; k < n; k++) {
-    const g = new ShapeGeometry(leaf);
-    g.rotateX(-Math.PI / 2); // flat, pointing +x
-    // Bend it down: drop each vertex by the square of its reach.
-    const p = g.attributes.position;
-    for (let v = 0; v < p.count; v++) p.setY(v, p.getY(v) - 0.14 * p.getX(v) ** 2);
-    g.rotateZ(0.35);
-    g.rotateY((k / n) * Math.PI * 2 + (k % 2) * 0.2);
-    g.translate(1.6, 8.6, 0);
-    fronds.push(g);
-  }
-  return { trunk, crown: mergeGeometries(fronds)! };
-}
-
-function Palms() {
-  const { trunk, crown, matrices } = useMemo(() => {
-    const parts = palmParts();
-    const matrices: Matrix4[] = [];
-    const o = new Object3D();
-    for (let z = -2 * PALM_PERIOD; z < 8 * PALM_PERIOD; z += PALM_SPACING) {
-      const k = Math.round(z / PALM_SPACING) & 1; // alternate so the pattern repeats each period
-      for (const side of [-1, 1]) {
-        const x = ROAD_WIDTH / 4 + side * (ROAD_WIDTH / 2 + 11 + k * 3);
-        o.position.set(x, 0, z + (side > 0 ? 0 : PALM_SPACING / 2));
-        // Lean out over the road a little, or away from it.
-        o.rotation.set(0, side > 0 ? Math.PI : 0, 0);
-        o.rotateY(k ? 0.5 : -0.4);
-        const s = k ? 1.15 : 0.95;
-        o.scale.set(s, s, s);
-        o.updateMatrix();
-        matrices.push(o.matrix.clone());
-      }
-    }
-    return { ...parts, matrices };
-  }, []);
-  const trunkRef = useRef<InstancedMesh>(null);
-  const crownRef = useRef<InstancedMesh>(null);
-  useLayoutEffect(() => {
-    for (const m of [trunkRef.current, crownRef.current]) {
-      if (!m) continue;
-      matrices.forEach((mat, i) => m.setMatrixAt(i, mat));
-      m.instanceMatrix.needsUpdate = true;
-      m.computeBoundingSphere();
-    }
-  }, [matrices]);
-  const frondColor = useMemo(() => new Color("#ff2fd0").multiplyScalar(1.4), []);
-  return (
-    <Scroll period={PALM_PERIOD}>
-      <instancedMesh ref={trunkRef} args={[trunk, undefined, matrices.length]}>
-        <meshBasicMaterial color="#1c0830" />
-      </instancedMesh>
-      <instancedMesh ref={crownRef} args={[crown, undefined, matrices.length]}>
-        <meshBasicMaterial color={frondColor} side={DoubleSide} />
-      </instancedMesh>
-    </Scroll>
   );
 }
 
@@ -513,7 +428,6 @@ export default function OutrunScene({ domeOn }: SceneProps) {
       <Grid />
       <Road />
       <Mountains />
-      <Palms />
       <CamaroModel lightsOn domeOn={domeOn} />
       <CarContactShadows position={[0, 0.01, 0]} opacity={0.8} scale={12} blur={2.4} far={3} />
       <OrbitControls makeDefault enablePan={false} enableDamping minDistance={3} maxDistance={14} maxPolarAngle={Math.PI / 2.05} />
