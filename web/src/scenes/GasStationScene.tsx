@@ -19,7 +19,7 @@ import { preloadPbr, usePbrMaterial } from "./common/pbr";
 // up at the pumps under a lit canopy, a two-bay service garage with its
 // office, a tall pole sign with the day's prices, and a railcar diner next
 // door with a Mustang outside. Farmland all around. Every name on the signs
-// is made up.
+// is made up: the station sells Dillo Gasoline, mascot Dillo the armadillo.
 
 const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
 const EXPOSURE = 0.85;
@@ -70,35 +70,119 @@ const text = (g: CanvasRenderingContext2D, s: string, x: number, y: number, size
   g.shadowBlur = 0;
 };
 
-// The brand: a red disc with a gold crown and the name across it. With `lit`
-// the same artwork on black, for the emissive map.
+// Dillo Gasoline: deep teal and sunflower yellow on cream, with Dillo the
+// armadillo, grinning, on the sign.
+const TEAL = "#13706e";
+const TEAL_DEEP = "#0b4f4e";
+const SUN = "#f2b31e";
+const CREAM = "#f3ead6";
+
+// Dillo, facing right: a banded shell, a long snout with a grin, one big
+// ear, stubby legs and a tapering tail. `s` scales the 240-px-wide drawing.
+function drawDillo(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, lit: boolean) {
+  const shell = lit ? "#ffd38a" : "#d2a679";
+  const band = lit ? "#c98a3a" : "#8c6644";
+  const skin = lit ? "#ffe0b0" : "#e6c29a";
+  const ink = lit ? "#6b3a12" : "#3b2616";
+  g.save();
+  g.translate(cx, cy);
+  g.scale(s, s);
+  g.lineJoin = g.lineCap = "round";
+  g.lineWidth = 7;
+  g.strokeStyle = ink;
+  // Tail.
+  g.fillStyle = shell;
+  g.beginPath();
+  g.moveTo(-100, 10);
+  g.quadraticCurveTo(-150, 20, -168, 55);
+  g.quadraticCurveTo(-140, 30, -96, 32);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  // Legs.
+  g.fillStyle = skin;
+  for (const x of [-70, -30, 30, 70]) {
+    g.beginPath();
+    g.roundRect(x - 13, 18, 26, 34, 10);
+    g.fill();
+    g.stroke();
+  }
+  // Head: snout out to the right.
+  g.beginPath();
+  g.moveTo(90, -30);
+  g.quadraticCurveTo(150, -24, 172, 6);
+  g.quadraticCurveTo(160, 26, 112, 26);
+  g.quadraticCurveTo(86, 22, 84, 0);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  // Ear.
+  g.beginPath();
+  g.ellipse(100, -38, 12, 24, -0.4, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  // The shell: a dome with bands across it.
+  g.fillStyle = shell;
+  g.beginPath();
+  g.moveTo(-110, 28);
+  g.bezierCurveTo(-112, -78, 108, -78, 106, 28);
+  g.closePath();
+  g.fill();
+  g.save();
+  g.clip();
+  g.strokeStyle = band;
+  g.lineWidth = 9;
+  for (const x of [-60, -22, 16, 54]) {
+    g.beginPath();
+    g.moveTo(x - 10, 30);
+    g.quadraticCurveTo(x + 6, -30, x - 4, -70);
+    g.stroke();
+  }
+  g.restore();
+  g.strokeStyle = ink;
+  g.lineWidth = 7;
+  g.beginPath();
+  g.moveTo(-110, 28);
+  g.bezierCurveTo(-112, -78, 108, -78, 106, 28);
+  g.closePath();
+  g.stroke();
+  // Eye and grin.
+  g.fillStyle = ink;
+  g.beginPath();
+  g.arc(122, -6, 6, 0, Math.PI * 2);
+  g.fill();
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(130, 14);
+  g.quadraticCurveTo(148, 22, 162, 12);
+  g.stroke();
+  g.restore();
+}
+
+// The brand: a teal disc ringed in cream, Dillo on top and the name across
+// it. With `lit`, the same artwork on black for the emissive map.
 const brandSign = (lit: boolean) =>
   canvasTexture(512, 512, (g) => {
-    g.fillStyle = lit ? "#000" : "#f3efe6";
+    g.fillStyle = lit ? "#000" : CREAM;
     g.fillRect(0, 0, 512, 512);
-    g.fillStyle = lit ? "#7a0a0a" : "#c8242b";
+    g.fillStyle = lit ? "#0d3d3c" : TEAL;
     g.beginPath();
     g.arc(256, 256, 240, 0, Math.PI * 2);
     g.fill();
     g.lineWidth = 16;
-    g.strokeStyle = lit ? "#000" : "#f3efe6";
+    g.strokeStyle = lit ? "#000" : CREAM;
     g.beginPath();
     g.arc(256, 256, 222, 0, Math.PI * 2);
     g.stroke();
-    // Crown.
-    g.fillStyle = lit ? "#ffd75a" : "#f2c230";
-    g.beginPath();
-    g.moveTo(166, 190);
-    g.lineTo(186, 120);
-    g.lineTo(221, 165);
-    g.lineTo(256, 105);
-    g.lineTo(291, 165);
-    g.lineTo(326, 120);
-    g.lineTo(346, 190);
-    g.closePath();
-    g.fill();
-    text(g, "ROADKING", 256, 278, 78, lit ? "#ffffff" : "#ffffff");
-    text(g, "GASOLINE", 256, 360, 46, lit ? "#ffd75a" : "#f2c230");
+    drawDillo(g, 250, 168, 0.92, lit);
+    g.lineWidth = 10;
+    g.strokeStyle = lit ? "#000" : TEAL_DEEP;
+    g.font = "bold 104px 'Arial Black', Impact, sans-serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.strokeText("DILLO", 256, 318);
+    text(g, "DILLO", 256, 318, 104, lit ? "#ffd75a" : SUN);
+    text(g, "GASOLINE", 256, 398, 44, lit ? "#ffffff" : CREAM);
   });
 
 const priceBoard = (lit: boolean) =>
@@ -106,14 +190,14 @@ const priceBoard = (lit: boolean) =>
     g.fillStyle = lit ? "#000" : "#f3efe6";
     g.fillRect(0, 0, 512, 256);
     if (!lit) {
-      g.strokeStyle = "#1d3f8f";
+      g.strokeStyle = TEAL;
       g.lineWidth = 10;
       g.strokeRect(5, 5, 502, 246);
     }
-    text(g, "REGULAR", 150, 70, 46, lit ? "#9ad0ff" : "#1d3f8f");
-    text(g, "29.9¢", 390, 70, 64, lit ? "#ffffff" : "#c8242b");
-    text(g, "ETHYL", 150, 180, 46, lit ? "#9ad0ff" : "#1d3f8f");
-    text(g, "33.9¢", 390, 180, 64, lit ? "#ffffff" : "#c8242b");
+    text(g, "REGULAR", 150, 70, 46, lit ? "#8ff0e6" : TEAL);
+    text(g, "29.9¢", 390, 70, 64, lit ? "#ffd75a" : "#b8452a");
+    text(g, "ETHYL", 150, 180, 46, lit ? "#8ff0e6" : TEAL);
+    text(g, "33.9¢", 390, 180, 64, lit ? "#ffd75a" : "#b8452a");
   });
 
 const fasciaBoard = (label: string, bg: string, fg: string) =>
@@ -132,7 +216,7 @@ const neonBoard = (label: string, color: string, glow: string, lit: boolean, w =
 
 const pumpFace = () =>
   canvasTexture(256, 384, (g) => {
-    g.fillStyle = "#c8242b";
+    g.fillStyle = TEAL;
     g.fillRect(0, 0, 256, 384);
     g.fillStyle = "#f4f1e8";
     g.beginPath();
@@ -153,7 +237,7 @@ const pumpFace = () =>
     g.font = "bold 18px monospace";
     g.textAlign = "center";
     g.fillText("0 2 4 . 7", 128, 114);
-    text(g, "ROADKING", 128, 262, 34, "#ffffff");
+    text(g, "DILLO", 128, 262, 44, SUN);
     g.fillStyle = "#f2c230";
     g.fillRect(28, 300, 200, 6);
   });
@@ -174,7 +258,9 @@ function useParts(night: boolean) {
     const lit = (map: CanvasTexture, emissive: CanvasTexture) => new MeshStandardMaterial({ map, emissiveMap: emissive, emissive: "#ffffff", emissiveIntensity: 0, roughness: 0.5 });
     return {
       white: m("#f1ede3"),
-      red: m("#c8242b", 0.5),
+      red: m(TEAL, 0.5), // the brand colour (pumps, island, canopy edge)
+      sun: m(SUN, 0.5),
+      cooler: m("#c8242b", 0.5),
       blue: m("#1d3f8f", 0.5),
       chrome: m("#d8dadc", 0.18, 1),
       steel: m("#9a9d9f", 0.45, 0.6),
@@ -188,7 +274,7 @@ function useParts(night: boolean) {
       prices: lit(priceBoard(false), priceBoard(true)),
       diner: lit(neonBoard("Rosie's Diner", "#ff5f8f", "#ff2a6d", false), neonBoard("Rosie's Diner", "#ff5f8f", "#ff2a6d", true)),
       eat: lit(neonBoard("EAT", "#7af6ff", "#38f2ff", false, 512, 256), neonBoard("EAT", "#7af6ff", "#38f2ff", true, 512, 256)),
-      service: new MeshStandardMaterial({ map: fasciaBoard("ROADKING  •  SERVICE", "#c8242b", "#ffffff"), roughness: 0.6 }),
+      service: new MeshStandardMaterial({ map: fasciaBoard("DILLO  •  SERVICE", TEAL, SUN), roughness: 0.6 }),
       pump: new MeshStandardMaterial({ map: pumpFace(), roughness: 0.45 }),
       soda: new MeshStandardMaterial({ map: sodaCooler(), roughness: 0.45 }),
       dinerSkin: m("#c9ccce", 0.25, 0.85),
@@ -271,7 +357,7 @@ function Forecourt({ p }: { p: Parts }) {
       <mesh position={[0, 0.125, 1]} material={p.concrete} castShadow receiveShadow>
         <boxGeometry args={[1.2, 0.25, 7.5]} />
       </mesh>
-      <mesh position={[0, 0.25, 1]} material={p.red}>
+      <mesh position={[0, 0.25, 1]} material={p.sun}>
         <boxGeometry args={[1.22, 0.02, 7.52]} />
       </mesh>
       <Pump p={p} z={-1} />
@@ -327,7 +413,7 @@ function Garage({ p }: { p: Parts }) {
       <mesh position={[3.51, 1.7, 7.5]} rotation-y={Math.PI / 2} material={p.glass}>
         <planeGeometry args={[6, 2.2]} />
       </mesh>
-      <mesh position={[3.52, 1.1, 4.1]} rotation-y={Math.PI / 2} material={p.blue}>
+      <mesh position={[3.52, 1.1, 4.1]} rotation-y={Math.PI / 2} material={p.sun}>
         <planeGeometry args={[1, 2.2]} />
       </mesh>
       {/* Two service bays, one door up with a lift inside, one down. */}
@@ -345,14 +431,14 @@ function Garage({ p }: { p: Parts }) {
           <cylinderGeometry args={[0.13, 0.13, 2, 10]} />
         </mesh>
       ))}
-      <mesh position={[1.6, 1.9, -0.5]} material={p.red}>
+      <mesh position={[1.6, 1.9, -0.5]} material={p.sun}>
         <boxGeometry args={[2, 0.12, 3]} />
       </mesh>
       {/* The fascia band across the front. */}
       <mesh position={[3.56, 4.25, -2.5]} rotation-y={Math.PI / 2} material={p.service}>
         <planeGeometry args={[11, 1.1]} />
       </mesh>
-      <mesh position={[3.54, 3.65, 7]} rotation-y={Math.PI / 2} material={p.red}>
+      <mesh position={[3.54, 3.65, 7]} rotation-y={Math.PI / 2} material={p.sun}>
         <planeGeometry args={[8, 0.2]} />
       </mesh>
       {/* Out front: a tyre stack, an oil can rack and the soda cooler. */}
@@ -374,7 +460,7 @@ function Garage({ p }: { p: Parts }) {
         )}
       </group>
       <group position={[4.2, 0, 10.2]}>
-        <mesh position={[0, 0.5, 0]} material={p.red} castShadow>
+        <mesh position={[0, 0.5, 0]} material={p.cooler} castShadow>
           <boxGeometry args={[0.7, 1, 1.3]} />
         </mesh>
         <mesh position={[0.36, 0.62, 0]} rotation-y={Math.PI / 2} material={p.soda}>
