@@ -371,7 +371,9 @@ export function RoadSurface({ kit, style, shoulders = [], rails = [], asphaltBri
     };
   }, [kit, left, width, tile, shoulders, rails]);
   const asphalt = usePbrMaterial(ASPHALT, { tile: 4, size: [width, tile], normalScale: 0.8, brightness: asphaltBrightness, tint: asphaltTint });
-  const gravelMat = usePbrMaterial(GRAVEL, { res: "1k", tile: 2, size: [3, 3], tint: gravelTint });
+  // Rougher than scanned: at a low sun or moon the loose stones otherwise glint
+  // like a wet road.
+  const gravelMat = usePbrMaterial(GRAVEL, { res: "1k", tile: 2, size: [3, 3], tint: gravelTint, roughness: 1.6 });
   const overlay = useMemo(() => overlayTexture(style), [style]);
   return (
     <>
