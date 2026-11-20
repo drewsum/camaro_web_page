@@ -24,6 +24,7 @@ import { polyHavenHdri, useHdriSky, type HdriSky } from "./common/hdri";
 import SkyReflections from "./common/SkyReflections";
 import { smooth, TAU } from "./common/roadway";
 import { MARKER_SPACING, RUN_LENGTH, speedRun } from "./saltflats/speedRun";
+import Dust from "./saltflats/Dust";
 
 // Bonneville: a land-speed run down a marked course on the salt flats. The
 // car launches from the start line, runs up to about 190 mph through the
@@ -35,6 +36,9 @@ const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
 const EXPOSURE = 0.7;
 const FOG_NEAR = 600;
 const FOG_FAR = 6000;
+
+// A shade darker than the salt, or it vanishes against it.
+const DUST = new Color("#b9b09c");
 
 // How far along the course the car is this frame (repeats every RUN_LENGTH).
 const here = { course: 0 };
@@ -419,6 +423,7 @@ function Course() {
       <Markers />
       <TimedMile />
       <Pits />
+      <Dust course={here} color={DUST} />
     </group>
   );
 }
