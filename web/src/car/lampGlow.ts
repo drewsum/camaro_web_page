@@ -181,9 +181,17 @@ export function makeDomeLight(rig: CarRig, scene: Object3D): DomeLight {
   // Just under the roof, a little behind the middle of the cabin.
   const pos = new Vector3(0, box.max.y - 0.04, centre.z - 0.15);
 
-  // Short reach so it lights the cabin but not the ground under the car.
+  // Short reach, so the shadow map only has the cabin and its shell to draw.
   const light = new PointLight("#fff3e2", 0, 1.4, 1);
   light.name = "DomeLight";
+  // It casts shadows while it's on, so the floor pan, doors and roof keep it
+  // in the cabin. Without them it lit the ground under the car, through the
+  // floor. Small map: the cabin is small, and soft edges suit a courtesy lamp.
+  light.shadow.mapSize.set(256, 256);
+  light.shadow.camera.near = 0.02;
+  light.shadow.camera.far = 1.4;
+  light.shadow.bias = -0.002;
+  light.shadow.normalBias = 0.01;
   light.position.copy(pos).y -= 0.08;
   const lens = new Mesh(new CircleGeometry(0.07, 20), new MeshBasicMaterial({ color: "#5a5852" }));
   lens.name = "DomeLens";
@@ -195,5 +203,7 @@ export function makeDomeLight(rig: CarRig, scene: Object3D): DomeLight {
 
 export function setDomeLight(dome: DomeLight, on: boolean) {
   dome.light.intensity = on ? 9 : 0;
+  // Only while it's on: six extra shadow passes of the car each frame.
+  dome.light.castShadow = on;
   (dome.lens.material as MeshBasicMaterial).color.set(on ? "#fffaf0" : "#5a5852");
 }
