@@ -38,6 +38,7 @@ import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { preloadPbr, usePbrMaterial } from "./common/pbr";
+import { GROUND_PERIOD, useSlopeGround } from "./common/slopeGround";
 import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 
 // A cruise down a winding two-lane California coast road: cliffs dropping to
@@ -148,25 +149,6 @@ function ribbon({ ds, us, y, uv, color }: RibbonOptions) {
   geo.setIndex(index);
   geo.computeVertexNormals();
   return geo;
-}
-
-function noiseTexture(seed: number, base: string, spread: number) {
-  const c = document.createElement("canvas");
-  c.width = c.height = 256;
-  const g = c.getContext("2d")!;
-  g.fillStyle = base;
-  g.fillRect(0, 0, 256, 256);
-  const rand = mulberry32(seed);
-  for (let n = 0; n < 12000; n++) {
-    const v = Math.floor(255 * (1 - spread / 2 + rand() * spread));
-    g.fillStyle = `rgba(${v},${v},${v},0.5)`;
-    g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 2, 1 + rand() * 2);
-  }
-  const t = new CanvasTexture(c);
-  t.colorSpace = SRGBColorSpace;
-  t.wrapS = t.wrapT = RepeatWrapping;
-  t.anisotropy = 8;
-  return t;
 }
 
 // The pavement itself is scanned asphalt and gravel (Poly Haven, CC0); the
@@ -461,41 +443,46 @@ function StreetLights({ night }: { night: boolean }) {
 function Terrain() {
   const { cliff, hills } = useMemo(() => {
     const grass = new Color("#8f8a4c");
-    const rock = [new Color("#7a6550"), new Color("#937a5e"), new Color("#5f5244"), new Color("#86705a")];
     const gold = [new Color("#94804c"), new Color("#877444"), new Color("#a08a55"), new Color("#7d6f45")];
     const cliffUs = [-4.5, -6, -9, -13, -18, -24, -30, -37, -44, -52];
     const hillUs = [8.5, 10, 13, 18, 26, 36, 50, 66, 85, 108, 135, 165, 200, 240];
-    // De-indexed with per-face normals so the rock reads as faceted stone.
-    const cliff = ribbon({
+    const cliffRibbon = ribbon({
       ds: 4,
       us: cliffUs,
       y: (s, p, u, j, key) => cliffY(s, u, p.y, j === 0 ? 0 : hash(key, j) - 0.5),
-      uv: (s, u) => [u / 6, s / 6],
-      color: (y, p, _u, j, key) => (y > p.y - 1.5 ? grass : rock[Math.floor(hash(key, j + 50) * rock.length)]),
-    }).toNonIndexed();
+      color: () => grass,
+    });
+    // Rock all the way down from just below the grassy top, however flat it
+    // gets at the waterline; above that, rock only where it's steep.
+    const pos = cliffRibbon.getAttribute("position");
+    const rockiness = new Float32Array(pos.count);
+    for (let i = 0; i < pos.count; i++) {
+      const row = Math.floor(i / cliffUs.length);
+      rockiness[i] = pos.getY(i) < track.at(S0 + row * 4).y - 1.5 ? 1 : 0;
+    }
+    cliffRibbon.setAttribute("rockiness", new BufferAttribute(rockiness, 1));
+    // De-indexed with per-face normals so the rock reads as faceted stone.
+    const cliff = cliffRibbon.toNonIndexed();
     cliff.computeVertexNormals();
     const hills = ribbon({
       ds: 10,
       us: hillUs,
       y: (s, p, u) => hillY(s, u, p.y),
-      uv: (s, u) => [u / 8, s / 8],
       color: (_y, _p, _u, j, key) => gold[Math.floor(hash(key, j + 90) * gold.length)],
     });
     return { cliff, hills };
   }, []);
-  const grain = useMemo(() => noiseTexture(9, "#ffffff", 0.35), []);
+  // Weathered tan rock on the cliffs, and dry ground where the hills steepen.
+  const { material, offset } = useSlopeGround({ rockTint: "#e2d2bc", dirtTint: "#dccdb4" });
+  // The mapping follows the laps the way the ocean's does (see Ocean).
+  useFrame(() => offset.set(mod(here.lap * track.lapShift.x, GROUND_PERIOD), 0, mod(here.lap * track.lapShift.z, GROUND_PERIOD)));
   return (
     <>
-      <mesh geometry={cliff} receiveShadow castShadow>
-        <meshStandardMaterial vertexColors map={grain} roughness={1} side={DoubleSide} />
-      </mesh>
-      <mesh geometry={hills} receiveShadow>
-        <meshStandardMaterial vertexColors map={grain} roughness={1} side={DoubleSide} />
-      </mesh>
+      <mesh geometry={cliff} material={material} receiveShadow castShadow />
+      <mesh geometry={hills} material={material} receiveShadow />
     </>
   );
 }
-
 // ---- Vegetation and rocks (Poly Haven, CC0) -------------------------------
 
 interface Spot {

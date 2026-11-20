@@ -14,6 +14,8 @@ import {
 import { mulberry32 } from "./periodic";
 import { tiledInstances } from "./tiles";
 import { Forest, type ForestKind } from "./impostors";
+import { useSlopeGround } from "./slopeGround";
+import { BlobShadows, type Blob } from "./blobShadows";
 import { conifer, crown, deciduous } from "../capitol/Trees";
 import { barkTexture, leafTexture } from "../capitol/textures";
 
@@ -221,6 +223,24 @@ function Trees({ spots }: { spots: ReturnType<typeof treeSpots> }) {
   }, [spots]);
   return <Forest kinds={kinds} near={NEAR} />;
 }
+// Shade under every tree and bush: a pool about as wide as its crown, laid
+// on the hillside.
+function shadeBlobs(p: CountrysideProps, spots: ReturnType<typeof treeSpots>): Blob[] {
+  const out: Blob[] = [];
+  const pos = new Vector3(), scale = new Vector3(), q = new Quaternion();
+  const add = (m: Matrix4, reach: number) => {
+    m.decompose(pos, q, scale);
+    const { x, z } = pos;
+    const e = 2;
+    const normal = new Vector3(heightAt(p, x - e, z) - heightAt(p, x + e, z), 2 * e, heightAt(p, x, z - e) - heightAt(p, x, z + e)).normalize();
+    out.push({ position: new Vector3(x, heightAt(p, x, z), z), radius: scale.x * reach, normal });
+  };
+  spots.broadleaf.forEach((t) => add(t.matrix, 0.42));
+  spots.conifer.forEach((t) => add(t.matrix, 0.3));
+  spots.shrubs.forEach((m) => add(m, 0.85));
+  return out;
+}
+
 // ---- Farm and clutter ------------------------------------------------------------
 
 function prism(w: number, h: number, l: number) {
@@ -357,13 +377,15 @@ function Bales({ p }: { p: CountrysideProps }) {
 export default function Countryside({ config: props }: { config: CountrysideProps }) {
   const hills = useMemo(() => hillsGeometry(props), [props]);
   const spots = useMemo(() => treeSpots(props), [props]);
+  const blobs = useMemo(() => shadeBlobs(props, spots), [props, spots]);
+  // Meadow colours on the flats, bare earth and rock where the hills steepen.
+  const { material: ground } = useSlopeGround({ dirt: [0.12, 0.3], rock: [0.45, 0.7], dirtTint: "#a8987f", rockTint: "#77736c" });
   return (
     <>
       {/* Everything here is far beyond the sun's shadow map around the cars. */}
-      <mesh geometry={hills}>
-        <meshStandardMaterial vertexColors roughness={1} />
-      </mesh>
+      <mesh geometry={hills} material={ground} />
       <Trees spots={spots} />
+      <BlobShadows blobs={blobs} />
       <Farm {...props.farm} y={heightAt(props, props.farm.x, props.farm.z)} />
       <PowerLine p={props} />
       <Bales p={props} />
