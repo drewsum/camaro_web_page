@@ -49,6 +49,13 @@ export const SCENES: SceneDef[] = [
     credits: [CREDITS.mach1, CREDITS.polyHaven],
   },
   {
+    id: "drivein",
+    label: "Drive-in theater",
+    Component: lazy(() => import("./DriveInScene")),
+    night: false, // always night, but headlights off for the show unless asked
+    credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.polyHaven],
+  },
+  {
     id: "burnout",
     label: "Burnout contest",
     Component: lazy(() => import("./BurnoutScene")),
