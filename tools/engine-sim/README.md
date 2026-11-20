@@ -11,7 +11,7 @@ turned on.
 Values from the Engine Build page:
 
 - 4.500 × 4.250 (540 ci), 6.535" rods, 9.8" deck, 9.4:1
-- AFR 2110 heads (117 cc), using AFR's published flow numbers
+- AFR 2110 heads (117 cc), with an approximate flow curve peaking at 401 cfm (the 401 cfm figure is from the build page)
 - Comp custom cam: 242/250 @ .050, .622/.618, 110 LSA, +4
 - AFR dual plane, 850 cfm double pumper
 - HEI at 15° initial, 36° total
