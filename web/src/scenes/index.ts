@@ -63,5 +63,13 @@ export const SCENES: SceneDef[] = [
     nightOption: true,
     credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.polyHaven],
   },
+  {
+    id: "goldengate",
+    label: "Golden Gate Bridge",
+    Component: lazy(() => import("./GoldenGateScene")),
+    night: false,
+    nightOption: true,
+    credits: [CREDITS.mach1, CREDITS.charger, CREDITS.polyHaven],
+  },
   { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true },
 ];
