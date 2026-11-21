@@ -193,6 +193,15 @@ def build():
     y_a, y_b = webs[4][0], webs[0][1]
     C("UnderWebs", prism([p + Vector((0, y_a, 0)) for p in case_sec("under")], Vector((0, 1, 0)), y_b - y_a))
 
+    # Front and rear ends: the block stops at the parting line from the
+    # mid-plane of cap 1 forward and of cap 5 back. That is where the oil
+    # pan's end seals meet the block, so nothing hangs below the crank there.
+    wide = P["rail_x"] + 1
+    end_sec = [Vector((-wide, 0, P["pan_rail_z"] - 1)), Vector((wide, 0, P["pan_rail_z"] - 1)),
+               Vector((wide, 0, 0)), Vector((-wide, 0, 0))]
+    C("EndCut_Front", prism([p + Vector((0, mains[0], 0)) for p in end_sec], Vector((0, 1, 0)), P["length"] - mains[0] + 1))
+    C("EndCut_Rear", prism([p + Vector((0, -1, 0)) for p in end_sec], Vector((0, 1, 0)), mains[4] + 1))
+
     # Main line bore and cam tunnel, full length.
     C("MainBore", cyl(Vector((0, -0.5, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, P["length"] + 1, 48))
     C("CamBore", cyl(Vector((0, -0.5, P["cam_cd"])), Vector((0, 1, 0)), P["cam_bore"] / 2, P["length"] + 1, 40))

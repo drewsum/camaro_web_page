@@ -74,6 +74,7 @@ Per deck:
 |---|---|---|
 | Front face: water-pump inlet ports, 6-bolt cover pattern, two dowels | Not built | Photo 29 shows it nearly square-on, but has no in-plane scale. Get a Gen VI front cover gasket or water-pump gasket image and scale from it. |
 | Bellhousing flange and starter bosses | Not built | Forum coordinates above, plus photo 22 and online rear-face photos |
+| Block ends below the crank | Built: from the mid-plane of cap 1 forward and of cap 5 back, the block stops at the parting line, where the pan's end seals meet the block. There is no material below it (Drew). | Drew |
 | Pan rail outline and bolt pattern | Rail height [meas] z = −2.25": the caps stand about .85" proud of it in photos 22, 24 and 41. The outline is [est]. | GM 19213986 one-piece pan gasket image (Drew's part) |
 | Side profile: jacket wall, skirt, freeze plugs (3 per side), oil filter pad, fuel pump pad, motor mount bosses | [est] simple section | Photos 22 and 26, plus bare-block photos online |
 | Lifter bores (16, .8437"), lifter retainer bosses, valley shape | Flat-floored valley [est] | Photo 27 (the lifters in the valley), plus cam position |
