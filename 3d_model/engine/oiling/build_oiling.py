@@ -1,4 +1,5 @@
-"""Oil pan, windage tray, oil pump and pickup for Drew's 540 (Gen VI BBC).
+"""Oil pan, windage tray and a one-piece billet oil pump with its pickup
+machined into the body, for Drew's 540 (Gen VI BBC).
 
 References (Drew's build album; see PARTS.md):
     163, 164, 169, 170, 340  the pan on the block, engine upside down on the stand:
@@ -57,9 +58,11 @@ K = dict(
               spacer_r=0.32, nut_af=0.50, nut_h=0.30),
     # Oil pump on the rear cap pad (bottom.json "pump"); body sizes [est], standard-volume BBC pump
     pump=dict(ear=(-3.275, -1.275, 0.275, 2.375), ear_z=(-4.00, -3.102),
-              body=(-3.45, -1.05, 1.05, 3.10), body_z=(-5.35, -3.999), body_r=0.40,
-              cover_z=(-5.55, -5.351), nipple_r=0.44, nipple_h=0.30),
-    pickup=dict(tube_r=0.375, screen=(-3.75, -0.75, 4.00, 8.60), screen_z=(-7.55, -6.80), screen_r=0.30),
+              body=(-3.45, -1.05, 1.05, 3.10), body_z=(-5.55, -3.999), body_r=0.40,   # gear section, cover machined in (one billet piece)
+              nipple_r=0.44, nipple_h=0.30),
+    # Pickup machined into the pump body (Drew): a leg down into the sump and an inlet foot [est sizes]
+    pickup=dict(leg=(-3.05, -1.45, 1.35, 2.85), leg_r=0.45, foot=(-3.55, -0.95, 0.55, 3.65), foot_r=0.35,
+                foot_z=(-7.55, -7.00), inlet_inset=0.25, inlet_depth=0.30),
 )
 CAP_Z = -3.10                      # main-cap bottoms (block)
 
@@ -215,37 +218,40 @@ def build_tray(root, tmp):
 
 
 def build_pump(root, tmp):
+    """One-piece billet pump (Drew): ear on the rear-cap pad, gear body, and the
+    pickup machined into the body as a leg down into the sump, ending in an
+    inlet foot with a screen."""
     P, PK = K["pump"], K["pickup"]; pb = BOT["pump"]
     x0, x1, y0, y1 = P["ear"]
     pump = obj("OilPump", zprism(rrect(x0, x1, y0, y1, 0.20), *P["ear_z"]), root)
     bx0, bx1, by0, by1 = P["body"]
     obj("bd", zprism(rrect(bx0, bx1, by0, by1, P["body_r"]), *P["body_z"]), tmp)
     obj("nip", zcyl(P["nipple_r"], P["ear_z"][1] - 0.01, P["ear_z"][1] + P["nipple_h"], pb["port"]["x"], pb["port"]["y"], 32), tmp)
-    # inlet boss on the body's front face for the pickup tube
-    bm = bmesh.new(); ycyl(0.52, by1 - 0.2, by1 + 0.18, 32, -2.25, -4.75, bm); obj("ib", bm, tmp)
+    lx0, lx1, ly0, ly1 = PK["leg"]; fx0, fx1, fy0, fy1 = PK["foot"]
+    leg_r, n = PK["leg_r"], 8
+    fz0, fz1 = PK["foot_z"]
+    obj("leg", loft([zsec(rrect(lx0, lx1, ly0, ly1, leg_r, n), P["body_z"][0] + 0.05),
+                     zsec(rrect(lx0, lx1, ly0, ly1, leg_r, n), fz1 + 0.35),
+                     zsec(rrect(fx0, fx1, fy0, fy1, PK["foot_r"], n), fz1),
+                     zsec(rrect(fx0, fx1, fy0, fy1, PK["foot_r"], n), fz0)]), tmp)
     boolean(pump, "UNION", tmp); clear(tmp)
+    ins = PK["inlet_inset"]
     obj("sh", zcyl(0.205, -6, 0, pb["stud"]["x"], pb["stud"]["y"], 20), tmp)
     obj("dw", zcyl(0.135, -4.5, 0, pb["dowel"]["x"], pb["dowel"]["y"], 16), tmp)
     obj("ol", zcyl(0.28, P["ear_z"][0] + 0.3, 0.5, pb["port"]["x"], pb["port"]["y"], 24), tmp)
+    obj("inl", zprism(rrect(fx0 + ins, fx1 - ins, fy0 + ins, fy1 - ins, max(PK["foot_r"] - ins, 0.08)), fz0 - 0.1, fz0 + PK["inlet_depth"]), tmp)
     boolean(pump, "DIFFERENCE", tmp); clear(tmp)
-    cover = obj("OilPumpCover", zprism(rrect(bx0 + 0.03, bx1 - 0.03, by0 + 0.03, by1 - 0.03, P["body_r"] - 0.03), *P["cover_z"]), root)
-    bm = bmesh.new()                                   # stud, nut, cover screws
+    bm = bmesh.new()                                   # pump stud and nut, body screws
     sx, sy = pb["stud"]["x"], pb["stud"]["y"]
     zcyl(0.18, P["ear_z"][0] - 0.40, CAP_Z + 0.95, sx, sy, 20, bm)
     hexagon_z(0.56, P["ear_z"][0] - 0.34, P["ear_z"][0] - 0.001, sx, sy, bm)
-    for cx, cy in ((bx0 + 0.32, by0 + 0.32), (bx1 - 0.32, by0 + 0.32), (bx0 + 0.32, by1 - 0.32), (bx1 - 0.32, by1 - 0.32)):
-        hexagon_z(0.38, P["cover_z"][0] - 0.20, P["cover_z"][0] - 0.001, cx, cy, bm)
+    zb = P["body_z"][0]
+    for cx, cy in ((bx0 + 0.22, by0 + 0.20), (bx1 - 0.22, by0 + 0.20), (bx0 + 0.22, by1 - 0.20), (bx1 - 0.22, by1 - 0.20)):
+        zcyl(0.16, zb - 0.19, zb - 0.001, cx, cy, 20, bm)
     hw = obj("OilPumpHardware", bm, root)
-    # Pickup: tube from the inlet boss, down into the sump, onto a rectangular screen.
-    sx0, sx1, sy0, sy1 = PK["screen"]; sz0, sz1 = PK["screen_z"]
-    pts = [Vector(p) for p in ((-2.25, by1 + 0.05, -4.75), (-2.25, by1 + 0.55, -4.80), (-2.25, by1 + 1.05, -5.55),
-                               (-2.25, by1 + 1.30, -6.40), (-2.25, by1 + 1.40, sz1 + 0.20))]
-    path = catmull(pts, 8)
-    bm = sweep_tube(path, PK["tube_r"], 24)
-    zcyl(0.60, sz1 - 0.01, sz1 + 0.18, -2.25, path[-1].y, 32, bm)             # flange collar on the screen top
-    tube = obj("OilPickupTube", bm, root)
-    scr = obj("OilPickupScreen", zprism(rrect(sx0, sx1, sy0, sy1, PK["screen_r"]), sz0, sz1), root)
-    return pump, cover, hw, tube, scr
+    i2 = ins + 0.01
+    scr = obj("OilPickupScreen", zprism(rrect(fx0 + i2, fx1 - i2, fy0 + i2, fy1 - i2, max(PK["foot_r"] - i2, 0.07)), fz0 + 0.002, fz0 + 0.05), root)
+    return pump, hw, scr
 
 
 def build():
@@ -254,18 +260,20 @@ def build():
     CAMNS["set_crank"](0.0); bpy.context.view_layer.update()
     pan, bolts, plug = build_pan(root, tmp)
     tray, tray_hw = build_tray(root, tmp)
-    pump, cover, pump_hw, tube, scr = build_pump(root, tmp)
+    pump, pump_hw, scr = build_pump(root, tmp)
     bpy.data.collections.remove(tmp)
     black = material("Pan_GlossBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.22)
     grey = material("Tray_Grey", (0.33, 0.34, 0.35, 1), 0.5, 0.55)
-    iron = material("Pump_CastIron", (0.22, 0.22, 0.23, 1), 0.9, 0.65)
+    billet = material("Pump_BilletAluminium", (0.78, 0.79, 0.80, 1), 1.0, 0.28)
     zinc = material("Pickup_Steel", (0.55, 0.56, 0.57, 1), 1.0, 0.40)
     mesh = material("Pickup_Screen", (0.12, 0.12, 0.13, 1), 0.9, 0.55)
     oxide = material("Oiling_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
-    for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, iron),
-                 (cover, iron), (pump_hw, oxide), (tube, zinc), (scr, mesh)):
+    for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, billet),
+                 (pump_hw, oxide), (scr, mesh)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
-    parts = [pan, bolts, plug, tray, tray_hw, pump, cover, pump_hw, tube, scr]
+    for n in ("OilPumpCover", "OilPickupTube"):          # parts of the earlier three-piece pump
+        if n in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
+    parts = [pan, bolts, plug, tray, tray_hw, pump, pump_hw, scr]
     return parts
 
 
@@ -303,7 +311,6 @@ def checks(parts, step=10.0):
                 if PT[p.name].overlap(mt): hits.add((p.name, n))
     set_crank(0.0)
     allowed = {("OilPumpHardware", "OilPump"),                 # stud and nut through the pump ear
-               ("OilPump", "OilPickupTube"), ("OilPickupTube", "OilPickupScreen"),   # pickup pressed into the pump and the screen
                ("WindageTrayNuts", "MainStuds_3"), ("WindageTrayNuts", "MainStuds_4")}  # spacers and nuts on the long studs (.50" at the tray, from the block)
     return dict(clash=sorted(h for h in hits if h not in allowed and h[::-1] not in allowed),
                 contacts_expected=sorted(allowed), rotating_lowest_z_in=round(low, 3),

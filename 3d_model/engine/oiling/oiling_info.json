@@ -66,30 +66,34 @@
     3.1
    ],
    "body_z": [
-    -5.35,
+    -5.55,
     -3.999
    ],
    "body_r": 0.4,
-   "cover_z": [
-    -5.55,
-    -5.351
-   ],
    "nipple_r": 0.44,
    "nipple_h": 0.3
   },
   "pickup": {
-   "tube_r": 0.375,
-   "screen": [
-    -3.75,
-    -0.75,
-    4.0,
-    8.6
+   "leg": [
+    -3.05,
+    -1.45,
+    1.35,
+    2.85
    ],
-   "screen_z": [
+   "leg_r": 0.45,
+   "foot": [
+    -3.55,
+    -0.95,
+    0.55,
+    3.65
+   ],
+   "foot_r": 0.35,
+   "foot_z": [
     -7.55,
-    -6.8
+    -7.0
    ],
-   "screen_r": 0.3
+   "inlet_inset": 0.25,
+   "inlet_depth": 0.3
   }
  },
  "manifold": {
@@ -115,36 +119,20 @@
   ],
   "OilPump": [
    0,
-   10.142266118588868
-  ],
-  "OilPumpCover": [
-   0,
-   0.9027302872019752
+   17.81668283970147
   ],
   "OilPumpHardware": [
    0,
-   0.4168837488683463
-  ],
-  "OilPickupTube": [
-   0,
-   1.3201238482645392
+   0.3771466688741716
   ],
   "OilPickupScreen": [
    0,
-   10.290699017947212
+   0.2572452014198161
   ]
  },
  "checks": {
   "clash": [],
   "contacts_expected": [
-   [
-    "OilPickupTube",
-    "OilPickupScreen"
-   ],
-   [
-    "OilPump",
-    "OilPickupTube"
-   ],
    [
     "OilPumpHardware",
     "OilPump"
@@ -171,10 +159,8 @@
   "OilPanDrainPlug": 112,
   "WindageTray": 2828,
   "WindageTrayNuts": 448,
-  "OilPump": 800,
-  "OilPumpCover": 140,
-  "OilPumpHardware": 176,
-  "OilPickupTube": 1704,
+  "OilPump": 1104,
+  "OilPumpHardware": 400,
   "OilPickupScreen": 140
  }
 }
