@@ -1,0 +1,180 @@
+{
+ "params": {
+  "t": 0.075,
+  "flange_out": 6.0,
+  "flange_in": 4.92,
+  "flange_t": 0.096,
+  "y_rear": 0.15,
+  "y_front": 23.92,
+  "front_band": 23.2,
+  "neck_y0": 21.8,
+  "neck_y1": 23.0,
+  "neck_x": 4.55,
+  "wall_x": 5.0,
+  "front_depth": 5.0,
+  "corner_r": 1.0,
+  "sump_depth": 8.0,
+  "sump_x": 4.25,
+  "sump_y1": 11.5,
+  "sump_r": 0.35,
+  "crank_notch_r": 2.05,
+  "rear_notch_x": 3.55,
+  "rear_notch_z": -3.15,
+  "bolt_hole": 0.34,
+  "drain": {
+   "y": 5.5,
+   "z": -7.35,
+   "r": 0.5,
+   "plug_af": 0.62
+  },
+  "tray": {
+   "z_top": -4.3,
+   "t": 0.075,
+   "hx": 4.55,
+   "y0": 6.55,
+   "y1": 13.95,
+   "r": 0.5,
+   "panel": [
+    2.2,
+    1.6
+   ],
+   "panel_y": [
+    9.25,
+    11.15
+   ],
+   "panel_x": 2.05,
+   "panel_drop": 0.13,
+   "spacer_r": 0.32,
+   "nut_af": 0.5,
+   "nut_h": 0.3
+  },
+  "pump": {
+   "ear": [
+    -3.275,
+    -1.275,
+    0.275,
+    2.375
+   ],
+   "ear_z": [
+    -4.0,
+    -3.102
+   ],
+   "body": [
+    -3.45,
+    -1.05,
+    1.05,
+    3.1
+   ],
+   "body_z": [
+    -5.35,
+    -3.999
+   ],
+   "body_r": 0.4,
+   "cover_z": [
+    -5.55,
+    -5.351
+   ],
+   "nipple_r": 0.44,
+   "nipple_h": 0.3
+  },
+  "pickup": {
+   "tube_r": 0.375,
+   "screen": [
+    -3.75,
+    -0.75,
+    4.0,
+    8.6
+   ],
+   "screen_z": [
+    -7.55,
+    -6.8
+   ],
+   "screen_r": 0.3
+  }
+ },
+ "manifold": {
+  "OilPan": [
+   0,
+   51.83542287263647
+  ],
+  "OilPanBolts": [
+   0,
+   2.2379008216828926
+  ],
+  "OilPanDrainPlug": [
+   0,
+   0.18771770292683493
+  ],
+  "WindageTray": [
+   0,
+   6.361980644789798
+  ],
+  "WindageTrayNuts": [
+   0,
+   0.7012427533332775
+  ],
+  "OilPump": [
+   0,
+   10.142266118588868
+  ],
+  "OilPumpCover": [
+   0,
+   0.9027302872019752
+  ],
+  "OilPumpHardware": [
+   0,
+   0.4168837488683463
+  ],
+  "OilPickupTube": [
+   0,
+   1.3201238482645392
+  ],
+  "OilPickupScreen": [
+   0,
+   10.290699017947212
+  ]
+ },
+ "checks": {
+  "clash": [],
+  "contacts_expected": [
+   [
+    "OilPickupTube",
+    "OilPickupScreen"
+   ],
+   [
+    "OilPump",
+    "OilPickupTube"
+   ],
+   [
+    "OilPumpHardware",
+    "OilPump"
+   ],
+   [
+    "WindageTrayNuts",
+    "MainStuds_3"
+   ],
+   [
+    "WindageTrayNuts",
+    "MainStuds_4"
+   ]
+  ],
+  "rotating_lowest_z_in": -3.977,
+  "tray_gap_to_rotating_in": 0.323
+ },
+ "capacity": {
+  "volume_below_rail_qt": 24.0,
+  "sump_box_below_front_floor_qt": 4.7
+ },
+ "tris": {
+  "OilPan": 3152,
+  "OilPanBolts": 3096,
+  "OilPanDrainPlug": 112,
+  "WindageTray": 2828,
+  "WindageTrayNuts": 448,
+  "OilPump": 800,
+  "OilPumpCover": 140,
+  "OilPumpHardware": 176,
+  "OilPickupTube": 1704,
+  "OilPickupScreen": 140
+ }
+}

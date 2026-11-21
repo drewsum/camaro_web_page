@@ -128,8 +128,8 @@
    3,
    4
   ],
-  "extra": 2.5,
-  "src": "[meas] photo 431: the inner studs on caps 3 and 4 are long windage-tray studs; extension [est]"
+  "extra": 0.9,
+  "src": "[meas] photo 431: the inner studs on caps 3 and 4 are long windage-tray studs; extension .90\" [derived]: spacer, tray and nut under the cap nut, ending .10\" above the pan's 5\" front floor (../oiling/PARTS.md). It was 2.5\" [est]."
  },
  "rear_cap": {
   "column_x": 3.0,
