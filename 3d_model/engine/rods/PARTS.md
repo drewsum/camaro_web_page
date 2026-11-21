@@ -5,7 +5,7 @@ Built by `build_rods.py`, after `../block/build_block.py` and `../crank/build_cr
 ## Sources
 
 - **Pistons:** Drew's Mahle box label (album photo 509) gives the part number 928957000 ("MS HVSS BIG BORE CHEVY FT 1270CH"), the pin (0.990 x 2.520, .180 wall), the 1.6 mm circlips, the ring set (4.500 +.005, 1.5 / 1.5 / 3.0 mm, file fit), the oil support rail, and the measured piston-to-wall clearance of .0045".
-- **Piston shape:** album photos 456, 459, 470 and 510, for the flat crown with one crescent valve relief, the short coated skirt, the pin-boss windows and the expander. Photo 382 shows Mahle's ring-alignment sheet and the circlips.
+- **Piston shape:** album photos 372, 428, 456, 459, 470 and 510, for the flat crown with one valve relief, the short coated skirt, the pin-boss windows and the expander. Photo 382 shows Mahle's ring-alignment sheet and the circlips.
 - **Rods:** Scat forged H-beam, from the build page and site photos 15 and 20, plus album photos 424, 456, 459, 461 and 512. Cap screws come up through the cap into the rod; the small end is bronze bushed.
 
 | Item | Value | Tag |
@@ -22,7 +22,7 @@ Built by `build_rods.py`, after `../block/build_block.py` and `../crank/build_cr
 | Wrist pin | .990" x 2.520", .180" wall, full floating, 1.6 mm wire circlips | [spec] |
 | Pin bosses | towers to the crown underside, faces at ±1.38", .53" from the rod | [est] photo 459 |
 | Skirt | coated thrust panels below the ring belt; the bottom edge follows the counterweight sweep at BDC with .10" clearance | [est] photo 459; the curve is [derived] from the crank's 3.55" [est] counterweight radius |
-| Valve relief | one crescent per piston: a 2.40" cutter (2.30" intake valve + .10"), floor tilted 18 deg, .18" deep at the outer edge, leaving a .06" rim | position and angles [est] from photos 470, 510 |
+| Valve relief | one D-shaped pocket per piston, running along the bank: a 2.40" cutter (2.30" intake valve + .10") centred .05" to the intake side and .86" along the bank. The floor rises at 8.6 deg to a straight edge .19" past centre, so the pocket is ~1.05" wide and 2.4" long, from .33" past centre to near the crown edge. It deepens slightly towards that outer end; .16" deep at the deepest | position and shape [meas] from photos 372 (near TDC, seen from the valley) and 428; depth and lean [est] |
 | Ring gaps | bottom oil rail at the front, on the pin line (Mahle sheet, photo 382); top 135 deg, 2nd 315 deg, top rail 180 deg, expander 100 deg, support rail 90 deg (measured from the front towards +X) | only the bottom rail is from the sheet; the rest [est] |
 
 Relief side: the heads run E-I-I-E-E-I-I-E front to rear, so the intake valve is behind the exhaust on cylinders 1, 5, 2 and 6, and ahead of it on 3, 7, 4 and 8. The relief is always on the intake (valley) side. That gives four piston variants (`Piston_IF`, `Piston_IR`, `Piston_EF`, `Piston_ER` in the library); the right bank uses the mirror of the left.

@@ -59,11 +59,12 @@
   "cw_clear": 0.1,
   "relief_r": 1.2,
   "relief_c": [
-   0.38,
-   0.91
+   0.05,
+   0.86
   ],
-  "relief_tilt": 18.0,
-  "relief_depth": 0.18
+  "relief_tilt": 8.6,
+  "relief_lean": 0.15,
+  "relief_depth": 0.16
  },
  "R_piston": 2.2459903787335347,
  "R_ring": 2.246490378733535,

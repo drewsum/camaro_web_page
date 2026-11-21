@@ -81,9 +81,11 @@ K = dict(
     boss_r=0.78, boss_gap=0.53, boss_face=1.38, boss_wall=0.15,   # [est] pin bosses and their side walls
     cw_clear=0.10,       # [est] skirt relief clearance to the counterweight sweep at BDC
     relief_r=1.20,       # [derived] 2.30" intake valve + .10"
-    relief_c=(0.38, 0.91),   # [est] intake valve centre: towards the intake side, along the bank; leaves a .06" rim
-    relief_tilt=18.0,    # [est] relief floor angle (crescent ~.55" wide, photo 470)
-    relief_depth=0.18,   # [est] deepest point, at the outer edge
+    relief_c=(0.05, 0.86),   # [meas] photos 372, 428: valve-cutter centre .05" to the intake side, .86" along the bank;
+                             # the D-shaped pocket runs 2.4" along the bank from .33" past centre to near the edge
+    relief_tilt=8.6,     # [meas] floor rises from the intake side to a straight edge .19" past centre (pocket ~1.05" wide, photo 372)
+    relief_lean=0.15,    # [est] the floor also deepens towards the outer end along the bank (photo 372)
+    relief_depth=0.16,   # [est] deepest point
 )
 L = K["rod_cc"]
 BETA = {"L": -45.0, "R": 45.0}
@@ -356,7 +358,7 @@ def build_piston_mesh(lib, s_int, y_int):
     zc = -(L - R)                                     # crank axis seen from the piston at BDC
     obj("cwrelief", ycyl(CP["cw_r"] + K["cw_clear"], -3, 3, 192, 0, zc), tmp)
     cx, cy = s_int * K["relief_c"][0], y_int * K["relief_c"][1]
-    w = Vector((cx, cy, 0)).normalized(); t = math.radians(K["relief_tilt"])
+    w = Vector((s_int, y_int * K["relief_lean"], 0)).normalized(); t = math.radians(K["relief_tilt"])   # floor deepens along w
     d = (w * math.sin(t) + Vector((0, 0, 1)) * math.cos(t)).normalized()
     Q = Vector((cx, cy, ch)); P0 = Q + w * K["relief_r"] - Vector((0, 0, K["relief_depth"]))
     B = Q + d * (P0 - Q).dot(d)
@@ -366,7 +368,7 @@ def build_piston_mesh(lib, s_int, y_int):
     # Finish: crown, lands and bosses bare forged aluminium; skirt panels coated (photo 510).
     alu = material("Piston_Aluminium", (0.72, 0.72, 0.74, 1), 0.9, 0.38)
     coat = material("Piston_SkirtCoat", (0.17, 0.17, 0.18, 1), 0.2, 0.6)
-    finish(pis, [alu, coat], 30)
+    finish(pis, [alu, coat], 6)        # the shallow relief floor must not smooth into the crown
     for p in pis.data.polygons:
         c, n = p.center / IN, p.normal
         r = math.hypot(c.x, c.y)
