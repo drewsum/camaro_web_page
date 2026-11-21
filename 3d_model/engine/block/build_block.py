@@ -396,8 +396,8 @@ def build():
     V, lf = SIDE["valley"], SIDE["lifters"]
     camc = Vector((0, 0, P["cam_cd"])); th = math.radians(lf["tilt_deg"])
     def lifter_axis(b): return Vector((math.copysign(math.sin(th), b["d"].x), 0, math.cos(th)))
-    def stadium(c, ax, half, r, seg=12):
-        e1 = Vector((0, 1, 0)); e2 = ax.cross(e1).normalized()
+    def stadium(c, ax, half, r, seg=12, e1=Vector((0, 1, 0))):
+        e1 = e1.normalized(); e2 = ax.cross(e1).normalized()
         pts = []
         for k in range(seg + 1):
             a_ = math.pi * k / seg
@@ -406,6 +406,12 @@ def build():
             a_ = math.pi + math.pi * k / seg
             pts.append(c + e1 * (-half + r * math.sin(a_)) + e2 * (r * math.cos(a_)))
         return pts
+    def out_dir(ax): return Vector((math.copysign(ax.z, ax.x), 0, -abs(ax.x)))   # across the bank, outboard
+    def bore_c(yc, ax, sgn, t):
+        """Centre of a lifter bore at distance t along its axis from the cam
+        centre: pairs are .65" either side of the cylinder centre, and the
+        forward bore (sgn +1) sits outboard of the rear one (photos 545/27)."""
+        return camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * t + out_dir(ax) * (sgn * lf["pair_offset"] / 2)
     pairs = []
     for bank, b in BANKS.items():
         ax = lifter_axis(b)
@@ -415,8 +421,8 @@ def build():
     bo = V["boss"]
     for bank, k, yc, ax in pairs:
         t_top = (bo["top_z"] - P["cam_cd"]) / ax.z
-        base = camc + Vector((0, yc, 0)) + ax * (t_top - bo["height"])
-        o = obj(f"LifterBoss_{bank}{k}", prism(stadium(base, ax, lf["dy"], bo["r"]), ax, bo["height"]), parts)
+        c1, c2 = bore_c(yc, ax, -1, t_top - bo["height"]), bore_c(yc, ax, 1, t_top - bo["height"])
+        o = obj(f"LifterBoss_{bank}{k}", prism(stadium((c1 + c2) / 2, ax, (c2 - c1).length / 2, bo["r"], e1=c2 - c1), ax, bo["height"]), parts)
         boolean(block, "UNION", o); bpy.data.objects.remove(o)
     ds, db, sb = SIDE["distributor"], V["dist_boss"], V["spider_boss"]
     slot_y = [P["y_cyl1"] - P["stagger"] / 2 - P["bore_sp"] * k for k in range(4)]
@@ -431,7 +437,7 @@ def build():
         info["cutters"] += 1; return obj(name, bm_, vcut)
     for bank, k, yc, ax in pairs:
         for j, sgn in enumerate((-1, 1)):
-            VC(f"Lifter_{bank}{k}{j}", cyl(camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * lf["from_cam"], ax, lf["d"] / 2,
+            VC(f"Lifter_{bank}{k}{j}", cyl(bore_c(yc, ax, sgn, lf["from_cam"]), ax, lf["d"] / 2,
                                           (bo["top_z"] - P["cam_cd"]) / ax.z - lf["from_cam"] + 0.3, 32))
     dsl = V["drain_slots"]
     for k, y in enumerate(slot_y):
@@ -537,32 +543,42 @@ def build():
             bsdf.inputs["Roughness"].default_value = rough
         return m
     mats = {
-        "paint": material("Block_ChevyOrange", (0.85, 0.24, 0.05, 1), 0.0, 0.45),   # painted (photo 26)
-        "iron": material("Block_BareIron", (0.30, 0.30, 0.31, 1), 0.85, 0.5),      # unpainted caps (photo 24)
+        "paint": material("Block_ChevyOrange", (0.85, 0.18, 0.02, 1), 0.0, 0.25),   # gloss orange outer faces (photos 26, 28)
+        "cast": material("Block_CastIron", (0.20, 0.20, 0.205, 1), 0.25, 0.85),     # as-cast grey iron: valley, crankcase, chest, caps (photos 27, 28)
+        "iron": material("Block_MachinedIron", (0.62, 0.62, 0.63, 1), 0.6, 0.32),  # machined faces: decks, pan rail, ends (photos 27-29)
         "arp": material("ARP_BlackOxide", (0.03, 0.03, 0.03, 1), 0.8, 0.35),       # ARP studs and nuts
-        "black": material("Block_BlackPaint", (0.025, 0.025, 0.025, 1), 0.0, 0.6),  # timing chest (photo 29)
         "brass": material("Brass_FreezePlug", (0.80, 0.62, 0.22, 1), 1.0, 0.3),       # brass cups (photo 431)
     }
     for o in parts.objects:
         kind = ("brass" if o.name == "FreezePlugs" else "arp" if o.name.startswith("MainStuds") else
-                "iron" if o.name.startswith(("MainCap", "DowelPins", "GalleryPlugs")) else "paint")
+                "cast" if o.name.startswith("MainCap") else
+                "iron" if o.name.startswith(("DowelPins", "GalleryPlugs")) else "cast")
         o.data.materials.clear(); o.data.materials.append(mats[kind])
-    # Machined faces are bare iron, as on Drew's block (photos 29/30): the
-    # front face, the decks and the pan face. Cast surfaces stay painted.
-    blk = parts.objects["Block"]; blk.data.materials.append(mats["iron"]); blk.data.materials.append(mats["black"])
-    hz = FRONT["recess"]["half_width_vs_z"]
-    def rec_w(z):
-        for (w0, z0), (w1, z1) in zip(hz, hz[1:]):
-            if z0 <= z <= z1: return w0 + (w1 - w0) * (z - z0) / (z1 - z0)
-        return -1
+    # Block surfaces (photos 26-29): everything is iron, as-cast grey by
+    # default; machined faces (decks, pan face, front and rear faces) are
+    # bright; the outer faces of the casting are painted orange. A face is
+    # "outer" when a ray along its normal leaves the block without hitting it
+    # again, unless it opens into the valley or the crankcase.
+    blk = parts.objects["Block"]; blk.data.materials.append(mats["iron"]); blk.data.materials.append(mats["paint"])
     dl, dr = BANKS["L"]["d"], BANKS["R"]["d"]
+    vh = P["valley_top_half"] + 0.3
+    def machined(c, n):
+        return ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.y < -0.999 and c.y < 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
+                or any(n.dot(d) > 0.999 and abs(c.dot(d) - P["deck"]) < 0.01 for d in (dl, dr))
+                or (n.z > 0.999 and c.z > P["valley_floor_z"] + 1.0 and abs(c.x) < P["deck_clip_v"] + 3.0))   # intake rails and china-wall tops
+    def inside(c, n):
+        if c.z > P["valley_floor_z"] - 0.5 and abs(c.x) < vh and n.z > -0.2: return True       # valley
+        if c.z < P["cam_cd"] + 1.0 and abs(c.x) < P["case_half"] + 0.2 and n.z < 0.2: return True  # crankcase
+        return False
     for poly in blk.data.polygons:
         c, n = poly.center / IN, poly.normal
-        if ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.y < -0.999 and c.y < 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
-                or any(n.dot(d) > 0.999 and abs(c.dot(d) - P["deck"]) < 0.01 for d in (dl, dr))):
-            poly.material_index = 1
-        elif yr - 0.01 < c.y < yf - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02:
-            poly.material_index = 2   # timing chest, painted black (photo 29)
+        if machined(c, n): poly.material_index = 1; continue
+        if inside(c, n): continue
+        # Strips beside the decks on the valley side (under the intake gasket)
+        # are bare cast iron, not painted (photos 27, 545).
+        if c.z > P["valley_floor_z"] and abs(c.x) < P["deck_clip_v"] + 1.7 and (any(n.dot(d) > 0.99 for d in (dl, dr)) or n.x * c.x < 0): continue
+        hit, *_ = blk.ray_cast(poly.center + n * 0.0005, n)
+        if not hit: poly.material_index = 2
     setup_camera(parts)
     # The cutters stay in the hidden collection for inspection; the block is final.
     with open(os.path.join(HERE, "block_info.json"), "w") as f:
