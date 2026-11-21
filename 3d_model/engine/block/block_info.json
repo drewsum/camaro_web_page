@@ -20,10 +20,10 @@
   "deck_v_exh": -3.15,
   "deck_clip_v": 3.8,
   "wall_len": 4.3,
-  "pan_rail_z": -2.25,
+  "pan_rail_z": 0.0,
   "rail_x": 5.65,
   "rail_t": 0.4,
-  "rail_inner": 4.45,
+  "rail_inner": 4.85,
   "valley_floor_z": 7.3,
   "valley_top_half": 3.6,
   "valley_floor_half": 2.4,
@@ -51,11 +51,11 @@
  },
  "parts": {
   "Block": {
-   "tris": 11141,
+   "tris": 10843,
    "dims_in": [
     19.347,
     24.014,
-    11.867
+    9.617
    ]
   },
   "MainCap_1": {
@@ -139,7 +139,7 @@
    ]
   }
  },
- "cutters": 75,
+ "cutters": 72,
  "mains_y": [
   22.27,
   17.43,

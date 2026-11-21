@@ -40,8 +40,8 @@ P = dict(
     deck_v_valley=3.30, deck_v_exh=-3.15,      # [meas] gasket body edges (tabs/bosses go further)
     deck_clip_v=3.80,    # [meas] gasket ears beyond this hang over the valley (photo 38)
     wall_len=4.30,       # [est] side water-jacket wall length below the deck edge
-    pan_rail_z=-2.25,    # [meas] photos 22/24/41: caps stand ~.85" proud of the rail; cap drop 3.10 below the parting line
-    rail_x=5.65, rail_t=0.40, rail_inner=4.45,   # [est] pan rail flange outer/inner half-width, thickness
+    pan_rail_z=0.0,      # [Drew] the oil pan face is one flat plane at the crank centreline (the main cap parting line), full length
+    rail_x=5.65, rail_t=0.40, rail_inner=4.85,   # [est] pan rail flange outer/inner half-width, thickness
     valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40, china_wall=0.45,   # [est]
     case_half=5.15,      # [est] crankcase cavity half-width above the rail
     cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
@@ -191,16 +191,11 @@ def build():
     # Below the parting line the bulkheads end: the crankcase is open the full
     # width under every web, and the caps hang free (no side bolts, no pockets).
     y_a, y_b = webs[4][0], webs[0][1]
-    C("UnderWebs", prism([p + Vector((0, y_a, 0)) for p in case_sec("under")], Vector((0, 1, 0)), y_b - y_a))
+    if zr < 0: C("UnderWebs", prism([p + Vector((0, y_a, 0)) for p in case_sec("under")], Vector((0, 1, 0)), y_b - y_a))
 
-    # Front and rear ends: the block stops at the parting line from the
-    # mid-plane of cap 1 forward and of cap 5 back. That is where the oil
-    # pan's end seals meet the block, so nothing hangs below the crank there.
-    wide = P["rail_x"] + 1
-    end_sec = [Vector((-wide, 0, P["pan_rail_z"] - 1)), Vector((wide, 0, P["pan_rail_z"] - 1)),
-               Vector((wide, 0, 0)), Vector((-wide, 0, 0))]
-    C("EndCut_Front", prism([p + Vector((0, mains[0], 0)) for p in end_sec], Vector((0, 1, 0)), P["length"] - mains[0] + 1))
-    C("EndCut_Rear", prism([p + Vector((0, -1, 0)) for p in end_sec], Vector((0, 1, 0)), mains[4] + 1))
+    # The whole bottom of the block is the oil pan face, flat at the main cap
+    # parting line (the crank centreline), from front to rear: the caps hang
+    # below it into the pan, and nothing else does.
 
     # Main line bore and cam tunnel, full length.
     C("MainBore", cyl(Vector((0, -0.5, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, P["length"] + 1, 48))
