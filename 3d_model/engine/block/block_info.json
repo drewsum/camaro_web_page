@@ -18,9 +18,11 @@
   "cam_plug": 2.218,
   "bore_len": 6.6,
   "deck_thk": 1.1,
-  "deck_v_valley": 3.3,
+  "deck_v_valley": 3.35,
   "deck_v_exh": -3.15,
-  "deck_clip_v": 3.8,
+  "deck_clip_v": 3.6,
+  "valley_wall_v": 3.0,
+  "valley_wall_depth": 3.2,
   "wall_len": 4.3,
   "pan_rail_z": 0.0,
   "rail_x": 5.95,
@@ -56,11 +58,11 @@
  },
  "parts": {
   "Block": {
-   "tris": 25816,
+   "tris": 25296,
    "dims_in": [
     19.347,
     24.0,
-    9.617
+    9.405
    ]
   },
   "MainCap_1": {
@@ -168,7 +170,7 @@
    ]
   }
  },
- "cutters": 188,
+ "cutters": 198,
  "mains_y": [
   22.27,
   17.43,
@@ -177,9 +179,9 @@
   2.91
  ],
  "deck_features_per_bank": {
-  "coolant": 10,
-  "stud": 16,
-  "stud_dowel": 1
+  "coolant": 18,
+  "stud": 12,
+  "dowel": 2
  },
  "front_features": 24
 }

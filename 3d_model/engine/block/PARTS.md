@@ -40,26 +40,32 @@ The block in Drew's 540 is GM **P/N 19170540**, the bare block of the ZZ502 crat
 | Main caps | [meas] photos 22, 24 and 435, scaled from the 2.9375" saddle: 6.9" wide; the centre hangs 3.1" below the pan face. The outer studs sit on shoulders 1.85" down (photo 435), so the outer studs are shorter than the inner ones (vertical stagger). Four vertical ARP studs each, inner +/-1.95", outer +/-3.00", with nuts and washers; long windage-tray studs on the inner positions of caps 3 and 4. Rear cap (#5, photo 435): runs to the rear face and carries the lower half of the seal bore. Its driver side is full depth and carries the oil-pump pad: a .95" counterbored outlet pocket .35" deep, with the .55" outlet through the cap into the block, a .25" dowel pin and the 7/16 pump stud. On the passenger side the outer stud stands on a full-depth round column. Pad sizes [est]. | Photos 22, 24, 41, 435 |
 | Head studs | ARP 235-4713, 7/16" | build doc |
 
-## Decks (head gasket face): measured from the gasket Drew used
+## Decks (head gasket face): the block's own deck, from Drew's photo, with bolt holes from the gasket
 
-- **Source:** Cometic C5333 (the .027" version is on Drew's engine). Its 2500 px product image (`refs/cometic_C5333_H1177MLS.jpg`) was measured with `refs/export_deck.py`, producing `refs/deck_c5333.json`.
-- **Scale:** the four bore centres, 4.840" apart: 98.5 px/in, ±1.7 px spread between bores. Expect about ±.02" on positions.
-- **Orientation:** the product image is the left-bank deck seen square-on, front at left, valley at top. Photo 38 confirms it: the triangle cut-out and rivet are at the front on the valley side, and the long slot is at the front on the exhaust side. The right bank is the mirror image.
+The deck started as the Cometic C5333 gasket (the .027" version is on Drew's engine), but the block's machined deck and its water ports differ from the gasket. They are now traced from Drew's photo of the bare left-bank deck, PXL_20251220_223513946 (`refs/deck_block.json`, overlay `refs/deck_block_overlay.png`).
+
+- **Gasket data:** its 2500 px product image (`refs/cometic_C5333_H1177MLS.jpg`) was measured with `refs/export_deck.py`, producing `refs/deck_c5333.json` (98.5 px/in from the 4.840" bore spacing, about ±.02" on positions). It still supplies the bolt-hole positions and the exhaust-side and end outline.
+- **Photo:** rectified with a homography fitted to the four bore rims (4.499" bores, 4.840" apart). The rims fit to .011" rms. The gasket's bolt holes then land on the photo's holes, which checks the fit. Traced at 100 px/in, so expect about ±.03".
+- **Orientation:** front at left, valley at top (u from the cylinder 1 centre towards the rear, v across the deck towards the valley). The right bank is the mirror image.
 
 Per deck:
 
-- **17 head-stud holes, 7/16-14 blind-tapped:**
-  - 4 along the exhaust edge, v ≈ −2.74";
-  - 3 + 3 between the bores on the exhaust side, v ≈ −2.21" and −1.25";
-  - 3 on the valley side, v ≈ +1.9 to +2.1";
-  - 4 staggered intake-side holes, v ≈ +2.7 to +3.4", two of them on raised tabs.
-- **One locating dowel:** a .609" counterbore around the stud at u = 12.07", v = −2.21". This is the hollow head dowel (Pioneer 839005).
-- **10 coolant openings:**
-  - a 0.21–0.25" steam hole beside each exhaust-edge stud;
-  - larger ports at the front (a .76" slot, a .66" and a .27" hole);
-  - larger ports at the rear (.68", .67" and .43").
-  - The outlines are taken from the gasket. The ports are modelled as pockets, because the water jacket isn't modelled.
-- **Not on the deck:** the two triangular gasket ears overhang the lifter valley. Photo 38 shows the valley through them.
+- **Valley edge:** traced from the photo, v = 3.0–3.5". It bulges out round the valley-side ports and dips beside the lifter bosses. It ends at v = 3.35–3.40" at the front and rear, at the china-wall top plane (Drew). The gasket's two triangular ears and the two bolt holes in them (v ≈ 3.4") are not on the block.
+- **Valley wall:** drops from the deck edge straight into the valley floor, parallel to the bores, with no ledge between the deck and the valley. The edge's bulges run down the wall as flutes (photo above, album 351/352). The wall itself sits at v = 3.0".
+- **12 head-stud holes, 7/16-14 blind-tapped:** 4 along the exhaust edge (v ≈ −2.74"), 3 between the bores on the exhaust side (v ≈ −1.25"), 3 on the valley side (v ≈ +1.9 to +2.1") and 2 at v ≈ +2.72" (cylinders 1 and 5).
+- **Water ports, all larger than the gasket's holes, modelled as .70" pockets** (the water jacket isn't modelled):
+  - 3 exhaust-side triangles between the bores, about 2.3 × .8". The gasket's round holes at v = −2.22" sit inside them, so those are not bolt holes.
+  - 3 valley-side kidneys between the bores, about 1.6 × .9", and a rounded triangle behind cylinder 7.
+  - At the front: a 1.3" tall slot, a .66" round port and a .32" hole.
+  - At the rear: a 1.0 × 1.15" square slot, a small triangle, a .50" round port and a .42" hole.
+  - Four .32" steam holes along the exhaust edge (gasket .21–.25").
+  - A shallow cast recess at the front, which is not a through port (the gasket's front slot opens onto it).
+- **Dowels:** .609" counterbores round the front and rear steam holes on the exhaust edge (u = .42" and 14.91"), where the photo shows counterbore rings. The gasket's dowel hole is inside a triangle port, so it isn't used.
+- **Spider pillars:** the four lifter-retainer bosses are slim pillars (.60") standing about .9" above the lifter-boss tops, well below the deck.
+
+What differs from the photo:
+- The photo shows the spider pillars beside the driver-side lifter bosses. The model keeps them on the centreline, because their positions in plan can't be measured from one view.
+- The valley-side lifter bosses are the earlier estimate from photo 545.
 
 ## Bellhousing face (crank centreline = 0,0), built
 
@@ -97,7 +103,7 @@ Per deck:
 ## Finish and materials
 
 From photos 26-29 and 545: everything is iron except the outer faces, which are painted gloss orange.
-- **Block_CastIron** (dark grey, rough): valley, lifter bosses, crankcase, timing chest, cam and lifter bores, the strips under the intake gasket, and the main caps.
+- **Block_CastIron** (dark grey, rough): valley and its walls, lifter bosses, crankcase, timing chest, cam and lifter bores, the floors of the deck's port pockets, and the main caps.
 - **Block_MachinedIron** (bright): the decks, the pan face, the machined front plate, the intake rails and the china-wall tops.
 - **Block_ChevyOrange**: the outer faces of the casting: sides, skirts, the rear (bellhousing) face (photo 50), the front water-pump and accessory pockets and the cast area outside the machined plate (photo 30), and the bosses. The rear seal bore and the pocket behind the thrust bearing stay bare iron (photo 435).
 

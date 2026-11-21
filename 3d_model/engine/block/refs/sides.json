@@ -100,11 +100,11 @@
   },
   "spider_boss": {
    "dy": 1.05,
-   "r": 0.38,
-   "h": 0.25,
+   "r": 0.3,
+   "h": 1.7,
    "tap_d": 0.3125,
    "tap_depth": 0.6,
-   "src": "[meas] photo 545: a round boss with a tapped hole just ahead of each window (lifter retainer / spider bolt); sizes [est]"
+   "src": "[meas] photo 545: a round boss with a tapped hole just ahead of each window (lifter retainer / spider bolt); photo PXL_20251220_223513946 and album 351/352 show them as slim pillars standing about .9\" above the lifter-boss tops, well below the deck edge; sizes [est]"
   },
   "dist_boss": {
    "r": 0.95,

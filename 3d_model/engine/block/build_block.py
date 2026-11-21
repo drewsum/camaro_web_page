@@ -39,8 +39,10 @@ P = dict(
     cam_plug=2.218,      # [spec] rear cam plug bore
     bore_len=6.60,       # [est] machined bore length below the deck
     deck_thk=1.10,       # [est] deck slab depth below the gasket face
-    deck_v_valley=3.30, deck_v_exh=-3.15,      # [meas] gasket body edges (tabs/bosses go further)
-    deck_clip_v=3.80,    # [meas] gasket ears beyond this hang over the valley (photo 38)
+    deck_v_valley=3.35, deck_v_exh=-3.15,      # [meas] valley: the deck edge at the front and rear ends (photo PXL_20251220_223513946), which is also the china-wall top plane; exhaust: gasket body edge
+    deck_clip_v=3.60,    # [meas] the deck's valley edge never goes further than this (refs/deck_block.json)
+    valley_wall_v=3.00,  # [meas] the valley wall drops from the deck's valley edge parallel to the bores; the edge's bulges carry down it as flutes (photo PXL_20251220_223513946, album 351/352)
+    valley_wall_depth=3.2,   # [derived] from the deck down the bore axis to below the valley floor
     wall_len=4.30,       # [est] side water-jacket wall length below the deck edge
     pan_rail_z=0.0,      # [Drew] the oil pan face is one flat plane at the crank centreline (the main cap parting line), full length
     rail_x=5.95, rail_t=0.40, rail_inner=4.75,   # [meas] photo 431 rectified: rail flange outer/inner half-width; thickness [est]
@@ -65,6 +67,7 @@ BANKS = {
     "R": dict(d=Vector((S45, 0, C45)), t=Vector((-C45, 0, S45)), y0=P["y_cyl1"] - P["stagger"], cyls=[2, 4, 6, 8]),
 }
 DECK = json.load(open(os.path.join(HERE, "refs", "deck_c5333.json")))
+BLK = json.load(open(os.path.join(HERE, "refs", "deck_block.json")))   # the block's own deck, traced from Drew's photo, see PARTS.md
 FRONT = json.load(open(os.path.join(HERE, "refs", "front_face.json")))   # photos 29/30, see PARTS.md
 PAN = json.load(open(os.path.join(HERE, "refs", "pan_rail.json")))       # album photo 431
 REAR = json.load(open(os.path.join(HERE, "refs", "rear_face.json")))     # GM bell pattern, Fel-Pro 2920
@@ -115,6 +118,28 @@ def cyl(center, axis, r, length, seg=32, bm=None):
 def deck_pt(bank, u, v, h=0.0):
     b = BANKS[bank]
     return Vector((0, b["y0"], 0)) + b["d"] * (P["deck"] + h) + b["t"] * v + Vector((0, -1, 0)) * u
+
+def deck_outline():
+    """The machined deck in (u, v): the gasket outline on the exhaust side and
+    the ends, the valley edge traced from the photo (refs/deck_block.json)."""
+    o = DECK["outline"]
+    keep = [tuple(p) for p in o[2:64]]           # front-valley corner, down the front, exhaust side, up the rear
+    assert keep[0][1] < 2.6 and keep[-1][1] < 2.6 and all(v < 2.6 for _, v in keep)
+    edge = [tuple(p) for p in BLK["valley_edge"]]
+    u_f, u_r = keep[0][0], keep[-1][0]
+    top = [(u_r, edge[-1][1])] + [p for p in reversed(edge) if u_f < p[0] < u_r] + [(u_f, edge[0][1])]
+    return keep + top
+
+def clip_v(poly, v0):
+    """Sutherland-Hodgman: the part of a (u, v) polygon with v >= v0."""
+    out = []
+    for i, a in enumerate(poly):
+        b = poly[(i + 1) % len(poly)]
+        ina, inb = a[1] >= v0, b[1] >= v0
+        if ina: out.append(a)
+        if ina != inb:
+            t = (v0 - a[1]) / (b[1] - a[1]); out.append((a[0] + t * (b[0] - a[0]), v0))
+    return out
 
 def boolean(target, kind, operand):
     m = target.modifiers.new(kind, "BOOLEAN"); m.operation = kind; m.solver = "MANIFOLD"   # robust on these closed operands; EXACT dropped or inverted some valley bosses and left ~1,100 non-manifold edges
@@ -199,12 +224,36 @@ def build():
     full = sec + [Vector((-p.x, 0, p.z)) for p in reversed(sec[1:-1])]
     block = obj("Block", prism(full, Vector((0, 1, 0)), P["length"]), parts)
 
-    # Deck slabs: the gasket outline (ears clipped) swept down the bore axis.
+    # Lifter valley between the china walls, cut before the decks go on. Each
+    # side wall runs straight down from the deck's valley edge, parallel to the
+    # bores, into the valley floor (photo PXL_20251220_223513946): no ledge
+    # between the deck and the valley. The china walls keep the body's flat top,
+    # which is the plane the deck's valley edge ends in at the front and rear.
+    def wall_xz(sg, h):
+        p = deck_pt("L", 0, P["valley_wall_v"], h); return Vector((sg * -p.x, 0, p.z))
+    fz = P["valley_floor_z"]
+    top = wall_xz(-1, 0); s_low = (top.z - (fz + 0.30)) / C45    # wall reaches .30 above the floor, then a chamfer
+    lw = wall_xz(-1, -s_low)
+    half_v = [wall_xz(-1, 3.0), top, lw, Vector((lw.x + 0.30, 0, fz))]
+    vsec = half_v + [Vector((-p.x, 0, p.z)) for p in reversed(half_v)]
+    vcut0 = obj("Valley", prism([p + Vector((0, P["china_wall"], 0)) for p in vsec], Vector((0, 1, 0)),
+                                P["length"] - P["china_wall"] - P["front_wall"]), parts)
+    boolean(block, "DIFFERENCE", vcut0); bpy.data.objects.remove(vcut0)
+    info["cutters"] += 1
+
+    # Deck slabs: the block's own deck outline swept down the bore axis, and
+    # the part of it past the valley wall swept on down to below the floor, so
+    # the deck edge's bulges (round the ports and bolt bosses) run down the
+    # valley wall as the flutes in the photos.
+    outline = deck_outline()
+    wall_part = clip_v(outline, P["valley_wall_v"] - 0.15)
     for bank in "LR":
-        pts = [(u, min(v, P["deck_clip_v"])) for u, v in DECK["outline"]]
-        poly = [deck_pt(bank, u, v) for u, v in pts]
+        poly = [deck_pt(bank, u, v) for u, v in outline]
         slab = obj(f"DeckSlab_{bank}", prism(poly, -BANKS[bank]["d"], P["deck_thk"]), parts)
         boolean(block, "UNION", slab); bpy.data.objects.remove(slab)
+        poly = [deck_pt(bank, u, v) for u, v in wall_part]
+        wall = obj(f"ValleyWall_{bank}", prism(poly, -BANKS[bank]["d"], P["valley_wall_depth"]), parts)
+        boolean(block, "UNION", wall); bpy.data.objects.remove(wall)
 
     # Front plate: wider than the skirt at the bottom, so the lower accessory
     # holes have metal round them (photo 30).
@@ -253,13 +302,6 @@ def build():
         info["cutters"] += 1
         return obj(name, bm, cut)
 
-    # Lifter valley between the china walls.
-    vt, vf = P["valley_top_half"], P["valley_floor_half"]
-    vsec = [Vector((-vt - 2, 0, 12)), Vector((-vt, 0, 9.5)), Vector((-vf, 0, P["valley_floor_z"])),
-            Vector((vf, 0, P["valley_floor_z"])), Vector((vt, 0, 9.5)), Vector((vt + 2, 0, 12))]
-    C("Valley", prism([p + Vector((0, P["china_wall"], 0)) for p in vsec], Vector((0, 1, 0)),
-                       P["length"] - P["china_wall"] - P["front_wall"]))
-
     # Main bulkhead positions: centred between rod journals.
     j0 = P["y_cyl1"] - P["stagger"] / 2          # journal 1 (cyl 1 & 2)
     mains = [j0 + P["bore_sp"] / 2 - P["bore_sp"] * i for i in range(5)]
@@ -297,15 +339,19 @@ def build():
     C("CamBore", cyl(Vector((0, -0.5, P["cam_cd"])), Vector((0, 1, 0)), P["cam_bore"] / 2, P["length"] + 1, 40))
     C("CamPlug", cyl(Vector((0, -0.05, P["cam_cd"])), Vector((0, 1, 0)), P["cam_plug"] / 2, 0.45, 40))
 
-    # Cylinder bores and every deck feature from the gasket.
+    # Cylinder bores and every deck feature: bolt holes from the gasket, water
+    # ports traced from the block itself (refs/deck_block.json), which are
+    # larger than the gasket's holes.
     counts = {}
+    drop = set(BLK["drop_gasket_holes"]); small_d = BLK["small_ports"]["d"]
     for bank, b in BANKS.items():
         for k, n in enumerate(b["cyls"]):
             top = deck_pt(bank, P["bore_sp"] * k, 0, 0.05)
             C(f"Bore_{n}", cyl(top, -b["d"], P["bore"] / 2, P["bore_len"] + 0.05, 64))
         for i, h in enumerate(DECK["holes"]):
             kind = h["kind"]
-            if kind in ("bore", "valley_cutout"): continue
+            if kind in ("bore", "valley_cutout") or i in drop: continue
+            if kind == "stud_dowel": kind = "stud"      # the gasket's dowel hole is not where the block's dowels are
             counts[kind] = counts.get(kind, 0) + 1
             c = deck_pt(bank, h["u"], h["v"], 0.05)
             if kind == "stud":
@@ -313,9 +359,23 @@ def build():
             elif kind == "stud_dowel":
                 C(f"Dowel_{bank}{i}", cyl(c, -b["d"], P["dowel_d"] / 2, P["dowel_depth"] + 0.05, 24))
                 C(f"Stud_{bank}{i}", cyl(c, -b["d"], P["stud_tap"] / 2, P["stud_depth"] + 0.05, 20))
+            elif h["d_eq"] < 0.3:
+                C(f"Port_{bank}{i}", cyl(c, -b["d"], small_d / 2, P["port_depth"] + 0.05, 20))
             else:
                 poly = [deck_pt(bank, u, v, 0.05) for u, v in h["contour"]]
                 C(f"Port_{bank}{i}", prism(poly, -b["d"], P["port_depth"] + 0.05))
+        for pt in BLK["ports"]:
+            counts["coolant"] = counts.get("coolant", 0) + 1
+            poly = [deck_pt(bank, u, v, 0.05) for u, v in pt["contour"]]
+            C(f"Port_{bank}_{pt['name']}", prism(poly, -b["d"], P["port_depth"] + 0.05))
+        for pt in BLK["round_ports"]:
+            counts["coolant"] = counts.get("coolant", 0) + 1
+            C(f"Port_{bank}_{pt['name']}", cyl(deck_pt(bank, pt["u"], pt["v"], 0.05), -b["d"], pt["d"] / 2, P["port_depth"] + 0.05, 24))
+        pd = BLK["pad"]
+        C(f"Pad_{bank}", prism([deck_pt(bank, u, v, 0.05) for u, v in pd["contour"]], -b["d"], pd["depth"] + 0.05))
+        for k, dw in enumerate(BLK["dowels"]):
+            counts["dowel"] = counts.get("dowel", 0) + 1
+            C(f"Dowel_{bank}{k}", cyl(deck_pt(bank, dw["u"], dw["v"], 0.05), -b["d"], P["dowel_d"] / 2, P["dowel_depth"] + 0.05, 24))
     info["deck_features_per_bank"] = {k: v // 2 for k, v in counts.items()}
 
     # Front face: water-pump inlets and bolts, Gen VI 6-bolt cover pattern and
@@ -591,6 +651,9 @@ def build():
         c, n = poly.center / IN, poly.normal
         if machined(c, n): poly.material_index = 1; continue
         if inside(c, n): continue
+        # Floors of the water-port and bolt-hole pockets just under each deck:
+        # bare iron (the jacket isn't modelled, so their rays would escape).
+        if any(n.dot(d) > 0.99 and P["deck"] - P["port_depth"] - 0.1 < c.dot(d) < P["deck"] - 0.02 for d in (dl, dr)): continue
         # Strips beside the decks on the valley side (under the intake gasket)
         # are bare cast iron, not painted (photos 27, 545).
         if c.z > P["valley_floor_z"] and abs(c.x) < P["deck_clip_v"] + 1.7 and (any(n.dot(d) > 0.99 for d in (dl, dr)) or n.x * c.x < 0): continue
