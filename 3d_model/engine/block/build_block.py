@@ -140,6 +140,49 @@ def body_section():
             Vector((-P["rail_x"], 0, z0)), Vector((0, 0, z0))]
     return half
 
+def setup_camera(parts, view=(-0.55, 0.75, 0.42), margin=1.04):
+    """A scene camera that fills the frame with the block (three-quarter view
+    from the front, driver side, slightly above), set as the scene camera, and
+    every 3D viewport put in camera view so the .blend opens on it."""
+    sc = bpy.context.scene
+    cam_data = bpy.data.cameras.get("BlockCam") or bpy.data.cameras.new("BlockCam")
+    cam_data.lens = 50; cam_data.clip_start = 0.01; cam_data.clip_end = 50
+    cam = bpy.data.objects.get("BlockCam") or bpy.data.objects.new("BlockCam", cam_data)
+    if cam.name not in sc.collection.objects: sc.collection.objects.link(cam)
+    sc.camera = cam
+    sc.render.resolution_x, sc.render.resolution_y = 1920, 1080
+    # Aim at the centre of everything in the block collection, then let
+    # Blender fit the distance to the corners of every part.
+    from mathutils import Vector
+    pts = [o.matrix_world @ Vector(c) for o in parts.objects for c in o.bound_box]
+    lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+    hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    centre = (lo + hi) / 2
+    d = Vector(view).normalized()
+    cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
+    cam.location = centre + d * 10
+    bpy.context.view_layer.update()
+    flat = [c for p in pts for c in ((p - centre) * margin + centre)]
+    loc, _ = cam.camera_fit_coords(bpy.context.evaluated_depsgraph_get(), flat)
+    cam.location = loc
+    frame_viewports()
+    return cam
+
+
+def frame_viewports():
+    """Put every 3D viewport in camera view, with the camera frame fitted to the
+    viewport (View > Frame Camera Bounds). Skipped when running headless."""
+    wm = bpy.context.window_manager
+    for win in (wm.windows if wm else []):
+        for area in win.screen.areas:
+            if area.type != "VIEW_3D": continue
+            reg = next(r for r in area.regions if r.type == "WINDOW")
+            reg.data.view_perspective = "CAMERA"
+            with bpy.context.temp_override(window=win, area=area, region=reg):
+                if bpy.ops.view3d.view_center_camera.poll():
+                    bpy.ops.view3d.view_center_camera()
+
+
 def build():
     root = coll("BBC_Block")
     clear(root)
@@ -520,6 +563,7 @@ def build():
             poly.material_index = 1
         elif yr - 0.01 < c.y < yf - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02:
             poly.material_index = 2   # timing chest, painted black (photo 29)
+    setup_camera(parts)
     # The cutters stay in the hidden collection for inspection; the block is final.
     with open(os.path.join(HERE, "block_info.json"), "w") as f:
         json.dump(dict(params=P, **info), f, indent=1, default=str)
