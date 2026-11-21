@@ -18,7 +18,7 @@ How it is laid out:
   lid     sheet .07", flange on the frame, wall up to a flat front face at y 24.90
           (the cam bolts end at y 24.50); crank seal bore 3.00".
   seal    2.25" ID (balancer hub) x 3.00" OD x .40" [est].
-  The lower lobe of the frame (down to z -2.35) covers the pan's front notch (r 2.05).
+  The lower lobe of the frame (down to z -2.35) is what the pan's curved front seal lip and gasket seal against.
 Outline sizes beyond the bolt pattern, depths and sheet thickness are [est].
 
 Axes and units as the block (inches; origin on the crank centreline at the rear

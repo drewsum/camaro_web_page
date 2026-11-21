@@ -134,6 +134,9 @@
  "rear_cap": {
   "column_x": 3.0,
   "column_r": 0.5,
-  "src": "[meas] photo 435: on the rear cap the passenger-side outer stud stands on a full-depth round column; the driver-side outer shoulder is full depth to carry the pump pad"
+  "src": "[meas] photo 435: on the rear cap the passenger-side outer stud stands on a full-depth round column; the driver-side outer shoulder is full depth to carry the pump pad",
+  "seal_arc_r": 3.1,
+  "seal_arc_len": 0.25,
+  "seal_arc_src": "Drew: the back of the pan squeezes its gasket against a curved section of the #5 cap. Arc about the crank, tangent to the cap bottom (r 3.10), from the rear face to y .25 (ahead of it the pump pad starts at y .275); length [est]"
  }
 }

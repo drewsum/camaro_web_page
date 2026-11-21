@@ -4,8 +4,17 @@
   "flange_out": 6.0,
   "flange_in": 4.92,
   "flange_t": 0.096,
-  "y_rear": 0.15,
-  "y_front": 23.92,
+  "y_rear": 0.02,
+  "y_front": 24.29,
+  "gasket": {
+   "t": 0.06,
+   "rail": [
+    4.92,
+    5.95
+   ],
+   "rear_band": 0.25,
+   "chest_x": 2.9
+  },
   "front_band": 23.2,
   "neck_y0": 21.8,
   "neck_y1": 23.0,
@@ -17,9 +26,6 @@
   "sump_x": 4.25,
   "sump_y1": 11.5,
   "sump_r": 0.35,
-  "crank_notch_r": 2.05,
-  "rear_notch_x": 3.55,
-  "rear_notch_z": -3.15,
   "bolt_hole": 0.34,
   "drain": {
    "y": 5.5,
@@ -89,8 +95,8 @@
    ],
    "foot_r": 0.12,
    "foot_z": [
-    -7.45,
-    -6.9
+    -7.51,
+    -6.96
    ],
    "inlet_inset": 0.25,
    "inlet_depth": 0.3,
@@ -104,15 +110,15 @@
  "manifold": {
   "OilPan": [
    0,
-   51.83542287263647
+   53.2513182583414
   ],
   "OilPanBolts": [
    0,
-   2.2379008216828926
+   2.3122946693240505
   ],
   "OilPanDrainPlug": [
    0,
-   0.18771770292683493
+   0.18771784371334538
   ],
   "WindageTray": [
    0,
@@ -124,15 +130,19 @@
   ],
   "OilPump": [
    0,
-   17.84772641628562
+   17.990542292540045
   ],
   "OilPumpHardware": [
    0,
-   0.4372389147409468
+   0.43723891474094706
   ],
   "OilPickupScreen": [
    0,
-   0.6728761800623028
+   0.672880208127345
+  ],
+  "OilPanGasket": [
+   0,
+   3.4021679017631685
   ]
  },
  "checks": {
@@ -159,17 +169,18 @@
   "tray_gap_to_rotating_in": 0.323
  },
  "capacity": {
-  "volume_below_rail_qt": 24.0,
-  "sump_box_below_front_floor_qt": 4.7
+  "volume_below_rail_qt": 24.4,
+  "sump_box_below_front_floor_qt": 4.8
  },
  "tris": {
-  "OilPan": 3152,
+  "OilPan": 14474,
   "OilPanBolts": 3096,
   "OilPanDrainPlug": 112,
   "WindageTray": 2828,
   "WindageTrayNuts": 448,
   "OilPump": 1104,
   "OilPumpHardware": 1120,
-  "OilPickupScreen": 2612
+  "OilPickupScreen": 2612,
+  "OilPanGasket": 8384
  }
 }

@@ -16,22 +16,26 @@ Built by `build_oiling.py`, after the block and crank. Collection `BBC_Oiling`. 
 
 | Part | Built | Source |
 |---|---|---|
-| `OilPan` | 14-gauge sheet (.075") [est].<br>**Rail flange:** .096" thick, out to ±6.00", with a front band under the timing chest. The block rail is 4.75–5.95" [meas]; the pan sits .004" below it.<br>**Stamped section:** 5.0" deep from the rail, walls at ±5.00", 1.0" bottom radius [est]. It necks in to ±4.55" over the last 1.2" so the front pair of pan bolts (x 4.88") clears the walls.<br>**Sump box:** 8.0" deep from the rail (Drew), ±4.25" wide, from .15" to 11.5" ahead of the rear face [est; about half the block's length in photo 170, narrower than the stamping in photo 169].<br>**Ends:** a 2.05" radius notch round the crank in the front wall, which the timing cover's lower lobe closes. At the rear, the wall drops under the rear main cap (cap bottom z −3.10).<br>**Drain:** bung and plug on the box's passenger side [est]. | Photos 163, 169, 170; Drew; listings |
+| `OilPan` | 14-gauge sheet (.075") [est].<br>**Rail flange:** .096" thick, out to ±6.00", with a front band under the deck beside the timing chest (the deck is open for |x| < 2.95" there, so the band stops at ±2.90"). The block rail is 4.75–5.95" [meas]; the pan sits a gasket (.06") below it.<br>**Stamped section:** 5.0" deep from the rail, walls at ±5.00", 1.0" bottom radius [est]. It necks in to ±4.55" over the last 1.2" so the front pair of pan bolts (x 4.88") clears the walls.<br>**Sump box:** 8.0" deep from the rail (Drew), ±4.25" wide, from .02" to 11.5" ahead of the rear face [est; about half the block's length in photo 170, narrower than the stamping in photo 169].<br>**Front seal (Drew):** the pan runs forward to y 24.29, under the timing-cover frame (y 24.00–24.30). Its front wall rises to a curved .096" seal lip that follows the frame's lower lobe, which hangs up to 2.35" below the deck, with the gasket squeezed between. The lip's shape is sampled off the built frame, so the front cover is built first.<br>**Rear seal (Drew):** the rear wall rises to a curved lip, an arc about the crank under the #5 cap's seal arc (r 3.10, y 0–.25), gasket between.<br>**Drain:** bung and plug on the box's passenger side [est]. | Photos 163, 169, 170; Drew; listings |
 | `OilPanBolts` | 18 rail bolts plus the front pair, in the block's [meas] pattern (`../block/refs/pan_rail.json`). 5/16 flanged heads [est]. | |
 | `OilPanDrainPlug` | 1/2" plug, .62" hex [est]. | |
 | `WindageTray` | Flat plate .075" [est] at z −4.30 to −4.375, ±4.55" wide, from y 6.55 to 13.95 [est].<br>Four square panels pressed .13" down, each with three drain slots [est; photo 190 shows the panels, the slots are a guess].<br>Holes for the four .50" long studs. | Photos 168, 190 |
 | `WindageTrayNuts` | Spacers from the cap nuts down to the tray, and nuts under it [est]. | |
 | `OilPump` | One-piece billet pump, black anodized, with the pickup machined into the body (Drew; finish and squared tower from Drew's photo). Sizes [est].<br>**Ear:** on the rear cap's driver-side pad, carrying the 7/16 stud and the dowel hole, from the pad layout [meas].<br>**Outlet nipple:** in the cap's .95" pocket.<br>**Gear section:** 2.4" × 2.05" × 1.55" below the ear, with the cover machined in (no separate cover).<br>**Pickup:** a 1.6" × 1.5" leg down into the box, flaring to a 2.6" × 3.1" square-cornered inlet foot with a .30" deep inlet pocket. | Drew; `../block/refs/bottom.json` |
 | `OilPumpHardware` | The pump stud and nut, four socket screws in the gear section, and six button-head screws on the screen plate [est]. | |
+| `OilPanGasket` | Blue rubber pan gasket, .060" compressed [est], one piece: the rail bands (x 4.92–5.95") with the pan-bolt holes, the flat front band beside the chest, the curved front seal under the timing cover's lower lobe and the curved rear seal under the #5 cap's seal arc. .002" clear of the block, cover and cap above and the pan below. | Drew |
 | `OilPickupScreen` | Flat .10" black screen plate bolted over the inlet, perforated with .10" square holes on a .20" grid. Its face is .375" above the sump floor (layout from Drew's photo, sizes [est]). | Drew photo |
 
-## Block change
+## Block changes
+
+The #5 cap's rear end (y 0–.25, ahead of it the pump pad starts at y .275) is now turned to an arc about the crank, r 3.10, tangent to the cap bottom: the curved seal section the pan's rear gasket squeezes against (Drew; `../block/refs/bottom.json`, `rear_cap.seal_arc_*`, length [est]).
+
 
 The long windage-tray studs on caps 3 and 4 now extend .90" below the cap nuts (`../block/refs/bottom.json`, `windage_studs.extra`; it was 2.5" [est]). Each stud takes a spacer, the tray and a nut, and ends .08" above the pan's front floor at cap 3.
 
 ## Checks (`oiling_info.json`)
 
-- **Static clashes:** none against the block, main caps, studs, dowels and plugs, or between these parts. The expected contacts are listed: the pump stud and nut, the screen-plate screws, and the tray nuts on their studs.
+- **Static clashes:** none against the block, main caps, studs, dowels and plugs, the timing cover, or between these parts (meshes triangulated properly first, so concave lip caps test true). The expected contacts are listed: the pump stud and nut, the screen-plate screws, and the tray nuts on their studs.
 - **Rotating clashes:** none, every 10° over 720° against the crank, rods, rod caps and bolts, pistons, cam and flywheel.
 - **Rotating clearance:** the lowest rotating point is z −3.98. The tray clears it by .32".
 - **Oil volume:** the sump box below the front floor holds about 4.7 qt. The whole pan below the rail is about 24 qt of space, most of it crankcase above any oil level.

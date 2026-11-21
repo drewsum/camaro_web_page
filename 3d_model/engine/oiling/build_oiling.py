@@ -22,7 +22,7 @@ crank centreline at the block's rear face; inches. Run live in Blender:
 """
 import bpy, bmesh, json, math, os
 import numpy as np
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
 HERE = (os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() and "oiling" in __file__
@@ -42,14 +42,15 @@ STUD_IN = 1.95                                          # inner main-stud x
 K = dict(
     t=0.075,                       # [est] 14-gauge steel
     flange_out=6.00, flange_in=4.92, flange_t=0.096,   # [est] rail flange; the block rail is 4.75-5.95 [meas]
-    y_rear=0.15, y_front=23.92,    # pan ends: just ahead of the bellhousing face, just behind the cover
+    y_rear=0.02, y_front=24.29,    # pan ends: at the bellhousing face; at the front under the timing cover's lower lobe (frame y 24.00-24.30)
+    gasket=dict(t=0.060, rail=(4.92, 5.95), rear_band=0.25, chest_x=2.90),  # [est] blue rubber pan gasket, compressed; the block deck is open for |x| < 2.95 at the chest (y 23.15-24)
     front_band=23.20,              # front flange band, under the timing chest (y 23.15-24.0 is open in the block)
     neck_y0=21.80, neck_y1=23.00, neck_x=4.55,          # front corners narrowed round the front bolt pair [est]
     wall_x=5.00, front_depth=5.00, corner_r=1.00,      # [est] stamped section, photos 163/169/170; comparable rear-sump pans list 4.75-5.25" at the front
     sump_depth=8.00,               # Drew: 8" sump, from the pan rail
     sump_x=4.25, sump_y1=11.50, sump_r=0.35,           # [est] welded box, narrower than the stamping (photo 169), about half the block long (photo 170)
-    crank_notch_r=2.05,            # front wall cut round the crank; the cover's lower lobe closes it
-    rear_notch_x=3.55, rear_notch_z=-3.15,             # rear wall runs under the rear main cap (bottom z -3.10)
+    # Front: the pan's front wall and a curved seal lip run under the timing cover's lower lobe (below the deck),
+    # gasket between (Drew). Rear: a curved lip under the #5 cap's rear seal arc (block/refs bottom.json rear_cap).
     bolt_hole=0.34,
     drain=dict(y=5.5, z=-7.35, r=0.50, plug_af=0.62),  # [est] drain bung on the sump's passenger side
     # Windage tray on the long inner studs of caps 3 and 4 [meas photo 431/168]; sizes [est]
@@ -62,7 +63,7 @@ K = dict(
               nipple_r=0.44, nipple_h=0.30),
     # Pickup machined into the pump body (Drew): a leg down into the sump and an inlet foot [est sizes]
     pickup=dict(leg=(-3.05, -1.45, 1.35, 2.85), leg_r=0.15, foot=(-3.55, -0.95, 0.55, 3.65), foot_r=0.12,
-                foot_z=(-7.45, -6.90), inlet_inset=0.25, inlet_depth=0.30,
+                foot_z=(-7.51, -6.96), inlet_inset=0.25, inlet_depth=0.30,
                 plate_t=0.10, hole=0.10, pitch=0.20, hole_inset=0.40, screw_inset=0.20),  # bolted perforated screen plate (Drew photo)
 )
 CAP_Z = -3.10                      # main-cap bottoms (block)
@@ -133,6 +134,50 @@ def wall(y):
     return k["wall_x"] + (k["neck_x"] - k["wall_x"]) * (y - k["neck_y0"]) / (k["neck_y1"] - k["neck_y0"])
 
 
+def cover_bottom(y=24.15):
+    """The timing-cover frame's lower edge z(x) (its lower lobe hangs below the deck), sampled
+    off the built TimingCoverFrame; 0 where the frame is above the deck or absent."""
+    fr = bpy.data.objects.get("TimingCoverFrame")
+    assert fr is not None, "build the front cover first (front_cover/build_front_cover.py)"
+    v, f = CAMNS["mesh_world"](fr); bvh = BVHTree.FromPolygons([Vector(p) for p in v], f)
+    xs = np.linspace(-4.8, 4.8, 3841); zs = []
+    for x in xs:
+        h = bvh.ray_cast(Vector((x, y, -4.0)), Vector((0, 0, 1)))       # mesh_world is in inches
+        zs.append(min(0.0, h[0].z) if h[0] is not None else 0.0)
+    zs = np.array(zs); w = 12                                    # min over +/-.03": stays under the steep parts
+    zs = np.array([zs[max(0, i - w):i + w + 1].min() for i in range(len(zs))])
+    return lambda x: float(np.interp(x, xs, zs))
+
+XS = np.round(np.linspace(-4.70, 4.70, 941), 4)                 # one x grid for the pan's front lip and the gasket
+
+
+def build_gasket(root, tmp):
+    """Blue rubber pan gasket, .002 clear of the block, cover and cap on top and of the pan below:
+    the rail and end bands on the flat deck, a curved front seal under the timing cover's lower
+    lobe, and a curved rear seal under the #5 cap's seal arc."""
+    k = K; G = k["gasket"]; g = G["t"]; ri, ro = G["rail"]; rb, cx = G["rear_band"] - 0.003, G["chest_x"]
+    fn = k["neck_x"] - k["t"] - 0.005; ar = BOT["rear_cap"]["seal_arc_r"]
+    gk = obj("OilPanGasket", zprism(rrect(-ro, ro, k["y_rear"], 24.0, 0.45), -g - 0.002, -0.002), root)
+    hole = [(-ri, rb), (ri, rb), (ri, k["neck_y0"]), (fn, k["neck_y1"]), (fn, k["front_band"]), (cx, k["front_band"]), (cx, 24.3),
+            (-cx, 24.3), (-cx, k["front_band"]), (-fn, k["front_band"]), (-fn, k["neck_y1"]), (-ri, k["neck_y0"])]
+    obj("gh", zprism(hole, -0.5, 0.5), tmp)
+    obj("gr", zprism(rrect(-ar - 0.001, ar + 0.001, -0.5, rb + 0.01, 0.01), -0.5, 0.5), tmp)
+    for h in RAIL["holes"]:
+        for s in (-1, 1): obj("gb", zcyl(0.17, -0.5, 0.5, s * h["x"], h["y"], 20), tmp)
+    boolean(gk, "DIFFERENCE", tmp); clear(tmp)
+    zc = cover_bottom()
+    xs = [x for x in XS if zc(x) < -0.0005]
+    x0 = max(abs(xs[0]), abs(xs[-1])) + 0.02; xs = [x for x in XS if abs(x) <= x0]
+    up = [(x, min(zc(x), 0.0) - 0.002) for x in xs]; lo = [(x, z - g) for x, z in up]
+    obj("gf", loft([ysec(list(reversed(lo + up[::-1])), y) for y in (24.003, 24.29)]), tmp)   # .003 ahead of the pan flange's front edge
+    Ri, Ro = ar + 0.002, ar + g + 0.002
+    e = math.asin(0.002 / Ri); eo = math.asin(0.002 / Ro)
+    ann = arc(0, 0, Ro, math.pi + eo, 2 * math.pi - eo, 96) + arc(0, 0, Ri, 2 * math.pi - e, math.pi + e, 96)
+    obj("gc", loft([ysec(list(reversed(ann)), y) for y in (k["y_rear"], rb)]), tmp)
+    boolean(gk, "UNION", tmp); clear(tmp)
+    return gk
+
+
 def build_pan(root, tmp):
     k = K; t = k["t"]
     y0, y1 = k["y_rear"], k["y_front"]
@@ -154,8 +199,9 @@ def build_pan(root, tmp):
     # Rail flange, with the front band under the timing chest.
     fl = obj("PanFlange", zprism(rrect(-k["flange_out"], k["flange_out"], y0, y1, 0.50), -k["flange_t"] - 0.004, -0.004), root)
     fi, fn = k["flange_in"], k["neck_x"] - t - 0.005
-    hole = [(-fi, y0 + 0.07), (fi, y0 + 0.07), (fi, k["neck_y0"]), (fn, k["neck_y1"]), (fn, k["front_band"]),
-            (-fn, k["front_band"]), (-fn, k["neck_y1"]), (-fi, k["neck_y0"])]
+    G = k["gasket"]; g = G["t"]; cx = G["chest_x"]; rb = G["rear_band"] - 0.003   # .003 short of the cap's step at y .25
+    hole = [(-fi, rb), (fi, rb), (fi, k["neck_y0"]), (fn, k["neck_y1"]), (fn, k["front_band"]), (cx, k["front_band"]), (cx, y1 + 0.3),
+            (-cx, y1 + 0.3), (-cx, k["front_band"]), (-fn, k["front_band"]), (-fn, k["neck_y1"]), (-fi, k["neck_y0"])]
     obj("flo", zprism(hole, -0.5, 0.5), tmp)
     boolean(fl, "DIFFERENCE", tmp); clear(tmp)
     boolean(A, "UNION", fl); bpy.data.objects.remove(fl, do_unlink=True)
@@ -163,17 +209,33 @@ def build_pan(root, tmp):
     d = k["drain"]
     obj("bung", xcyl(d["r"], k["sump_x"] - 0.20, k["sump_x"] + 0.30, d["y"], d["z"], 32), tmp)
     boolean(A, "UNION", tmp); clear(tmp)
-    # Cuts: crank notch at the front, rear notch under the rear cap, bolt holes, drain thread.
-    obj("cn", ycyl(k["crank_notch_r"], 22.95, 24.2, 64), tmp)
-    obj("rn", loft([ysec(rrect(-k["rear_notch_x"], k["rear_notch_x"], k["rear_notch_z"], 1.0, 0.35), y) for y in (-0.3, 0.45)]), tmp)
+    # The pan sits a gasket thickness below the block.
+    A.data.transform(Matrix.Translation((0, 0, -g * IN)))
+    ft = k["flange_t"]; ztop = -0.004 - g                       # flange top
+    zc = cover_bottom()                                          # timing-cover lower edge, z(x) below the deck
+    xs = XS
+    T = [min(zc(x), 0.0) - g - 0.004 for x in xs]                # pan seal-lip top under the cover
+    # Cuts: room for the cover's lower lobe + gasket at the front, the cap's seal arc + gasket at the rear,
+    # bolt holes, drain thread.
+    obj("fc", loft([ysec(list(reversed([(xs[0], 1.0)] + list(zip(xs, T)) + [(xs[-1], 1.0)])), y) for y in (24.0, y1 + 0.3)]), tmp)
+    Ra = BOT["rear_cap"]["seal_arc_r"] + g + 0.004
+    obj("rc", ycyl(Ra, -0.3, rb + 0.004, 128), tmp)
     for h in RAIL["holes"]:
         for s in (-1, 1):
             obj("bh", zcyl(k["bolt_hole"] / 2, -0.6, 0.2, s * h["x"], h["y"], 20), tmp)
-    obj("dt", xcyl(0.27, k["sump_x"] - 0.5, k["sump_x"] + 0.5, d["y"], d["z"], 24), tmp)
+    obj("dt", xcyl(0.27, k["sump_x"] - 0.5, k["sump_x"] + 0.5, d["y"], d["z"] - g, 24), tmp)
     boolean(A, "DIFFERENCE", tmp); clear(tmp)
+    # Seal lips: front, curved under the cover (y 24.00-24.29); rear, an arc under the cap (y .02-.25).
+    xl = [x for x in xs if abs(x) <= 4.50]; Tl = [min(zc(x), 0.0) - g - 0.004 for x in xl]
+    band = [(x, z - ft) for x, z in zip(xl, Tl)] + list(reversed(list(zip(xl, Tl))))
+    obj("fl", loft([ysec(list(reversed(band)), y) for y in (24.0, y1)]), tmp)
+    Ro = Ra + ft; e = math.asin((g + 0.004) / Ra); eo = math.asin((g + 0.004) / Ro)
+    ann = arc(0, 0, Ro, math.pi + eo, 2 * math.pi - eo, 96) + arc(0, 0, Ra, 2 * math.pi - e, math.pi + e, 96)
+    obj("rl", loft([ysec(list(reversed(ann)), y) for y in (y0, rb)]), tmp)
+    boolean(A, "UNION", tmp); clear(tmp)
     A.name = "OilPan"; A.data.name = "OilPan"
     # Pan bolts (5/16 flanged heads under the flange) and the drain plug.
-    bm = bmesh.new(); zf = -k["flange_t"] - 0.004
+    bm = bmesh.new(); zf = -k["flange_t"] - 0.004 - g
     for h in RAIL["holes"]:
         for s in (-1, 1):
             x, y = s * h["x"], h["y"]
@@ -182,9 +244,9 @@ def build_pan(root, tmp):
             zcyl(0.15, zf - 0.002, 0.70, x, y, 16, bm)
     bolts = obj("OilPanBolts", bm, root)
     bm = bmesh.new()
-    xcyl(0.26, k["sump_x"] - 0.12, k["sump_x"] + 0.30, d["y"], d["z"], 24, bm)
+    xcyl(0.26, k["sump_x"] - 0.12, k["sump_x"] + 0.30, d["y"], d["z"] - g, 24, bm)
     R = d["plug_af"] / math.sqrt(3)
-    loft([[Vector((x, d["y"] + R * math.cos(math.pi / 6 + i * math.pi / 3), d["z"] + R * math.sin(math.pi / 6 + i * math.pi / 3))) for i in range(6)]
+    loft([[Vector((x, d["y"] + R * math.cos(math.pi / 6 + i * math.pi / 3), d["z"] - g + R * math.sin(math.pi / 6 + i * math.pi / 3))) for i in range(6)]
           for x in (k["sump_x"] + 0.301, k["sump_x"] + 0.60)], bm)
     plug = obj("OilPanDrainPlug", bm, root)
     return A, bolts, plug
@@ -281,6 +343,7 @@ def build():
     pan, bolts, plug = build_pan(root, tmp)
     tray, tray_hw = build_tray(root, tmp)
     pump, pump_hw, scr = build_pump(root, tmp)
+    gasket = build_gasket(root, tmp)
     bpy.data.collections.remove(tmp)
     black = material("Pan_GlossBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.22)
     grey = material("Tray_Grey", (0.33, 0.34, 0.35, 1), 0.5, 0.55)
@@ -288,12 +351,13 @@ def build():
     zinc = material("Pickup_Steel", (0.55, 0.56, 0.57, 1), 1.0, 0.40)
     mesh = material("Pickup_Screen", (0.12, 0.12, 0.13, 1), 0.9, 0.55)
     oxide = material("Oiling_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
+    blue = material("PanGasket_Blue", (0.04, 0.22, 0.75, 1), 0.0, 0.55)
     for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, billet),
-                 (pump_hw, oxide), (scr, billet)):
+                 (pump_hw, oxide), (scr, billet), (gasket, blue)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
     for n in ("OilPumpCover", "OilPickupTube"):          # parts of the earlier three-piece pump
         if n in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
-    parts = [pan, bolts, plug, tray, tray_hw, pump, pump_hw, scr]
+    parts = [pan, bolts, plug, tray, tray_hw, pump, pump_hw, scr, gasket]
     return parts
 
 
@@ -305,9 +369,14 @@ def manifold(o):
 def checks(parts, step=10.0):
     mesh_world, set_crank = CAMNS["mesh_world"], CAMNS["set_crank"]
     def tree(o):
-        v, f = mesh_world(o); return BVHTree.FromPolygons([Vector(x) for x in v], f)
+        """BVH of the mesh in inches, triangulated properly first (a fan over a concave
+        n-gon cap, such as the seal lips' or the cap's seal arc, would leave its outline)."""
+        bm = bmesh.new(); bm.from_mesh(o.data); bm.transform(o.matrix_world)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+        t = BVHTree.FromPolygons([v.co / IN for v in bm.verts], [[v.index for v in f.verts] for f in bm.faces]); bm.free(); return t
     fixed = [n for n in ["Block", "DowelPins", "GalleryPlugs", "FreezePlugs"] + [f"MainCap_{i}" for i in range(1, 6)]
-             + [f"MainStuds_{i}" for i in range(1, 6)] if n in bpy.data.objects]
+             + [f"MainStuds_{i}" for i in range(1, 6)]
+             + ["TimingCoverFrame", "TimingCoverLid", "TimingCoverBolts", "TimingCoverSeal"] if n in bpy.data.objects]
     movers = [o.name for o in bpy.data.objects if o.type == "MESH" and
               (o.name.startswith(("ConRod_", "RodCap_", "RodBolt_", "Piston_")) or o.name in ("Crankshaft", "Camshaft", "Flywheel", "FlywheelBolts"))]
     PT = {o.name: tree(o) for o in parts}

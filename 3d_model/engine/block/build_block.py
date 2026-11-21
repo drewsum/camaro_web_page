@@ -571,6 +571,13 @@ def build():
         obj("bore", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), capcut)
         if i == 4:
             seal_cuts(capcut)
+            # Rear seal section: the cap's rear end is turned to an arc about the crank,
+            # which the pan's rear gasket seal squeezes against (Drew).
+            ar, al = BOT["rear_cap"]["seal_arc_r"], BOT["rear_cap"]["seal_arc_len"]
+            arc_pts = [Vector((-4.5, 0, 0.5)), Vector((-4.5, 0, -4.5)), Vector((4.5, 0, -4.5)), Vector((4.5, 0, 0.5)), Vector((ar, 0, 0.5))]
+            arc_pts += [Vector((ar * math.cos(-math.pi * k / 64), 0, ar * math.sin(-math.pi * k / 64))) for k in range(65)]
+            arc_pts += [Vector((-ar, 0, 0.5))]   # cutter runs above the cap top (no coplanar faces)
+            obj("seal_arc", prism([q + Vector((0, -0.1, 0)) for q in arc_pts], Vector((0, 1, 0)), al + 0.1), capcut)
             obj("pump_port", cyl(Vector((pp["x"], pp["y"], -dz - 0.1)), up, pp["d"] / 2, dz + 0.2, 24), capcut)
             obj("pump_pocket", cyl(Vector((pp["x"], pp["y"], -dz - 0.05)), up, pp["pocket_d"] / 2, pp["pocket_depth"] + 0.05, 32), capcut)
             ps = BOT["pump"]["stud"]
