@@ -150,7 +150,7 @@ def lifter_axes():
         w = (sg * math.cos(th), -math.sin(th))                     # out_dir: across the bank, outboard
         for k, cyl in enumerate(cyls):
             yF, yR = LF["y"][bank][k]
-            front_is_exh = k in (0, 2)                             # E-I-I-E heads: 1,2,5,6 exhaust in front
+            front_is_exh = bank == "L"                             # BBC heads alternate E-I-E-I; the right head is the same casting turned round, so I-E-I-E (../heads)
             for yy, sgn in ((yF, 1), (yR, -1)):
                 valve = ("E" if front_is_exh else "I") if sgn > 0 else ("I" if front_is_exh else "E")
                 out.append(dict(cyl=cyl, bank=bank, valve=valve, y=yy, ax=ax, w=w, e=sgn * po))
@@ -164,9 +164,10 @@ def lobe_table():
         peak = (FIRE_DEG[L["cyl"]] + 360.0 + c["cl"]) % 720.0
         alpha = math.degrees(math.atan2(L["ax"][0], L["ax"][1]))   # psi of the lifter axis
         rows.append(dict(L, peak_crank=peak, alpha=alpha))
-    # Lobe order front to rear must be 1E 2E 1I 2I 3I 4I 3E 4E 5E 6E 5I 6I 7I 8I 7E 8E (Chevy V8).
+    # Lobe order front to rear must be 1E 2I 1I 2E 3E 4I 3I 4E 5E 6I 5I 6E 7E 8I 7I 8E: each lifter under its
+    # own valve, with the big-block's alternating E-I-E-I (left) and I-E-I-E (right) heads.
     order = "".join(f"{r['cyl']}{r['valve']}" for r in rows)
-    assert order == "1E2E1I2I3I4I3E4E5E6E5I6I7I8I7E8E", order
+    assert order == "1E2I1I2E3E4I3I4E5E6I5I6E7E8I7I8E", order
     return rows
 
 

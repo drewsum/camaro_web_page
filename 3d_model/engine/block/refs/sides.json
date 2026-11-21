@@ -11,12 +11,12 @@
    13.25,
    8.4
   ],
-  "h": 2.15,
+  "h": 1.55,
   "d": 1.75,
   "bore_depth": 0.45,
   "cup_recess": 0.08,
   "cup_len": 0.3,
-  "src": "y [meas] album photo 431 rectified (brass cups, 3 per side, left bank 1\" ahead of the right); d 1.75\" [spec, BBC core plug]; height up the wall [est]"
+  "src": "y [meas] album photo 431 rectified (brass cups, 3 per side, left bank 1\" ahead of the right); d 1.75\" [spec, BBC core plug]; height up the wall [est], 1.55 in (was 2.15): low enough that the right bank's bottom-row head studs (1.75 in into the deck) clear the cups now that the right deck is the left deck turned round"
  },
  "mount_holes": {
   "offsets": [
@@ -105,7 +105,7 @@
     ]
    ]
   },
-  "y_src": "[meas]/[derived] front and rear lifter y of each pair, cylinders front to rear (L 1,3,5,7; R 2,4,6,8). Pair spacing 1.80\" [meas] from album photo 545 (pair spacing / bore spacing, 3 bosses: 1.77-1.83\"; a camera solve from the 8 deck bores gives 1.5-2.0\"). It was 1.30\", which left 0.30\" between the 2E and 1I lobes. Pairs are centred on their cylinders, except cylinders 7 and 8, whose lobes must fit between the distributor gear (y 3.70, [meas]) and cam journal 4: that group is shifted .39\" forward, giving an even .90\" lobe pitch [derived]. Each lifter sits over its own cam lobe; front lifter is the exhaust on cylinders 1,2,5,6 and the intake on 3,4,7,8 (E-I-I-E heads; lobe order 1E 2E 1I 2I ...)."
+  "y_src": "[meas]/[derived] front and rear lifter y of each pair, cylinders front to rear (L 1,3,5,7; R 2,4,6,8). Pair spacing 1.80\" [meas] from album photo 545 (pair spacing / bore spacing, 3 bosses: 1.77-1.83\"; a camera solve from the 8 deck bores gives 1.5-2.0\"). It was 1.30\", which left 0.30\" between the 2E and 1I lobes. Pairs are centred on their cylinders, except cylinders 7 and 8, whose lobes must fit between the distributor gear (y 3.70, [meas]) and cam journal 4: that group is shifted .39\" forward, giving an even .90\" lobe pitch [derived]. Each lifter sits over its own cam lobe; front lifter is the exhaust on the left bank (1,3,5,7) and the intake on the right (2,4,6,8): BBC heads run E-I-E-I on the left and I-E-I-E on the right (lobe order 1E 2I 1I 2E ...; ../heads/PARTS.md)."
  },
  "rear_plugs": [
   {

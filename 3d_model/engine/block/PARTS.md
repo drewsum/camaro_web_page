@@ -46,7 +46,7 @@ The deck started as the Cometic C5333 gasket (the .027" version is on Drew's eng
 
 - **Gasket data:** its 2500 px product image (`refs/cometic_C5333_H1177MLS.jpg`) was measured with `refs/export_deck.py`, producing `refs/deck_c5333.json` (98.5 px/in from the 4.840" bore spacing, about ±.02" on positions). It still supplies the bolt-hole positions and the exhaust-side and end outline.
 - **Photo:** rectified with a homography fitted to the four bore rims (4.499" bores, 4.840" apart). The rims fit to .011" rms. The gasket's bolt holes then land on the photo's holes, which checks the fit. Traced at 100 px/in, so expect about ±.03".
-- **Orientation:** front at left, valley at top (u from the cylinder 1 centre towards the rear, v across the deck towards the valley). The right bank is the mirror image.
+- **Orientation:** front at left, valley at top (u from the cylinder 1 centre towards the rear, v across the deck towards the valley). The right deck is the left deck turned 180 deg about the vertical (u becomes 14.52 - u from cylinder 2), not its mirror image: BBC heads fit either bank, so the stud and port pattern turns with the head (`deck_pt`, and ../heads/PARTS.md). It was mirrored until the heads were modelled; the turned pattern is not symmetric front to rear, so the right deck's studs, ports and dowels moved.
 
 Per deck:
 

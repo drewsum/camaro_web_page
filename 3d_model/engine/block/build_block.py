@@ -120,7 +120,12 @@ def cyl(center, axis, r, length, seg=32, bm=None):
     return prism(circle(center, axis, r, seg), axis.normalized(), length, bm)
 
 def deck_pt(bank, u, v, h=0.0):
+    """Deck point: u along the deck from the bank's first bore towards the rear, v across it towards
+    the valley. The right deck is the left deck turned 180 deg about the vertical (u -> 3 x bore
+    spacing - u), not its mirror image: BBC heads fit either bank, so the stud and port pattern
+    turns with the head (see ../heads/PARTS.md)."""
     b = BANKS[bank]
+    if bank == "R": u = 3 * P["bore_sp"] - u
     return Vector((0, b["y0"], 0)) + b["d"] * (P["deck"] + h) + b["t"] * v + Vector((0, -1, 0)) * u
 
 def deck_outline():

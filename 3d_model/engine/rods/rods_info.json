@@ -95,14 +95,14 @@
    "bank": "R",
    "throw": 1,
    "y": 19.35,
-   "intake": "-Y"
+   "intake": "+Y"
   },
   {
    "cyl": 3,
    "bank": "L",
    "throw": 2,
    "y": 15.51,
-   "intake": "+Y"
+   "intake": "-Y"
   },
   {
    "cyl": 4,
@@ -123,14 +123,14 @@
    "bank": "R",
    "throw": 3,
    "y": 9.67,
-   "intake": "-Y"
+   "intake": "+Y"
   },
   {
    "cyl": 7,
    "bank": "L",
    "throw": 4,
    "y": 5.83,
-   "intake": "+Y"
+   "intake": "-Y"
   },
   {
    "cyl": 8,
@@ -184,5 +184,5 @@
   }
  },
  "clash": [],
- "clash_checked_against": 21
+ "clash_checked_against": 0
 }

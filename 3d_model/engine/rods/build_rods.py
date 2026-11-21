@@ -89,8 +89,9 @@ K = dict(
 )
 L = K["rod_cc"]
 BETA = {"L": -45.0, "R": 45.0}
-# Intake valve position: heads run E-I-I-E-E-I-I-E front to rear, so the intake
-# is behind the exhaust on the 1st and 3rd cylinder of each bank, ahead on the 2nd and 4th.
+# Intake valve position: big-block heads alternate, E-I-E-I front to rear on the left bank
+# and I-E-I-E on the right (the same casting turned round, ../heads), so the intake is
+# behind the exhaust on every left cylinder and ahead of it on every right one.
 SEG_BORE = 64                                     # the block's bore is a 64-sided polygon
 R_RING = BP["bore"] / 2 * math.cos(math.pi / SEG_BORE) - 0.0003   # ring OD, inside the polygon's flats
 R_PIST = min((BP["bore"] - K["ptw"]) / 2, R_RING - 0.0005)        # piston OD (the polygon takes the .0045 clearance)
@@ -470,7 +471,7 @@ def build():
         beta = BETA[bank]
         s_int = 1 if bank == "L" else -1
         nth = [1, 3, 5, 7].index(cyl_n) if bank == "L" else [2, 4, 6, 8].index(cyl_n)
-        y_int = 1 if nth % 2 else -1                       # E-I-I-E: 1st and 3rd of each bank have the intake behind
+        y_int = -1 if bank == "L" else 1                  # E-I-E-I left, I-E-I-E right
         rod = place(f"ConRod_{cyl_n}", rm["rod"].data, rods_c, loc=(0, yb, 0))
         place(f"RodCap_{cyl_n}", rm["cap"].data, rods_c, rod)
         place(f"RodBolt_{cyl_n}_A", rm["bolt"].data, rods_c, rod, (K["bolt_x"], 0, 0))
