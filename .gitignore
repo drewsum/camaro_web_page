@@ -21,3 +21,6 @@ web/public/draco/
 # Manufacturer product images used as measurement references (not ours to redistribute)
 3d_model/engine/block/refs/*.jpg
 3d_model/engine/block/refs/*.pdf
+
+# Drew's build album (photos.drewsum.us), downloaded as modelling references
+3d_model/engine/album/

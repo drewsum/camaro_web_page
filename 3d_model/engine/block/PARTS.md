@@ -36,6 +36,7 @@ The block in Drew's 540 is GM **P/N 19170540**, the bare block of the ZZ502 crat
 | Length, front face to bellhousing face | 24.0" | [forum]; the model comes out 24.01" |
 | Width across the deck edges | 19" | [forum]; the model comes out 19.35" |
 | Rear main seal | 1-piece; Gen VI pan and 6-bolt front cover | [spec] |
+| Valley front wall | 1.15" thick behind the front face (.85" timing-chest recess + .30") | [est]; the window is the only opening into the valley |
 | Main caps | 4-bolt, ARP 235-5701 studs, 110 ft-lb | [spec] / build doc |
 | Head studs | ARP 235-4713, 7/16" | build doc |
 
@@ -72,7 +73,7 @@ Per deck:
 
 | Feature | Status | Plan |
 |---|---|---|
-| Front face: water-pump inlet ports, 6-bolt cover pattern, two dowels | Not built | Photo 29 shows it nearly square-on, but has no in-plane scale. Get a Gen VI front cover gasket or water-pump gasket image and scale from it. |
+| Front face | Built from `refs/front_face.json`. All values [meas] from Drew's photos 30 and 29 (repo, also in his build album). Photo 30's camera was solved from the 3/8" timing-chain pitch (5 and 8 pitches), the 5.147" cam-to-crank distance and the two deck edges (9.800" planes): rms 12 px. Photo 29 was mapped on the shared holes (residual < .07"). Error about +/-.15". Face coords x across, z above the crank centreline: water inlets 1.80" at (+/-4.91, 7.04); water-pump bolts (3/8-16) at (+/-4.89, 8.21) and (+/-4.88, 5.83); Gen VI 6-bolt cover (1/4-20) at (+/-2.75, 8.01), (+/-4.17, 4.87), (+/-3.23, .30); cover dowels at (+/-3.69, 1.23), pins .30" proud; accessory holes at (+/-5.51, 2.82) on a boss and (+/-5.62, .67); timing chest recessed .85" [est], painted black, with the valley window (1.32" at z 7.60), cam-plate bolts (z 6.74 and 3.44), hex lifter-gallery plugs (+/-1.22, 6.46) and the main-gallery plug (-1.53, 5.57); water-pump leg pockets .40" deep [est]; the machined plate is bare and the cast area outside it sits .12" back [est]; the plate is 6.25" half-wide down to the pan face. Overlay check: the model's features projected through the solved camera land on the photo's holes and edges. Not yet matched: the left leg pocket is the right one mirrored (the real left one is larger), and the cam retainer plate itself is not modelled. | Photos 29, 30; album photos 319-327 and 343-345 for later checks; `refs/front_photo_fit.py` |
 | Bellhousing flange and starter bosses | Not built | Forum coordinates above, plus photo 22 and online rear-face photos |
 | Oil pan face | Built: one flat plane at the crank centreline (the main cap parting line) along the full length (Drew). Only the main caps hang below it. Still to do: the rail outline and bolt pattern. | GM 19213986 one-piece pan gasket image (Drew's part) |
 | Side profile: jacket wall, skirt, freeze plugs (3 per side), oil filter pad, fuel pump pad, motor mount bosses | [est] simple section | Photos 22 and 26, plus bare-block photos online |
@@ -90,3 +91,8 @@ Per deck:
 
 - `naturally_aspirated_454_cid_v8.glb` and `blown_454_cid_v8.glb`: "454 cid V8" by Jorma Rysky, CC BY 4.0 (https://skfb.ly/p7FsJ, https://skfb.ly/p7Fss).
 - The isolated block from the NA model is `Ref454_Block` in `../bbc_block_work.blend`. It is a low-detail shell with no bores or holes, about 23.7 × 17.6 × 10.6 in.
+
+
+## Known mesh issue
+
+The EXACT collection boolean leaves non-manifold edges (about 890 before the front face, about 1,140 after), mostly interior faces where cutters meet coplanar surfaces. They don't show in renders. Clean them up before any mesh export that needs a watertight solid (try applying the cutters one at a time).

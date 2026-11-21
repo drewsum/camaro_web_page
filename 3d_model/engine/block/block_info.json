@@ -46,15 +46,16 @@
   "dowel_d": 0.609,
   "dowel_depth": 0.35,
   "port_depth": 0.7,
+  "front_wall": 1.15,
   "y_front": 24.0,
   "y_cyl1": 20.35
  },
  "parts": {
   "Block": {
-   "tris": 10843,
+   "tris": 14287,
    "dims_in": [
     19.347,
-    24.014,
+    24.0,
     9.617
    ]
   },
@@ -137,9 +138,25 @@
     0.95,
     4.95
    ]
+  },
+  "FrontDowels": {
+   "tris": 120,
+   "dims_in": [
+    7.626,
+    0.75,
+    0.246
+   ]
+  },
+  "GalleryPlugs": {
+   "tris": 60,
+   "dims_in": [
+    3.3,
+    0.42,
+    1.366
+   ]
   }
  },
- "cutters": 72,
+ "cutters": 101,
  "mains_y": [
   22.27,
   17.43,
@@ -151,5 +168,6 @@
   "coolant": 10,
   "stud": 16,
   "stud_dowel": 1
- }
+ },
+ "front_features": 24
 }

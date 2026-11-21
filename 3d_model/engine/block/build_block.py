@@ -50,6 +50,7 @@ P = dict(
     stud_tap=0.4375, stud_depth=1.75,          # [spec] 7/16-14 blind-tapped head stud holes
     dowel_d=0.609, dowel_depth=0.35,           # [meas] head dowel counterbore (gasket hole)
     port_depth=0.70,     # [est] coolant ports cut as pockets; the jacket itself is not modelled
+    front_wall=1.15,     # [est] valley starts behind the timing-chest floor (recess .85 + .30 wall); the window is the only opening
 )
 P["y_front"] = P["length"]
 P["y_cyl1"] = P["length"] - P["front_to_cyl1"]
@@ -61,6 +62,7 @@ BANKS = {
     "R": dict(d=Vector((S45, 0, C45)), t=Vector((-C45, 0, S45)), y0=P["y_cyl1"] - P["stagger"], cyls=[2, 4, 6, 8]),
 }
 DECK = json.load(open(os.path.join(HERE, "refs", "deck_c5333.json")))
+FRONT = json.load(open(os.path.join(HERE, "refs", "front_face.json")))   # photos 29/30, see PARTS.md
 
 
 # ---- helpers ------------------------------------------------------------------
@@ -154,6 +156,14 @@ def build():
         slab = obj(f"DeckSlab_{bank}", prism(poly, -BANKS[bank]["d"], P["deck_thk"]), parts)
         boolean(block, "UNION", slab); bpy.data.objects.remove(slab)
 
+    # Front plate: wider than the skirt at the bottom, so the lower accessory
+    # holes have metal round them (photo 30).
+    fl = FRONT["flange"]
+    fsec = [Vector((-fl["half"], P["length"] - fl["depth"], 0)), Vector((fl["half"], P["length"] - fl["depth"], 0)),
+            Vector((fl["half"], P["length"] - fl["depth"], fl["top"])), Vector((-fl["half"], P["length"] - fl["depth"], fl["top"]))]
+    flange = obj("FrontFlange", prism(fsec, Vector((0, 1, 0)), fl["depth"]), parts)
+    boolean(block, "UNION", flange); bpy.data.objects.remove(flange)
+
     # ---- cutters
     def C(name, bm):
         info["cutters"] += 1
@@ -164,7 +174,7 @@ def build():
     vsec = [Vector((-vt - 2, 0, 12)), Vector((-vt, 0, 9.5)), Vector((-vf, 0, P["valley_floor_z"])),
             Vector((vf, 0, P["valley_floor_z"])), Vector((vt, 0, 9.5)), Vector((vt + 2, 0, 12))]
     C("Valley", prism([p + Vector((0, P["china_wall"], 0)) for p in vsec], Vector((0, 1, 0)),
-                       P["length"] - 2 * P["china_wall"]))
+                       P["length"] - P["china_wall"] - P["front_wall"]))
 
     # Main bulkhead positions: centred between rod journals.
     j0 = P["y_cyl1"] - P["stagger"] / 2          # journal 1 (cyl 1 & 2)
@@ -223,6 +233,34 @@ def build():
                 C(f"Port_{bank}{i}", prism(poly, -b["d"], P["port_depth"] + 0.05))
     info["deck_features_per_bank"] = {k: v // 2 for k, v in counts.items()}
 
+    # Front face: water-pump inlets and bolts, Gen VI 6-bolt cover pattern and
+    # dowels, accessory holes, the timing-chest recess with its cam-plate bolts,
+    # gallery plugs and valley window, and the water-pump leg pockets.
+    yf, back = P["length"], Vector((0, -1, 0))
+    def xs(h): return (h["x"], -h["x"]) if h["mirror"] else (h["x"],)
+    def holes(group, y0):
+        for h in FRONT[group]:
+            for i, x in enumerate(xs(h)):
+                C(f"F_{h['name']}_{i}", cyl(Vector((x, y0 + 0.05, h["z"])), back, h["d"] / 2, h["depth"] + 0.05,
+                                            48 if h["d"] > 1 else 24))
+    holes("holes", yf)
+    rec = FRONT["recess"]; hz = rec["half_width_vs_z"]; yr = yf - rec["depth"]
+    rp = ([Vector((hz[0][0], yr, -1.0))] + [Vector((w, yr, z)) for w, z in hz]
+          + [Vector((-w, yr, z)) for w, z in reversed(hz[:-1])] + [Vector((-hz[0][0], yr, -1.0))])
+    C("F_TimingRecess", prism(rp, Vector((0, 1, 0)), rec["depth"] + 0.1))
+    holes("floor_holes", yr)
+    pk = FRONT["pocket"]
+    for side, sx in (("R", 1), ("L", -1)):
+        C(f"F_LegPocket_{side}", prism([Vector((sx * x, yf - pk["depth"], z)) for x, z in pk["outline"]],
+                                       Vector((0, 1, 0)), pk["depth"] + 0.1))
+    # Outside the machined plate the front is cast, a little behind the plate.
+    pl = FRONT["plate"]; yrel = yf - pl["relief"]
+    half = [Vector((0, yrel, 16))] + [Vector((x, yrel, z)) for x, z in pl["half_outline"]] + \
+           [Vector((pl["half_outline"][-1][0], yrel, -1)), Vector((12, yrel, -1)), Vector((12, yrel, 16))]
+    for side, sx in (("R", 1), ("L", -1)):
+        C(f"F_CastRelief_{side}", prism([Vector((sx * p.x, p.y, p.z)) for p in half], Vector((0, 1, 0)), pl["relief"] + 0.1))
+    info["front_features"] = sum(len(xs(h)) for g in ("holes", "floor_holes") for h in FRONT[g])
+
     boolean(block, "DIFFERENCE", cut)
 
     # Main caps: separate parts hanging under each bulkhead, bored with the
@@ -248,6 +286,19 @@ def build():
         clear(capcut); bpy.data.collections.remove(capcut)
         studs = obj(f"MainStuds_{i+1}", hw_bm, parts)
 
+    # Front hardware: timing-cover dowel pins (stand .30 proud) and the
+    # hex-socket gallery plugs in the timing chest (flush).
+    hw_bm = bmesh.new()
+    for h in FRONT["holes"]:
+        if h["name"] == "CoverDowel":
+            for x in xs(h): cyl(Vector((x, yf - 0.45, h["z"])), Vector((0, 1, 0)), h["d"] / 2 - 0.002, 0.75, 16, hw_bm)
+    obj("FrontDowels", hw_bm, parts)
+    hw_bm = bmesh.new()
+    for h in FRONT["floor_holes"]:
+        if h["name"].endswith("Plug"):
+            for x in xs(h): cyl(Vector((x, yr - 0.45, h["z"])), Vector((0, 1, 0)), h["d"] / 2 - 0.005, 0.42, 6, hw_bm)
+    obj("GalleryPlugs", hw_bm, parts)
+
     for o in parts.objects:
         o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
         info["parts"][o.name] = dict(tris=sum(len(p.vertices) - 2 for p in o.data.polygons),
@@ -265,10 +316,28 @@ def build():
         "paint": material("Block_ChevyOrange", (0.85, 0.24, 0.05, 1), 0.0, 0.45),   # painted (photo 26)
         "iron": material("Block_BareIron", (0.30, 0.30, 0.31, 1), 0.85, 0.5),      # unpainted caps (photo 24)
         "arp": material("ARP_BlackOxide", (0.03, 0.03, 0.03, 1), 0.8, 0.35),       # ARP studs and nuts
+        "black": material("Block_BlackPaint", (0.025, 0.025, 0.025, 1), 0.0, 0.6),  # timing chest (photo 29)
     }
     for o in parts.objects:
-        kind = "arp" if o.name.startswith("MainStuds") else "iron" if o.name.startswith("MainCap") else "paint"
+        kind = ("arp" if o.name.startswith("MainStuds") else
+                "iron" if o.name.startswith(("MainCap", "FrontDowels", "GalleryPlugs")) else "paint")
         o.data.materials.clear(); o.data.materials.append(mats[kind])
+    # Machined faces are bare iron, as on Drew's block (photos 29/30): the
+    # front face, the decks and the pan face. Cast surfaces stay painted.
+    blk = parts.objects["Block"]; blk.data.materials.append(mats["iron"]); blk.data.materials.append(mats["black"])
+    hz = FRONT["recess"]["half_width_vs_z"]
+    def rec_w(z):
+        for (w0, z0), (w1, z1) in zip(hz, hz[1:]):
+            if z0 <= z <= z1: return w0 + (w1 - w0) * (z - z0) / (z1 - z0)
+        return -1
+    dl, dr = BANKS["L"]["d"], BANKS["R"]["d"]
+    for poly in blk.data.polygons:
+        c, n = poly.center / IN, poly.normal
+        if ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
+                or any(n.dot(d) > 0.999 and abs(c.dot(d) - P["deck"]) < 0.01 for d in (dl, dr))):
+            poly.material_index = 1
+        elif yr - 0.01 < c.y < yf - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02:
+            poly.material_index = 2   # timing chest, painted black (photo 29)
     # The cutters stay in the hidden collection for inspection; the block is final.
     with open(os.path.join(HERE, "block_info.json"), "w") as f:
         json.dump(dict(params=P, **info), f, indent=1, default=str)

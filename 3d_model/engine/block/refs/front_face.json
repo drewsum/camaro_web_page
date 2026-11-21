@@ -1,0 +1,366 @@
+{
+ "_about": "Front face of Drew's Gen VI block (GM 19170540). Face coords: x across (+ = passenger side), z up from the crank centreline, inches. Measured from photo 30 (camera solved from the 3/8\" timing-chain pitch, the 5.147\" cam-to-crank distance and the 9.800\" deck planes; rms 12 px) and photo 29 (homography on the shared holes, residual < 0.07\"). Every pattern is mirrored left/right. Expected error about +/-0.15\".",
+ "recess": {
+  "half_width_vs_z": [
+   [
+    2.948,
+    0.0
+   ],
+   [
+    3.056,
+    0.8
+   ],
+   [
+    3.212,
+    1.6
+   ],
+   [
+    3.374,
+    2.4
+   ],
+   [
+    3.482,
+    3.2
+   ],
+   [
+    3.563,
+    4.0
+   ],
+   [
+    3.522,
+    4.8
+   ],
+   [
+    3.637,
+    5.6
+   ],
+   [
+    3.566,
+    5.9
+   ],
+   [
+    3.47,
+    6.183
+   ],
+   [
+    3.355,
+    6.467
+   ],
+   [
+    3.201,
+    6.75
+   ],
+   [
+    3.014,
+    7.033
+   ],
+   [
+    2.717,
+    7.317
+   ],
+   [
+    2.247,
+    7.6
+   ],
+   [
+    2.065,
+    7.883
+   ],
+   [
+    1.653,
+    8.167
+   ],
+   [
+    0.906,
+    8.45
+   ],
+   [
+    0.0,
+    8.56
+   ]
+  ],
+  "depth": 0.85,
+  "src": "outline [meas] photo 29; depth [est]"
+ },
+ "holes": [
+  {
+   "name": "WaterInlet",
+   "x": 4.91,
+   "z": 7.04,
+   "d": 1.8,
+   "depth": 2.5,
+   "mirror": true,
+   "src": "[meas] photo 30, A"
+  },
+  {
+   "name": "WPBoltUpper",
+   "x": 4.89,
+   "z": 8.21,
+   "d": 0.4,
+   "depth": 1.0,
+   "mirror": true,
+   "src": "[meas] photo 30, B; 3/8-16 tapped (water pump, 4 bolts)"
+  },
+  {
+   "name": "WPBoltLower",
+   "x": 4.88,
+   "z": 5.83,
+   "d": 0.4,
+   "depth": 1.0,
+   "mirror": true,
+   "src": "[meas] photo 30, D"
+  },
+  {
+   "name": "CoverBoltTop",
+   "x": 2.75,
+   "z": 8.01,
+   "d": 0.25,
+   "depth": 0.75,
+   "mirror": true,
+   "src": "[meas] photo 30, C; Gen VI 6-bolt cover, 1/4-20"
+  },
+  {
+   "name": "CoverBoltMid",
+   "x": 4.17,
+   "z": 4.87,
+   "d": 0.25,
+   "depth": 0.75,
+   "mirror": true,
+   "src": "[meas] photo 30, E"
+  },
+  {
+   "name": "CoverBoltLow",
+   "x": 3.23,
+   "z": 0.3,
+   "d": 0.25,
+   "depth": 0.75,
+   "mirror": true,
+   "src": "[meas] photo 30, I (z 0.10, raised to clear the pan face)"
+  },
+  {
+   "name": "CoverDowel",
+   "x": 3.69,
+   "z": 1.23,
+   "d": 0.25,
+   "depth": 0.5,
+   "mirror": true,
+   "src": "[meas] photo 30, G; dowel pins fitted"
+  },
+  {
+   "name": "AccyBoss",
+   "x": 5.51,
+   "z": 2.82,
+   "d": 0.44,
+   "depth": 1.0,
+   "mirror": true,
+   "src": "[meas] photo 30, F; boss in the leg pocket"
+  },
+  {
+   "name": "AccyLow",
+   "x": 5.62,
+   "z": 0.67,
+   "d": 0.44,
+   "depth": 1.0,
+   "mirror": true,
+   "src": "[meas] photo 30, H"
+  }
+ ],
+ "floor_holes": [
+  {
+   "name": "ValleyWindow",
+   "x": 0.0,
+   "z": 7.6,
+   "d": 1.32,
+   "depth": 3.0,
+   "mirror": false,
+   "src": "[meas] photo 29"
+  },
+  {
+   "name": "CamPlateBoltTop",
+   "x": 0.0,
+   "z": 6.74,
+   "d": 0.25,
+   "depth": 0.6,
+   "mirror": false,
+   "src": "[meas] photo 29 (relative to the cam centre)"
+  },
+  {
+   "name": "CamPlateBoltBot",
+   "x": 0.0,
+   "z": 3.44,
+   "d": 0.25,
+   "depth": 0.6,
+   "mirror": false,
+   "src": "[meas] photo 29"
+  },
+  {
+   "name": "LifterGalleryPlug",
+   "x": 1.22,
+   "z": 6.46,
+   "d": 0.56,
+   "depth": 0.6,
+   "mirror": true,
+   "src": "[meas] photo 29; hex-socket plugs"
+  },
+  {
+   "name": "MainGalleryPlug",
+   "x": -1.53,
+   "z": 5.57,
+   "d": 0.56,
+   "depth": 0.6,
+   "mirror": false,
+   "src": "[meas] photo 29"
+  }
+ ],
+ "pocket": {
+  "outline": [
+   [
+    6.04,
+    4.98
+   ],
+   [
+    4.67,
+    5.06
+   ],
+   [
+    4.64,
+    4.82
+   ],
+   [
+    4.38,
+    4.52
+   ],
+   [
+    4.01,
+    1.88
+   ],
+   [
+    4.15,
+    1.14
+   ],
+   [
+    3.95,
+    0.75
+   ],
+   [
+    3.95,
+    0.45
+   ],
+   [
+    4.3,
+    0.52
+   ],
+   [
+    4.7,
+    0.35
+   ],
+   [
+    5.05,
+    0.6
+   ],
+   [
+    5.19,
+    1.1
+   ],
+   [
+    5.83,
+    1.37
+   ],
+   [
+    5.9,
+    2.45
+   ],
+   [
+    5.6,
+    2.3
+   ],
+   [
+    5.19,
+    2.32
+   ],
+   [
+    4.82,
+    2.68
+   ],
+   [
+    4.77,
+    3.02
+   ],
+   [
+    5.02,
+    3.48
+   ],
+   [
+    5.37,
+    3.52
+   ],
+   [
+    6.02,
+    3.51
+   ]
+  ],
+  "depth": 0.4,
+  "mirror": true,
+  "src": "outline [meas] photo 30 (right pocket, mirrored); depth [est]"
+ },
+ "flange": {
+  "half": 6.25,
+  "top": 2.4,
+  "depth": 1.0,
+  "src": "half-width [meas] photo 30 plate edge, back-projected (6.2-6.3 from the pan face to z 5); depth [est]"
+ },
+ "plate": {
+  "half_outline": [
+   [
+    0,
+    9.12
+   ],
+   [
+    1.2,
+    9.0
+   ],
+   [
+    1.9,
+    8.82
+   ],
+   [
+    2.8,
+    8.68
+   ],
+   [
+    4.0,
+    8.75
+   ],
+   [
+    4.7,
+    8.8
+   ],
+   [
+    5.5,
+    8.2
+   ],
+   [
+    6.05,
+    7.1
+   ],
+   [
+    6.12,
+    5.7
+   ],
+   [
+    6.2,
+    4.1
+   ],
+   [
+    6.23,
+    2.5
+   ],
+   [
+    6.25,
+    0
+   ]
+  ],
+  "relief": 0.12,
+  "src": "outline [meas] photo 30 plate edge (bare vs painted), back-projected, left/right averaged; relief depth [est]"
+ }
+}
