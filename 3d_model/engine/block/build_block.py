@@ -31,7 +31,8 @@ P = dict(
     front_to_cyl1=3.65,  # [meas] gasket front edge to cyl-1 centre; gasket flush with front face (photo 38)
     length=24.0,         # [forum] front face to bellhousing face
     main_bore=2.9375,    # [spec] line-honed housing bore
-    web=1.00, web_front=1.10, web_rear=1.60,   # [est] bulkhead thicknesses
+    web=1.00, web_front=1.10, web_rear=1.20,   # [est] bulkhead thicknesses; the rear (thrust) one is faced to take the 1.33" flanged thrust bearing
+    rear_pocket_d=3.60,  # [est] drain-back pocket between the thrust bearing and the seal, clears the crank's rear thrust collar
     cam_cd=5.147,        # [derived] crank-to-cam centre distance
     cam_bore=2.120,      # [spec] cam bearing housing bore
     cam_plug=2.218,      # [spec] rear cam plug bore
@@ -384,7 +385,9 @@ def build():
     def seal_cuts(coll_):
         obj("SealBore", cyl(Vector((0, -0.05, 0)), fwd, sl["bore_d"] / 2, sl["bore_depth"] + 0.05, 64), coll_)
         obj("SealClear", cyl(Vector((0, -0.05, 0)), fwd, sl["clear_d"] / 2, sl["clear_depth"] + 0.05, 64), coll_)
-    seal_cuts(cut); info["cutters"] += 2
+        y_th = webs[4][0]   # rear face of the thrust bulkhead
+        obj("RearPocket", cyl(Vector((0, sl["clear_depth"] - 0.05, 0)), fwd, P["rear_pocket_d"] / 2, y_th - sl["clear_depth"] + 0.05, 64), coll_)
+    seal_cuts(cut); info["cutters"] += 3
     info["front_features"] = sum(len(xs(h)) for g in ("holes", "floor_holes") for h in FRONT[g])
 
     boolean(block, "DIFFERENCE", cut)
@@ -575,7 +578,7 @@ def build():
     def inside(c, n):
         # The timing chest and the rear seal bore are bare iron (photos 29, 435).
         if P["length"] - FRONT["recess"]["depth"] - 0.05 < c.y < P["length"] - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02: return True
-        if c.y < REAR["seal"]["clear_depth"] + 0.05 and math.hypot(c.x, c.z) < seal_r: return True
+        if c.y < webs[4][0] + 0.05 and math.hypot(c.x, c.z) < seal_r: return True
         # Valley and crankcase, inside the block's length only, so the painted
         # rear face (photo 50) and the front leg pockets (photo 30) stay orange.
         if not (0.05 < c.y < P["length"] - 1.2): return False

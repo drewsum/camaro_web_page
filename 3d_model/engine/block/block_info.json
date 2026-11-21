@@ -10,7 +10,8 @@
   "main_bore": 2.9375,
   "web": 1.0,
   "web_front": 1.1,
-  "web_rear": 1.6,
+  "web_rear": 1.2,
+  "rear_pocket_d": 3.6,
   "cam_cd": 5.147,
   "cam_bore": 2.12,
   "cam_plug": 2.218,
@@ -54,7 +55,7 @@
  },
  "parts": {
   "Block": {
-   "tris": 24976,
+   "tris": 25100,
    "dims_in": [
     19.347,
     24.0,
@@ -126,10 +127,10 @@
    ]
   },
   "MainCap_5": {
-   "tris": 1250,
+   "tris": 1380,
    "dims_in": [
     6.95,
-    3.71,
+    3.51,
     3.1
    ]
   },
@@ -166,7 +167,7 @@
    ]
   }
  },
- "cutters": 183,
+ "cutters": 184,
  "mains_y": [
   22.27,
   17.43,

@@ -1,0 +1,77 @@
+{
+ "params": {
+  "stroke": 4.25,
+  "main_d": 2.7488,
+  "rod_d": 2.199,
+  "pin_len": 2.0,
+  "jl_gap": 0.05,
+  "hub_r": 1.6,
+  "pin_r": 1.45,
+  "cw_r": 3.55,
+  "cw_half": 62.0,
+  "cw_taper": 26.0,
+  "oil_clear": 0.0025,
+  "brg_w": 0.9,
+  "thrust_t": 0.065,
+  "thrust_od": 3.55,
+  "groove_w": 0.2,
+  "groove_d": 0.035,
+  "brg_hole": 0.25,
+  "gear_d": 1.75,
+  "gear_to": 24.3,
+  "snout_d": 1.6,
+  "snout_to": 27.1,
+  "key_w": 0.1875,
+  "key_depth": 0.09,
+  "key_from": 23.3,
+  "nose_bore": 0.75,
+  "nose_bore_depth": 1.25,
+  "flange_d": 4.25,
+  "flange_back": -0.4,
+  "flange_front": 0.85,
+  "collar_d": 3.4,
+  "fw_bolt_circle": 3.58,
+  "fw_bolt_d": 0.4375,
+  "fw_bolt_n": 6,
+  "fw_bolt_depth": 0.75,
+  "pilot_d": 1.094,
+  "pilot_depth": 0.8,
+  "oil_hole": 0.25
+ },
+ "throws_psi_deg": [
+  315.0,
+  225.0,
+  45.0,
+  135.0
+ ],
+ "pin_y": [
+  19.85,
+  15.010000000000002,
+  10.170000000000002,
+  5.330000000000002
+ ],
+ "mains_y": [
+  22.27,
+  17.43,
+  12.59,
+  7.75,
+  2.91
+ ],
+ "journal_len": [
+  1.2000000000000002,
+  1.1,
+  1.1,
+  1.1,
+  1.336
+ ],
+ "ground_faces": 1316,
+ "crank_tris": 12898,
+ "crank_dims_in": [
+  7.099,
+  27.5,
+  7.099
+ ],
+ "bearings": 10,
+ "clash": [],
+ "clash_checked_against": 21
+}

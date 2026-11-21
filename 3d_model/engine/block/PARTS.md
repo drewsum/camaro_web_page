@@ -98,11 +98,15 @@ Per deck:
 
 From photos 26-29 and 545: everything is iron except the outer faces, which are painted gloss orange.
 - **Block_CastIron** (dark grey, rough): valley, lifter bosses, crankcase, timing chest, cam and lifter bores, the strips under the intake gasket, and the main caps.
-- **Block_MachinedIron** (bright): the decks, the pan face, the front and rear faces, the intake rails and the china-wall tops.
-- **Block_ChevyOrange**: the outer faces of the casting (sides, skirts, front flanks outside the machined plate, bosses).
+- **Block_MachinedIron** (bright): the decks, the pan face, the machined front plate, the intake rails and the china-wall tops.
+- **Block_ChevyOrange**: the outer faces of the casting: sides, skirts, the rear (bellhousing) face (photo 50), the front water-pump and accessory pockets and the cast area outside the machined plate (photo 30), and the bosses. The rear seal bore and the pocket behind the thrust bearing stay bare iron (photo 435).
 
 The build sorts the faces automatically. Machined faces are found by plane. Any other face is painted if a ray along its normal leaves the block without hitting it, unless it opens into the valley or the crankcase, or faces into the intake area.
 
 ## Booleans
 
 All cuts use Blender's MANIFOLD boolean solver (Blender 4.5+). The EXACT solver dropped or inverted some valley bosses and left about 1,100 non-manifold edges. With MANIFOLD the block is fully manifold (0 non-manifold edges, watertight) and builds in about 2 s.
+
+## Rear bulkhead and crank clearance
+
+The rear (thrust) bulkhead is 1.20" thick [est], faced for the flanged #5 thrust bearing, and a 3.60" pocket [est] runs from the seal clearance (0.90" deep) to the bulkhead's rear face, around the crank's thrust collar. The crankshaft and main bearings are built by `../crank/build_crank.py`; see `../crank/PARTS.md`.
