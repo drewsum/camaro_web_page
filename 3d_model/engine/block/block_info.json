@@ -64,7 +64,7 @@
  },
  "parts": {
   "Block": {
-   "tris": 26530,
+   "tris": 25188,
    "dims_in": [
     19.347,
     24.0,
@@ -176,7 +176,7 @@
    ]
   }
  },
- "cutters": 207,
+ "cutters": 199,
  "china_top_z": 10.782,
  "mains_y": [
   22.27,
@@ -186,7 +186,7 @@
   2.91
  ],
  "deck_features_per_bank": {
-  "coolant": 18,
+  "coolant": 14,
   "stud": 16,
   "dowel": 2
  },

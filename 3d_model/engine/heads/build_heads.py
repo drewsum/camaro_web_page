@@ -50,32 +50,43 @@ K = dict(
     int_face_top=3.90,       # [meas] photo 335: the intake face is ~1.6 port heights tall
     rail_v_int=5.05,         # [est] the rail steps in from the intake face above it
     wall=0.45,               # [est] rocker-box wall / rail width (perimeter-bolt rail)
-    floor=(3.75, 3.95),      # [est] rocker-box floor height, exhaust side and intake side
+    floor=(4.10, 3.95),      # [est] rocker-box floor height, exhaust side and intake side
     # Valves [spec] AFR: 2.300/1.880, 24/4 intake, 15/4 exhaust; seats 2.450 x 2.000 and 2.000 x 1.580
     vI=dict(d=2.300, ang=24.0, cant=4.0, du=0.90, dv=0.48, seat_od=2.450, seat_id=2.000, hs=0.80),
-    vE=dict(d=1.880, ang=15.0, cant=4.0, du=0.90, dv=-0.87, seat_od=2.000, seat_id=1.580, hs=0.70),
-    # du [derived] the lifters sit under the valves, .90" either side of the bore (../lifters);
+    vE=dict(d=1.880, ang=15.0, cant=4.0, du=0.75, dv=-0.87, seat_od=2.000, seat_id=1.580, hs=0.70),
+    # du [derived] the lifters sit under the valves, .90" either side of the bore (../lifters); the exhaust
+    # valves sit .15" closer in [est], so each exhaust spring clears the exhaust-side stud beside it;
     # dv [derived] seats 2.25" apart so the seat rings clear, both inside the 4.5" bore; hs [est] seat
     # height above the block deck, tuned with the chamber wall to the 117cc chamber
     chamber_cc=117.0,        # [spec] AFR 2110, partial-CNC chamber
     chamber_r=2.24,          # [derived] inside the 4.499" bore and the 4.540" gasket
-    spring_h=3.15,           # [est] valve face to spring seat along the stem (5.3" valve): seat ~.4" above the port roof
+    spring_h=dict(I=3.15, E=3.50),  # [est] valve face to spring seat along the stem: intake seat ~.4" above the port roof;
+                             # the exhaust seats stand .35" higher [Drew], over the middle-row studs' spot faces
     spring_r=0.875,          # [spec] 1.725-1.750" spring pocket
-    stem_l=5.30,             # [est] valve length, face to tip
+    stem_l=dict(I=5.30, E=5.65),             # [est] valve length, face to tip
     # Intake: 345cc, 2.435 x 1.765, 13/32 corner radius, stock location, 3.263 in^2 min CSA [spec]; the
     # ports pair up, cylinders 1/3 and 5/7, 2.07" apart within a pair [meas] photo 335 (perspective fit)
     int_cc=345.0, int_w=1.765, int_h=2.435, int_r=0.406, int_hc=2.35, int_pair=1.035, int_csa=3.263,
     int_pairs=(3.60, 13.28),  # [derived] 9.68" apart (manifold), placed so the pushrods clear (photo 335 fit gives 2.29/11.97 or 2.87/12.55)
     # Exhaust: 132cc, 1.720 H x 1.920 W, raised .375 [spec]; about evenly spaced, one over each
     # cylinder's exhaust valve, with the plugs between them [meas] photo 337
-    exh_cc=132.0, exh_w=1.920, exh_h=1.720, exh_r=0.45, exh_hc=2.60, exh_u=(-0.70, 4.20, 9.00, 13.90),
+    # Exhaust ports sit between the bottom-row studs, each under a middle-row stud, so the bottom row is below
+    # the ports and the middle row above them [meas] Drew (deck drawing, photo of the head with the springs in);
+    # each port runs forward from its valve; the first port is under the front-end stud
+    exh_cc=132.0, exh_w=1.920, exh_h=1.720, exh_r=0.45, exh_hc=2.60, exh_u=(-1.95, 2.39, 7.23, 12.07),
     exh_face=-3.15,          # [est] machined port pads stand .20 proud of the casting wall
     # Spark plug: 14mm x .750" reach, gasket seat [spec]; plugs exit low between the exhaust ports, angled
     # towards their own intake valve [meas] photos 265/266/337; positions [est]
-    plug=dict(tip=(0.45, -1.50, 0.32), exit=(1.70, -3.00, 1.25), thread_r=0.276, reach=0.75, seat_r=0.45, boss_r=0.56),
+    plug=dict(tip=(0.45, -1.50, 0.32), exit=(0.25, -3.00, 2.15), thread_r=0.276, reach=0.75, seat_r=0.45, boss_r=0.56),
     stud_hole=0.235,         # 7/16 stud clearance
+    # The middle (exhaust-side) row stands outside the valve cover, above the exhaust ports: each sits on a
+    # spot face at mid_seat in a slot open to the exhaust side, and the cover rail and rocker box step in
+    # round it [meas] Drew; sizes [est]
+    mid_seat=3.85, mid_slot=0.40, mid_wall=0.25,
     boss_r=0.42,             # [est] stud bosses in the rocker box
     nut_pocket=0.50,         # [est] socket clearance round the four bottom studs, above the lip
+    nut_pocket_h=0.62,       # [est] the pocket can't go deeper without breaking into the exhaust port above; the
+                             # bottom-row studs are cut to finish flush with their nuts
     pushrod_r=0.24,          # 3/8" pushrod + clearance
     hdr_bolts=((-1.20, 0.70), (1.20, -0.70)),   # [est] header bolts per port (du, dh), 3/8-16
     int_bolts=((-0.75, 3.30), (7.00, 3.05), (9.30, 3.05), (16.05, 3.30)),   # [est] intake bolts (u, h), 3/8-16
@@ -97,10 +108,22 @@ K = dict(
     stud_pillar_r=0.40,               # the stud boss carried up through intake port 2 (BBC "hidden" head-bolt boss)
 )
 H0 = K["gasket_t"]
-# Head studs: the gasket's 17 stud holes less those the block has no stud in (refs/deck_block.json): 16 per
-# head [meas] Drew's photo with the ARP studs in. Hole 13 rises through intake port 2 on a boss.
-STUDS = [h for i, h in enumerate(GASK["holes"]) if h["kind"] in ("stud", "stud_dowel") and i not in BDECK["drop_gasket_holes"]]
+# Head studs: 16 per head, as the block (refs/deck_block.json "studs": Drew's deck drawing and the 16-bolt
+# torque-sequence figure). The two at cylinders 3 and 7 on the valley side rise through intake ports 2 and 4 on bosses.
+STUDS = BDECK["studs"]
 assert len(STUDS) == 16, len(STUDS)
+LOW = [h for h in STUDS if h["v"] < -2.5]                 # below the exhaust ports, on the lip
+MID = [h for h in STUDS if -2.5 <= h["v"] < 0]            # above the exhaust ports, outside the cover
+HIGH = [h for h in STUDS if h["v"] >= 0]                  # valley side, in the rocker box
+assert (len(LOW), len(MID), len(HIGH)) == (4, 5, 7)
+
+def stud_top(h):
+    """Top of a stud's clearance hole in the head: the lip, the middle-row spot face, or the rocker box."""
+    return H0 + K["lip"] + 0.05 if h in LOW else (K["mid_seat"] + 0.05 if h in MID else K["rail"])
+
+def stadium(h, r, v_out=-4.5):
+    """The middle-row stud's slot: a disc round the stud run out through the exhaust side."""
+    return ccw(hull(circ(h["u"], h["v"], r, 32) + circ(h["u"], v_out, r, 32)))
 
 
 # ---------- 2D helpers ----------
@@ -298,7 +321,7 @@ def int_runner(k, scale, bm=None, face_ext=0.0):
 
 def exh_runner(k, scale, bm=None, face_ext=0.0):
     cv, s, _ = valve(k, "E"); hc = K["exh_hc"]; up = K["exh_u"][k]; rt = K["vE"]["seat_id"] / 2
-    um = 0.5 * (up + cv.x)
+    um = 0.25 * up + 0.75 * cv.x                       # the runner stays near its valve until it is past the middle-row stud
     ctrl = [V(up, K["exh_face"] - face_ext, hc), V(up, K["exh_face"] + 0.35, hc), V(0.5 * (up + um), -2.35, hc - 0.10),
             V(um, -1.60, hc - 0.50), cv + s * 1.00, cv + s * 0.40]
     w0, h0_, r0 = K["exh_w"], K["exh_h"], K["exh_r"]
@@ -322,6 +345,11 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0):
         for h in STUDS:
             if h["v"] > 3.2 and abs(h["u"] - INT_U[k]) < 1.2:
                 pl = obj("pil", zprism(circ(h["u"], h["v"], K["stud_pillar_r"], 32), -0.5, 7.0), tmp)
+                boolean(o, "DIFFERENCE", pl); bpy.data.objects.remove(pl, do_unlink=True)
+    if kind == "E":                                    # the front exhaust-side stud stands in the wall of port 1's bowl
+        for h in STUDS:
+            if -2.5 < h["v"] < 0 and abs(h["u"] - cv.x) < 1.4:
+                pl = obj("pil", zprism(circ(h["u"], h["v"], K["stud_hole"] + 0.10, 32), -0.5, 7.0), tmp)
                 boolean(o, "DIFFERENCE", pl); bpy.data.objects.remove(pl, do_unlink=True)
     return o, path, L
 
@@ -366,9 +394,19 @@ def head_outline():
     uf, ur = run[0][0], run[-1][0]
     return ccw(run + [(ur, K["v_int"]), (uf, K["v_int"])]), uf, ur
 
+def edge_dist(poly, x, y):
+    """Distance from (x, y) to the nearest edge of a polygon."""
+    best = 1e9
+    for i in range(len(poly)):
+        (x0, y0), (x1, y1) = poly[i], poly[(i + 1) % len(poly)]
+        dx, dy = x1 - x0, y1 - y0; L2 = dx * dx + dy * dy or 1e-12
+        t = max(0.0, min(1.0, ((x - x0) * dx + (y - y0) * dy) / L2))
+        best = min(best, math.hypot(x - x0 - t * dx, y - y0 - t * dy))
+    return best
+
 def lead_in(k, kind):
     """Cone cutter: the machined lead-in round a spring pocket."""
-    cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]; a0, a1, dr = K["spring_lead"]; r0 = K["spring_r"] + 0.06
+    cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"][kind]; a0, a1, dr = K["spring_lead"]; r0 = K["spring_r"] + 0.06
     return loft([ring_pts(sp + s * a0, s, r0, 48), ring_pts(sp + s * a1, s, r0 + dr, 48), ring_pts(sp + s * 3.0, s, r0 + dr, 48)])
 
 def cover_bolt_pts():
@@ -405,7 +443,11 @@ def build_left(root, tmp, info):
     # rocker box
     cav = ccw(clip(inset(core, K["wall"]), 0, 1, K["rail_v_int"] - K["wall"]))
     bot = [V(x, y, floor_h(y)) for x, y in cav]; top = [V(x, y, K["rail"] + 1) for x, y in cav]
-    o = obj("box", loft([bot, top]), tmp); boolean(head, "DIFFERENCE", o); clear(tmp)
+    o = obj("box", loft([bot, top]), tmp)
+    for h in MID:
+        x = obj("mx", zprism(stadium(h, K["mid_slot"] + K["mid_wall"]), 0.0, K["rail"] + 3.0), root)
+        boolean(o, "DIFFERENCE", x); bpy.data.objects.remove(x, do_unlink=True)
+    boolean(head, "DIFFERENCE", o); clear(tmp)
     # valve-cover rail: outward gasket lip and the seven bolt lugs inside the wall
     rail_ol = ccw(clip(core, 0, 1, K["rail_v_int"]))
     lip = ccw(clip(inset(rail_ol, -K["rail_lip"]), 0, 1, K["rail_v_int"] + K["rail_lip"]))
@@ -418,23 +460,26 @@ def build_left(root, tmp, info):
         obj("lugb", loft([ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] - 0.30), V(0, 0, 1), 0.06, 32),
                           ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] + 0.001), V(0, 0, 1), K["cover_lug_r"], 32)]), tmp)
     boolean(head, "UNION", tmp); clear(tmp)
+    for h in MID:                                      # the middle-row slots, open to the exhaust side
+        obj("slot", zprism(stadium(h, K["mid_slot"]), K["mid_seat"], K["rail"] + 1.0), tmp)
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # bosses in the box: studs, spring seats, guides, rocker studs
     studs = STUDS
     info["studs"] = [(round(h["u"], 3), round(h["v"], 3)) for h in studs]
-    low = [h for h in studs if h["v"] < -2.5]; high = [h for h in studs if h["v"] >= -2.5]
+    low, high = LOW, HIGH
     for h in high:
         obj("sb", zprism(circ(h["u"], h["v"], K["boss_r"], 32), H0 + 1.0, floor_h(h["v"]) + 0.45), tmp)
     for k in range(4):
         for kind in "IE":
-            cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]
+            cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"][kind]
             rt, rf, ln = K["spring_boss"]
             obj("spb", loft([ring_pts(sp - s * ln, s, K["spring_r"] + rf, 48), ring_pts(sp - s * 0.5, s, K["spring_r"] + rt + 0.10, 48),
                              ring_pts(sp, s, K["spring_r"] + rt, 48)]), tmp)
             obj("gb", cyl_axis(sp - s * 0.05, s, 0.34, 0.62, 24), tmp)
     lines = pushrod_lines(); pivots = {}
     for (k, kind), ln in lines.items():
-        cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"]
+        cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"][kind]
         cup = line_at_h(ln[0][0], ln[0][1], tipv.z - 0.25)
         pv = tipv + (cup - tipv) * (1.7 / 2.7); pivots[(k, kind)] = pv
         obj("rb", zprism(circ(pv.x, pv.y, 0.45, 32), floor_h(pv.y) - 0.5, floor_h(pv.y) + 0.60), tmp)
@@ -458,8 +503,13 @@ def build_left(root, tmp, info):
         def f(sc):
             o, _, _ = port_solid(k, "I", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
         return f
-    sI = [tune(pk(k), K["int_cc"], 0.75, 1.45, 10) for k in range(4)]; sE = tune(pcc("E"), K["exh_cc"], 0.75, 1.40, 10)
-    info["port_scale"] = dict(I=[round(x, 4) for x in sI], E=round(sE, 4))
+    def pe(k):
+        def f(sc):
+            o, _, _ = port_solid(k, "E", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
+        return f
+    sI = [tune(pk(k), K["int_cc"], 0.75, 1.45, 10) for k in range(4)]
+    sE = [tune(pe(k), K["exh_cc"], 0.45, 1.40, 10) for k in range(4)]
+    info["port_scale"] = dict(I=[round(x, 4) for x in sI], E=[round(x, 4) for x in sE])
     iv, ev, lens = [], [], {}
     for k in range(4):
         o, _, L = port_solid(k, "I", sI, tmp); iv.append(round(vol(o) / 0.0610237, 1)); lens[f"I{k}"] = round(L, 2); clear(tmp)
@@ -478,16 +528,17 @@ def build_left(root, tmp, info):
     # spring pockets, stem holes, plug holes, stud holes, nut pockets, pushrod slots, rocker-stud taps
     for k in range(4):
         for kind in "IE":
-            cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]
+            cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"][kind]
             obj("spk", cyl_axis(sp, s, K["spring_r"], 3.0, 48), tmp)
             obj("spf", cyl_axis(sp + s * K["spring_cbore"], s, K["spring_r"] + 0.06, 3.0, 48), tmp)
-            obj("stem", cyl_axis(cv + s * 0.3, s, 0.172, K["spring_h"] + 1.0, 16), tmp)
+            obj("stem", cyl_axis(cv + s * 0.3, s, 0.172, K["spring_h"][kind] + 1.0, 16), tmp)
         tip, dr, ex = plug_line(k); P = K["plug"]
         obj("pth", cyl_axis(tip - dr * 0.2, dr, P["thread_r"], P["reach"] + 0.2, 24), tmp)
         obj("pse", seg_cyl(tip + dr * P["reach"], ex + dr * 0.6, P["seat_r"], 32), tmp)
     lim = obj("lim", zprism(cav, 0.0, K["rail"] + 2.0), root)
     keep = bmesh.new()
     for h in high: zprism(circ(h["u"], h["v"], K["boss_r"] + 0.04, 32), 0.0, 9.0, keep)
+    for h in MID: zprism(stadium(h, K["mid_slot"] + K["mid_wall"]), 0.0, 9.0, keep)
     for pv in pivots.values(): zprism(circ(pv.x, pv.y, 0.49, 32), 0.0, 9.0, keep)
     keep = obj("keep", keep, root)
     for k in range(4):
@@ -496,9 +547,12 @@ def build_left(root, tmp, info):
             boolean(o, "DIFFERENCE", keep); boolean(o, "INTERSECT", lim)
     bpy.data.objects.remove(lim, do_unlink=True); bpy.data.objects.remove(keep, do_unlink=True)
     for h in studs:
-        obj("shl", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0 - 0.2, (H0 + K["lip"] + 0.05) if h in low else K["rail"]), tmp)
+        obj("shl", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0 - 0.2, stud_top(h)), tmp)
     for h in low:
-        obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + 0.62), tmp)
+        obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + K["nut_pocket_h"]), tmp)
+    for h in high:                                     # socket relief where a stud stands close to the box wall (rear end)
+        if edge_dist(cav, h["u"], h["v"]) < K["nut_pocket"] + 0.05:
+            obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), floor_h(h["v"]) + 0.451, K["rail"] + 0.5), tmp)
     for (k, kind), ln in lines.items():
         pts = []
         for a, b in ln:
@@ -521,7 +575,7 @@ def build_left(root, tmp, info):
         obj("ewp", vprism(rrect(u - ep["w"] / 2, u + ep["w"] / 2, ep["h"] - ep["ht"] / 2, ep["h"] + ep["ht"] / 2, 0.15, 4),
                           K["v_int"] + 0.1, K["v_int"] - ep["depth"]), tmp)
     for i, h in enumerate(GASK["holes"]):
-        if h["kind"] in ("coolant",):
+        if h["kind"] in ("coolant",) and i not in (2, 3, 29, 30):   # 3/29 are the dowels, 2/30 studs (deck drawing)
             if "contour" in h and len(h["contour"]) > 5:
                 obj("wp", zprism(ccw([tuple(p) for p in h["contour"]]), H0 - 0.1, H0 + 0.60), tmp)
     for dw in BDECK["dowels"]:
@@ -548,8 +602,9 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
             for v in o.data.vertices: v.co += v.normal * gap * IN
             ports[f"{kind}{k}"] = bvh(o)
     others = {}
-    for h in studs: others[f"stud{h['u']:.1f},{h['v']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0, (H0 + K["lip"] + 0.05) if h in low else K["rail"]), tmp)
-    for h in low: others[f"nut{h['u']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + 0.62), tmp)
+    for h in studs: others[f"stud{h['u']:.1f},{h['v']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0, stud_top(h)), tmp)
+    for h in MID: others[f"slot{h['u']:.1f}"] = obj("x", zprism(stadium(h, K["mid_slot"]), K["mid_seat"], K["rail"] + 1.0), tmp)
+    for h in low: others[f"nut{h['u']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + K["nut_pocket_h"]), tmp)
     for (k, kind), ln in lines.items():
         pts = []
         for a, b in ln:
@@ -560,7 +615,7 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
         others[f"plug{k}"] = obj("x", seg_cyl(tip + dr * K["plug"]["reach"], ex + dr * 0.6, K["plug"]["seat_r"], 32), tmp)
         for kind in "IE":
             cv, s, _ = valve(k, kind)
-            others[f"spring{k}{kind}"] = obj("x", cyl_axis(cv + s * K["spring_h"], s, K["spring_r"], 3.0, 48), tmp)
+            others[f"spring{k}{kind}"] = obj("x", cyl_axis(cv + s * K["spring_h"][kind], s, K["spring_r"], 3.0, 48), tmp)
             others[f"lead{k}{kind}"] = obj("x", lead_in(k, kind), tmp)
     out = []
     for pn, pt in ports.items():
@@ -580,6 +635,7 @@ def assign_head_materials(head, cast, mach):
         elif n.y > 0.99 and abs(c.y - K["v_int"]) < 0.004: m = 1              # intake face
         elif n.y < -0.99 and abs(c.y - K["exh_face"]) < 0.004: m = 1          # exhaust pads
         elif n.z > 0.99 and abs(c.z - K["rail"]) < 0.004: m = 1               # cover rail
+        elif n.z > 0.99 and abs(c.z - K["mid_seat"]) < 0.004: m = 1           # middle-row spot faces
         elif c.z < H0 + 1.25 and any(math.hypot(c.x - q.x, c.y) < K["chamber_r"] + 0.02 for q in cyls): m = 1   # CNC chambers and seats
         idx.append(m)
     me.polygons.foreach_set("material_index", idx)
@@ -593,6 +649,8 @@ def build_gasket(name, root, tmp):
             obj("gh", zprism(circ(h["u"], h["v"], h["d_eq"] / 2, 24), -0.1, 0.2), tmp)
         else:
             obj("gh", zprism(ccw([tuple(p) for p in h["contour"]]), -0.1, 0.2), tmp)
+    for h in STUDS: obj("gs", zprism(circ(h["u"], h["v"], 0.24, 24), -0.1, 0.2), tmp)
+    for dw in BDECK["dowels"]: obj("gd", zprism(circ(dw["u"], dw["v"], 0.33, 24), -0.1, 0.2), tmp)
     for u in CYL_U:
         obj("gb", zprism(circ(u, 0, K["gasket_bore"] / 2, 96), -0.1, 0.2), tmp)
     boolean(g, "DIFFERENCE", tmp); clear(tmp)
@@ -601,14 +659,15 @@ def build_gasket(name, root, tmp):
 
 
 def build_studs(name, root, low, high):
+    high = high + MID
     """ARP 235-4713: 7/16 studs, parallel washers, 12-point nuts [spec]; lengths [derived]."""
     bm = bmesh.new()
     def star(u, v, z0, z1):
         pts = [(u + (0.36 if i % 2 == 0 else 0.315) * math.cos(math.pi * i / 12), v + (0.36 if i % 2 == 0 else 0.315) * math.sin(math.pi * i / 12)) for i in range(24)]
         zprism(pts, z0, z1, bm)
-    for h, seat in [(h, H0 + K["lip"]) for h in low] + [(h, floor_h(h["v"]) + 0.45) for h in high]:
+    for h, seat in [(h, H0 + K["lip"]) for h in low] + [(h, K["mid_seat"] if h in MID else floor_h(h["v"]) + 0.45) for h in high]:
         u, v = h["u"], h["v"]
-        zprism(circ(u, v, 0.2187, 20), -BLK["stud_depth"] + 0.03, seat + 0.12 + 0.44 + 0.28, bm)
+        zprism(circ(u, v, 0.2187, 20), -BLK["stud_depth"] + 0.03, seat + 0.12 + 0.44 + (0.02 if h in low else 0.28), bm)
         zprism(circ(u, v, 0.44, 32), seat + 0.001, seat + 0.12, bm)
         star(u, v, seat + 0.121, seat + 0.56)
     return obj(name, bm, root)

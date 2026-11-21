@@ -383,19 +383,17 @@ def build():
         for i, h in enumerate(DECK["holes"]):
             kind = h["kind"]
             if kind in ("bore", "valley_cutout") or i in drop: continue
-            if kind == "stud_dowel": kind = "stud"      # the gasket's dowel hole is not where the block's dowels are
+            if kind in ("stud", "stud_dowel"): continue  # studs come from refs/deck_block.json "studs" below
             counts[kind] = counts.get(kind, 0) + 1
             c = deck_pt(bank, h["u"], h["v"], 0.05)
-            if kind == "stud":
-                C(f"Stud_{bank}{i}", cyl(c, -b["d"], P["stud_tap"] / 2, P["stud_depth"] + 0.05, 20))
-            elif kind == "stud_dowel":
-                C(f"Dowel_{bank}{i}", cyl(c, -b["d"], P["dowel_d"] / 2, P["dowel_depth"] + 0.05, 24))
-                C(f"Stud_{bank}{i}", cyl(c, -b["d"], P["stud_tap"] / 2, P["stud_depth"] + 0.05, 20))
-            elif h["d_eq"] < 0.3:
+            if h["d_eq"] < 0.3:
                 C(f"Port_{bank}{i}", cyl(c, -b["d"], small_d / 2, P["port_depth"] + 0.05, 20))
             else:
                 poly = [deck_pt(bank, u, v, 0.05) for u, v in h["contour"]]
                 C(f"Port_{bank}{i}", prism(poly, -b["d"], P["port_depth"] + 0.05))
+        for k, st in enumerate(BLK["studs"]):           # Drew's deck drawing (16 per deck)
+            counts["stud"] = counts.get("stud", 0) + 1
+            C(f"Stud_{bank}s{k}", cyl(deck_pt(bank, st["u"], st["v"], 0.05), -b["d"], P["stud_tap"] / 2, P["stud_depth"] + 0.05, 20))
         for pt in BLK["ports"]:
             counts["coolant"] = counts.get("coolant", 0) + 1
             poly = [deck_pt(bank, u, v, 0.05) for u, v in pt["contour"]]
