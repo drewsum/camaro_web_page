@@ -1,0 +1,50 @@
+{
+ "params": {
+  "teeth": 168,
+  "ring_od": 14.105,
+  "pitch_d": 14.0,
+  "ring_root_d": 13.8,
+  "ring_id": 13.21,
+  "ring_w": 0.497,
+  "ring_front": 0.151,
+  "centre_d": 2.485,
+  "deck": 0.96,
+  "cbore_d": 6.4,
+  "cbore_depth": 0.43,
+  "hub_relief_r": 3.1,
+  "web_t": 0.76,
+  "rim_r": 6.85,
+  "friction_od": 11.2,
+  "bolt_c": 3.58,
+  "bolt_hole": 0.46,
+  "bolt_n": 6,
+  "bolt_head_d": 0.6,
+  "bolt_head_h": 0.3,
+  "bolt_shank_d": 0.4,
+  "bolt_len": 1.05,
+  "pp_circles": [
+   11.625,
+   12.625
+  ],
+  "pp_hole": 0.3125,
+  "pp_depth": 0.7,
+  "pilot_od": 1.09,
+  "pilot_id": 0.59,
+  "pilot_len": 0.7
+ },
+ "front_face_y": -0.401,
+ "mass": {
+  "flywheel_lb": 27.6,
+  "ring_gear_lb": 2.2
+ },
+ "checks": {
+  "clash": [],
+  "block_face_gap_in": 0.401
+ },
+ "tris": {
+  "Flywheel": 6232,
+  "FlywheelRingGear": 4080,
+  "FlywheelBolts": 720,
+  "PilotBushing": 320
+ }
+}

@@ -64,8 +64,8 @@
  "lifters": {
   "d": 0.8437,
   "tilt_deg": 38,
-  "from_cam": 1.0,
-  "src": "[spec] .8437\" bores, 16. Boss tops about 2.3\" either side of the centreline [meas] from album photo 545 (scaled by the 4.84\" bore spacing), which gives a 38 deg tilt from vertical through the cam centre [derived]; the two bores of each pair are offset across the bank: the forward bore sits ~.22\" further outboard [meas] photo 545 (passenger bank 15-20 px over the 85-105 px pair spacing), confirmed by the angled bosses in photo 27",
+  "from_cam": 0.5,
+  "src": "[spec] .8437\" bores, 16. Boss tops about 2.3\" either side of the centreline [meas] from album photo 545 (scaled by the 4.84\" bore spacing), which gives a 38 deg tilt from vertical through the cam centre [derived]; the two bores of each pair are offset across the bank: the forward bore sits ~.22\" further outboard [meas] photo 545 (passenger bank 15-20 px over the 85-105 px pair spacing), confirmed by the angled bosses in photo 27; bores start .5\" from the cam centre so they open fully into the cam tunnel (at 1.0\" the lifter roller clipped the tunnel edge)",
   "pair_offset": 0.22,
   "y": {
    "L": [
@@ -125,9 +125,9 @@
  "valley": {
   "boss": {
    "r": 0.72,
-   "top_z": 8.1,
+   "top_z": 7.92,
    "height": 1.7,
-   "src": "[meas] photos 545/547: each cylinder's two lifters share one dog-bone boss with a machined top, rising out of the floor and blending into the wall; outer radius and top height [est] from the photo scale"
+   "src": "[meas] photos 545/547: each cylinder's two lifters share one dog-bone boss with a machined top square to the lifter axes, rising out of the floor and blending into the wall; outer radius [est]. Top height [derived] from the lifters (../lifters): OE-style Gen VI hydraulic rollers, 2.66\" seat height [spec], sit on the cam's .585\" base circle with their tops about .10\" above the .09\" stainless guide plates (album photo 351), which puts the boss top 3.524\" along the lifter axis from the cam centre, z 7.92 at the bore (it was 8.10 [est] from the photo scale)"
   },
   "drain_slots": {
    "len": 1.5,

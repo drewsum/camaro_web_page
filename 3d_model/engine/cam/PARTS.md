@@ -118,5 +118,5 @@ The absolute nose angles depend on the lifter bank angle. A real core is ground 
   - the chain's slack-side sag
   - the cam bearings
   - the Gen VI fuel-pump eccentric (if this core has one; Drew runs an electric pump)
-  - lifters, pushrods and the lifter retainers
+  - pushrods and the lifter retainer (spider); the lifters and guides are in `../lifters`
 - The cam is a union of plain solids: there are no fillets at the lobe roots.
