@@ -65,6 +65,7 @@ DECK = json.load(open(os.path.join(HERE, "refs", "deck_c5333.json")))
 FRONT = json.load(open(os.path.join(HERE, "refs", "front_face.json")))   # photos 29/30, see PARTS.md
 PAN = json.load(open(os.path.join(HERE, "refs", "pan_rail.json")))       # album photo 431
 REAR = json.load(open(os.path.join(HERE, "refs", "rear_face.json")))     # GM bell pattern, Fel-Pro 2920
+BOT = json.load(open(os.path.join(HERE, "refs", "bottom.json")))         # rail ears, filter pad, starter pad, pump
 
 
 # ---- helpers ------------------------------------------------------------------
@@ -172,6 +173,19 @@ def build():
     ears = obj("RearEars", prism(rsec, Vector((0, 1, 0)), rf["depth"]), parts)
     boolean(block, "UNION", ears); bpy.data.objects.remove(ears)
 
+    # Bottom bosses: rail ears, the oil filter pad and the starter pad.
+    up = Vector((0, 0, 1))
+    adds = []
+    for e in BOT["ears"]:
+        adds.append(prism([Vector((e["side"] * x, y, 0)) for x, y in e["outline"]], up, e["thk"]))
+    fp = BOT["filter_pad"]
+    adds.append(cyl(Vector((fp["x"], fp["y"], 0)), up, fp["r"], fp["height"], 48))
+    sp = BOT["starter_pad"]
+    adds.append(prism([Vector((sp["x0"], sp["y0"], 0)), Vector((sp["x1"], sp["y0"], 0)),
+                       Vector((sp["x1"], sp["y1"], 0)), Vector((sp["x0"], sp["y1"], 0))], up, sp["height"]))
+    for k, bm_ in enumerate(adds):
+        o = obj(f"Boss_{k}", bm_, parts); boolean(block, "UNION", o); bpy.data.objects.remove(o)
+
     # ---- cutters
     def C(name, bm):
         info["cutters"] += 1
@@ -271,6 +285,16 @@ def build():
     for h in PAN["holes"]:
         for i, x in enumerate((h["x"], -h["x"])):
             C(f"Pan_{h['y']:.2f}_{i}", cyl(Vector((x, h["y"], -0.05)), Vector((0, 0, 1)), h["d"] / 2, h["depth"] + 0.05, 16))
+    # Bottom boss holes: ear holes, filter thread and oil port, starter holes,
+    # and the oil-pump outlet passage up into the block.
+    for e in BOT["ears"]:
+        h = e["hole"]; C(f"EarHole_{e['side']}", cyl(Vector((e["side"] * h["x"], h["y"], -0.05)), up, h["d"] / 2, h["depth"] + 0.1, 24))
+    C("FilterThread", cyl(Vector((fp["x"], fp["y"], -0.05)), up, fp["thread_d"] / 2, fp["thread_depth"] + 0.05, 32))
+    pt = fp["port"]; C("FilterPort", cyl(Vector((pt["x"], pt["y"], -0.05)), up, pt["d"] / 2, pt["depth"] + 0.05, 24))
+    for k, (x, y) in enumerate(sp["holes"]):
+        C(f"StarterHole_{k}", cyl(Vector((x, y, -0.05)), up, sp["d"] / 2, sp["depth"] + 0.05, 20))
+    pp = BOT["pump"]["port"]
+    C("PumpPortBlock", cyl(Vector((pp["x"], pp["y"], -0.05)), up, pp["d"] / 2, pp["up_into_block"] + 0.05, 24))
     # Rear face: bellhousing bolts and dowel holes, the one-piece seal bore.
     fwd = Vector((0, 1, 0))
     for h in REAR["bell_holes"]:
@@ -299,14 +323,19 @@ def build():
         cap = obj(f"MainCap_{i+1}", prism([p + Vector((0, a, 0)) for p in cap_sec], Vector((0, 1, 0)), b - a), parts)
         capcut = coll("Cap_Cutters_tmp", root, hide=True)
         obj("bore", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), capcut)
-        if i == 4: seal_cuts(capcut)
+        if i == 4:
+            seal_cuts(capcut)
+            obj("pump_port", cyl(Vector((pp["x"], pp["y"], -dz - 0.1)), up, pp["d"] / 2, dz + 0.2, 24), capcut)
+            ps = BOT["pump"]["stud"]
+            obj("pump_stud", cyl(Vector((ps["x"], ps["y"], -dz - 0.05)), up, ps["d"] / 2, ps["depth"] + 0.05, 20), capcut)
         hw_bm = bmesh.new()
         for x in P["main_stud_x"]:
             for sx in (-x, x):
                 obj("stud", cyl(Vector((sx, ym, -dz - 0.1)), Vector((0, 0, 1)), P["main_stud_d"] / 2 + 0.015, dz + 0.2, 20), capcut)
                 base = Vector((sx, ym, -dz))
                 # Stud: threaded ~1" up into the bulkhead, down through the cap, past the nut.
-                cyl(Vector((sx, ym, 1.0)), Vector((0, 0, -1)), P["main_stud_d"] / 2, 1.0 + dz + P["main_stud_out"], 16, hw_bm)
+                extra = BOT["windage_studs"]["extra"] if (i + 1 in BOT["windage_studs"]["caps"] and x == min(P["main_stud_x"])) else 0
+                cyl(Vector((sx, ym, 1.0)), Vector((0, 0, -1)), P["main_stud_d"] / 2, 1.0 + dz + P["main_stud_out"] + extra, 16, hw_bm)
                 cyl(base, Vector((0, 0, -1)), P["main_washer_d"] / 2, 0.10, 24, hw_bm)
                 cyl(base - Vector((0, 0, 0.10)), Vector((0, 0, -1)), P["main_nut_d"] / 2, P["main_nut_h"], 12, hw_bm)
         boolean(cap, "DIFFERENCE", capcut)

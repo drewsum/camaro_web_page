@@ -1,0 +1,125 @@
+{
+ "_about": "Bottom-of-block details. Pan-plane coords: x across (+ passenger), y forward from the rear face, z up from the pan face (0). From album photo 431 rectified (pan rail fit, see pan_rail.json) and photo 22 (bare block). Features that sit off the pan plane can't be placed exactly from a single rectified view, so they are tagged [est].",
+ "ears": [
+  {
+   "side": -1,
+   "outline": [
+    [
+     5.9,
+     19.4
+    ],
+    [
+     6.95,
+     20.0
+    ],
+    [
+     6.95,
+     21.6
+    ],
+    [
+     5.9,
+     22.2
+    ]
+   ],
+   "hole": {
+    "x": 6.47,
+    "y": 20.81,
+    "d": 0.375,
+    "depth": 0.6
+   },
+   "thk": 0.6,
+   "src": "[meas] photo 431: driver-side rail ear and its hole"
+  },
+  {
+   "side": 1,
+   "outline": [
+    [
+     5.9,
+     19.4
+    ],
+    [
+     8.1,
+     19.9
+    ],
+    [
+     8.1,
+     21.9
+    ],
+    [
+     5.9,
+     22.4
+    ]
+   ],
+   "hole": {
+    "x": 7.03,
+    "y": 20.92,
+    "d": 0.85,
+    "depth": 0.6
+   },
+   "thk": 0.6,
+   "src": "[meas] photo 431: passenger-side rail ear with the large through hole"
+  }
+ ],
+ "filter_pad": {
+  "x": -7.4,
+  "y": 2.05,
+  "r": 1.95,
+  "height": 2.2,
+  "thread_d": 0.8125,
+  "thread_depth": 1.2,
+  "port": {
+   "x": -6.3,
+   "y": 2.9,
+   "d": 0.5,
+   "depth": 1.6
+  },
+  "src": "[meas] position and size from photo 431 (driver-side rear corner, faces the pan); y nudged forward so it clears the bellhousing face; boss height and ports [est]"
+ },
+ "starter_pad": {
+  "x0": 5.9,
+  "x1": 8.35,
+  "y0": 0.0,
+  "y1": 2.6,
+  "height": 0.8,
+  "holes": [
+   [
+    6.4,
+    1.0
+   ],
+   [
+    7.9,
+    1.0
+   ],
+   [
+    7.15,
+    2.1
+   ]
+  ],
+  "d": 0.375,
+  "depth": 1.0,
+  "src": "[est] passenger-side rear corner (photos 22, 431): pad with three 3/8-16 holes, a straight pair across the crank plus the offset hole, as Chevy blocks are drilled for both starter patterns"
+ },
+ "pump": {
+  "port": {
+   "x": -2.45,
+   "y": 3.35,
+   "d": 0.55,
+   "up_into_block": 0.8
+  },
+  "stud": {
+   "x": -1.0,
+   "y": 1.2,
+   "d": 0.375,
+   "depth": 1.0
+  },
+  "src": "[est] oil pump on the rear main cap: one 7/16 stud into the cap bottom, outlet through the cap into the block with an O-ring at the joint (photo 22 shows the O-ring between the driver-side studs)"
+ },
+ "windage_studs": {
+  "caps": [
+   3,
+   4
+  ],
+  "extra": 2.5,
+  "src": "[meas] photo 431: the inner studs on caps 3 and 4 are long windage-tray studs; extension [est]"
+ }
+}
