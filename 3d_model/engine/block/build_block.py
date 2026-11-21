@@ -563,10 +563,22 @@ def build():
     dl, dr = BANKS["L"]["d"], BANKS["R"]["d"]
     vh = P["valley_top_half"] + 0.3
     def machined(c, n):
-        return ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.y < -0.999 and c.y < 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
+        return ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
                 or any(n.dot(d) > 0.999 and abs(c.dot(d) - P["deck"]) < 0.01 for d in (dl, dr))
                 or (n.z > 0.999 and c.z > P["valley_floor_z"] + 1.0 and abs(c.x) < P["deck_clip_v"] + 3.0))   # intake rails and china-wall tops
+    hz = FRONT["recess"]["half_width_vs_z"]
+    def rec_w(z):
+        for (w0, z0), (w1, z1) in zip(hz, hz[1:]):
+            if z0 <= z <= z1: return w0 + (w1 - w0) * (z - z0) / (z1 - z0)
+        return -1
+    seal_r = REAR["seal"]["bore_d"] / 2 + 0.05
     def inside(c, n):
+        # The timing chest and the rear seal bore are bare iron (photos 29, 435).
+        if P["length"] - FRONT["recess"]["depth"] - 0.05 < c.y < P["length"] - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02: return True
+        if c.y < REAR["seal"]["clear_depth"] + 0.05 and math.hypot(c.x, c.z) < seal_r: return True
+        # Valley and crankcase, inside the block's length only, so the painted
+        # rear face (photo 50) and the front leg pockets (photo 30) stay orange.
+        if not (0.05 < c.y < P["length"] - 1.2): return False
         if c.z > P["valley_floor_z"] - 0.5 and abs(c.x) < vh and n.z > -0.2: return True       # valley
         if c.z < P["cam_cd"] + 1.0 and abs(c.x) < P["case_half"] + 0.2 and n.z < 0.2: return True  # crankcase
         return False
