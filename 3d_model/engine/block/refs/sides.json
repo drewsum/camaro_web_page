@@ -108,7 +108,7 @@
   },
   "dist_boss": {
    "r": 0.95,
-   "h": 0.5,
+   "h": 0.85,
    "src": "[meas] photo 545: raised round boss round the distributor bore at the rear; size [est]"
   },
   "galleries": [
@@ -127,10 +127,10 @@
   "galleries_src": "[derived] lifter galleries and the main gallery drilled front to rear between the front and rear plugs; the lifter galleries break into the lifter bores"
  },
  "distributor": {
-  "y": 1.35,
+  "y": 3.7,
   "d": 1.0,
   "z_top": 8.4,
   "z_bot": 5.6,
-  "src": "[est] distributor bore at the rear of the valley, down to the cam's drive gear (photo 545 shows it on its boss)"
+  "src": "[meas] Drew's photo PXL_20251220_223513946, camera solved from the deck: bore on the centreline 3.7\" from the rear face, just ahead of the rear china wall, its boss top about .85\" above the valley floor; bore size and depth [est]"
  }
 }

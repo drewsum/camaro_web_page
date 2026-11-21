@@ -46,7 +46,11 @@ P = dict(
     wall_len=4.30,       # [est] side water-jacket wall length below the deck edge
     pan_rail_z=0.0,      # [Drew] the oil pan face is one flat plane at the crank centreline (the main cap parting line), full length
     rail_x=5.95, rail_t=0.40, rail_inner=4.75,   # [meas] photo 431 rectified: rail flange outer/inner half-width; thickness [est]
-    valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40, china_wall=0.45,   # [est]
+    valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40,   # [est]
+    china_wall=2.30,     # [meas] the rear china wall's inner face (photo PXL_20251220_223513946, camera solved from the deck): the valley runs from here to the front wall
+    china_top_v=5.45,    # [meas] the china-wall tops are one horizontal plane where it crosses the deck planes at v = 5.45" (z 10.78"): the photo's camera, and the gasket's end ears that cover the strips
+    china_top_t=(0.40, 0.65),   # [meas] rear and front china-wall thickness at the top (photo): the left deck's end strips are their end faces
+    front_upper_z=8.90,  # [est] above the timing chest (recess top 8.56") the valley reaches the thin top of the front wall
     case_half=5.15,      # [est] crankcase cavity half-width above the rail
     cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
     cap_step_x=2.45, cap_outer_drop=1.85,   # [meas] photo 435: outer studs sit on shoulders ~60% of the cap depth (shorter outer studs)
@@ -239,7 +243,15 @@ def build():
     vcut0 = obj("Valley", prism([p + Vector((0, P["china_wall"], 0)) for p in vsec], Vector((0, 1, 0)),
                                 P["length"] - P["china_wall"] - P["front_wall"]), parts)
     boolean(block, "DIFFERENCE", vcut0); bpy.data.objects.remove(vcut0)
-    info["cutters"] += 1
+    # Above the timing chest the front wall thins to its top thickness.
+    y_ft = P["length"] - P["china_top_t"][1]
+    up_lw = wall_xz(-1, -(top.z - P["front_upper_z"]) / C45)
+    half_u = [wall_xz(-1, 3.0), top, up_lw]
+    usec = half_u + [Vector((-p.x, 0, p.z)) for p in reversed(half_u)]
+    y_f0 = P["length"] - P["front_wall"] - 0.05
+    vcut1 = obj("ValleyFrontUpper", prism([p + Vector((0, y_f0, 0)) for p in usec], Vector((0, 1, 0)), y_ft - y_f0), parts)
+    boolean(block, "DIFFERENCE", vcut1); bpy.data.objects.remove(vcut1)
+    info["cutters"] += 2
 
     # Deck slabs: the block's own deck outline swept down the bore axis, and
     # the part of it past the valley wall swept on down to below the floor, so
@@ -254,6 +266,21 @@ def build():
         poly = [deck_pt(bank, u, v) for u, v in wall_part]
         wall = obj(f"ValleyWall_{bank}", prism(poly, -BANKS[bank]["d"], P["valley_wall_depth"]), parts)
         boolean(block, "UNION", wall); bpy.data.objects.remove(wall)
+
+    # China walls: thin walls rising above the decks' valley edges to one flat
+    # top (photo PXL_20251220_223513946). Their ends lie in the deck planes, so
+    # at each end of the left deck a narrow strip of the deck plane runs on up
+    # from the deck to the china-wall top; on the right bank the strips start
+    # where the wall crosses the deck. A hair below the deck plane, so the
+    # union doesn't fight coplanar faces.
+    def deck_xz(sg, v, h=-0.002):
+        p = deck_pt("L", 0, v, h); return Vector((sg * -p.x, 0, p.z))
+    a, b_ = deck_xz(-1, P["valley_wall_v"]), deck_xz(-1, P["china_top_v"])
+    csec = [Vector((a.x, 0, 8.6)), a, b_, Vector((-b_.x, 0, b_.z)), Vector((-a.x, 0, a.z)), Vector((-a.x, 0, 8.6))]
+    info["china_top_z"] = round(b_.z, 3)
+    for name, y0, y1 in (("ChinaRear", P["china_wall"] - P["china_top_t"][0], P["china_wall"]), ("ChinaFront", y_ft, P["length"])):
+        cw = obj(name, prism([p + Vector((0, y0, 0)) for p in csec], Vector((0, 1, 0)), y1 - y0), parts)
+        boolean(block, "UNION", cw); bpy.data.objects.remove(cw)
 
     # Front plate: wider than the skirt at the bottom, so the lower accessory
     # holes have metal round them (photo 30).

@@ -88,9 +88,10 @@
    "x": 4.91,
    "z": 7.04,
    "d": 1.8,
-   "depth": 2.5,
+   "depth": 1.2,
    "mirror": true,
-   "src": "[meas] photo 30, A"
+   "src": "[meas] photo 30, A",
+   "depth_src": "[derived] stops .28\" short of the cylinder 1 bore wall (at 2.5\" the inlet pocket broke into bore 1); the water jacket behind it isn't modelled"
   },
   {
    "name": "WPBoltUpper",

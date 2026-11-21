@@ -31,7 +31,13 @@
   "valley_floor_z": 7.3,
   "valley_top_half": 3.6,
   "valley_floor_half": 2.4,
-  "china_wall": 0.45,
+  "china_wall": 2.3,
+  "china_top_v": 5.45,
+  "china_top_t": [
+   0.4,
+   0.65
+  ],
+  "front_upper_z": 8.9,
   "case_half": 5.15,
   "cap_half": 3.45,
   "cap_drop": 3.1,
@@ -62,7 +68,7 @@
    "dims_in": [
     19.347,
     24.0,
-    9.405
+    10.782
    ]
   },
   "MainCap_1": {
@@ -170,7 +176,8 @@
    ]
   }
  },
- "cutters": 198,
+ "cutters": 199,
+ "china_top_z": 10.782,
  "mains_y": [
   22.27,
   17.43,
