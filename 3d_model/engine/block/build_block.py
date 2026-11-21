@@ -499,16 +499,17 @@ def build():
             pts.append(c + e1 * (-half + r * math.sin(a_)) + e2 * (r * math.cos(a_)))
         return pts
     def out_dir(ax): return Vector((math.copysign(ax.z, ax.x), 0, -abs(ax.x)))   # across the bank, outboard
-    def bore_c(yc, ax, sgn, t):
+    def bore_c(yp, ax, sgn, t):
         """Centre of a lifter bore at distance t along its axis from the cam
-        centre: pairs are .65" either side of the cylinder centre, and the
-        forward bore (sgn +1) sits outboard of the rear one (photos 545/27)."""
-        return camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * t + out_dir(ax) * (sgn * lf["pair_offset"] / 2)
+        centre. yp is the pair's (front, rear) lifter y from sides.json, the
+        same y as the cam lobe under it; the forward bore (sgn +1) sits
+        outboard of the rear one (photos 545/27)."""
+        return camc + Vector((0, yp[0] if sgn > 0 else yp[1], 0)) + ax * t + out_dir(ax) * (sgn * lf["pair_offset"] / 2)
     pairs = []
     for bank, b in BANKS.items():
         ax = lifter_axis(b)
         for k in range(4):
-            yc = b["y0"] - P["bore_sp"] * k
+            yc = lf["y"][bank][k]
             pairs.append((bank, k, yc, ax))
     bo = V["boss"]
     for bank, k, yc, ax in pairs:

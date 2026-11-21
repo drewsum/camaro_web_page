@@ -56,6 +56,6 @@ The cap, bolts, bushing and bearing shells are children of their rod. The pin, c
 
 ## Not modelled, or not checked
 
-- **Cam:** not modelled yet, so rod-bolt-to-cam-lobe clearance is unchecked. With a 4.25" stroke on a BBC that clearance is tight in real engines.
+- **Cam:** checked in `../cam` (every 5° over two turns): no contact, closest .230" (rod 3 at 230°). Real 4.25" stroke BBCs are often tighter; the rod ear shape here is [est].
 - **Detail:** no bearing tangs and oil holes, rod and piston part numbers, piston oil-drain holes, or the support-rail dimple.
 - **Shape:** fillets, and the exact rod beam and piston forging shapes, are estimates from the photos.

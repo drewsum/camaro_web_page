@@ -63,11 +63,49 @@
  },
  "lifters": {
   "d": 0.8437,
-  "dy": 0.65,
   "tilt_deg": 38,
   "from_cam": 1.0,
-  "src": "[spec] .8437\" bores, 16. Pair spacing 1.3\" and boss tops about 2.3\" either side of the centreline [meas] from album photo 545 (scaled by the 4.84\" bore spacing), which gives a 38 deg tilt from vertical through the cam centre [derived]; the two bores of each pair are offset across the bank: the forward bore sits ~.22\" further outboard [meas] photo 545 (passenger bank 15-20 px over the 85-105 px pair spacing), confirmed by the angled bosses in photo 27",
-  "pair_offset": 0.22
+  "src": "[spec] .8437\" bores, 16. Boss tops about 2.3\" either side of the centreline [meas] from album photo 545 (scaled by the 4.84\" bore spacing), which gives a 38 deg tilt from vertical through the cam centre [derived]; the two bores of each pair are offset across the bank: the forward bore sits ~.22\" further outboard [meas] photo 545 (passenger bank 15-20 px over the 85-105 px pair spacing), confirmed by the angled bosses in photo 27",
+  "pair_offset": 0.22,
+  "y": {
+   "L": [
+    [
+     21.25,
+     19.45
+    ],
+    [
+     16.41,
+     14.61
+    ],
+    [
+     11.57,
+     9.77
+    ],
+    [
+     7.01,
+     5.22
+    ]
+   ],
+   "R": [
+    [
+     20.25,
+     18.45
+    ],
+    [
+     15.41,
+     13.61
+    ],
+    [
+     10.57,
+     8.77
+    ],
+    [
+     6.12,
+     4.32
+    ]
+   ]
+  },
+  "y_src": "[meas]/[derived] front and rear lifter y of each pair, cylinders front to rear (L 1,3,5,7; R 2,4,6,8). Pair spacing 1.80\" [meas] from album photo 545 (pair spacing / bore spacing, 3 bosses: 1.77-1.83\"; a camera solve from the 8 deck bores gives 1.5-2.0\"). It was 1.30\", which left 0.30\" between the 2E and 1I lobes. Pairs are centred on their cylinders, except cylinders 7 and 8, whose lobes must fit between the distributor gear (y 3.70, [meas]) and cam journal 4: that group is shifted .39\" forward, giving an even .90\" lobe pitch [derived]. Each lifter sits over its own cam lobe; front lifter is the exhaust on cylinders 1,2,5,6 and the intake on 3,4,7,8 (E-I-I-E heads; lobe order 1E 2E 1I 2I ...)."
  },
  "rear_plugs": [
   {
