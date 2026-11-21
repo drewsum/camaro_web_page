@@ -1,0 +1,94 @@
+{
+ "_about": "Side, valley and rear-gallery detail. Block coords (x passenger, y forward from the rear face, z up from the crank centreline). Wall points are given as (y, h): h is the distance up the side water-jacket wall from its lower edge, along the bore axis.",
+ "freeze_plugs": {
+  "L": [
+   19.1,
+   14.4,
+   9.75
+  ],
+  "R": [
+   17.9,
+   13.25,
+   8.4
+  ],
+  "h": 2.15,
+  "d": 1.75,
+  "bore_depth": 0.45,
+  "cup_recess": 0.08,
+  "cup_len": 0.3,
+  "src": "y [meas] album photo 431 rectified (brass cups, 3 per side, left bank 1\" ahead of the right); d 1.75\" [spec, BBC core plug]; height up the wall [est]"
+ },
+ "mount_holes": {
+  "offsets": [
+   [
+    1.6,
+    0.9
+   ],
+   [
+    1.6,
+    3.4
+   ],
+   [
+    -1.7,
+    2.15
+   ]
+  ],
+  "plug": 0,
+  "d": 0.375,
+  "depth": 0.8,
+  "pad_r": 0.45,
+  "pad_h": 0.15,
+  "src": "[est] three 3/8-16 motor-mount holes per side round the front freeze plug, on spot-faced pads (photo 431 shows tapped bosses there); for the ENS-3-1114G mounts"
+ },
+ "fuel_pump": {
+  "y": 21.6,
+  "z": 2.3,
+  "x_face": 7.15,
+  "r": 1.4,
+  "open_d": 1.65,
+  "open_depth": 1.6,
+  "bolts": [
+   [
+    1.05,
+    1.05
+   ],
+   [
+    -1.05,
+    -1.05
+   ]
+  ],
+  "bolt_d": 0.375,
+  "bolt_depth": 0.8,
+  "src": "[est] Gen VI fuel-pump boss on the passenger side at the front (block 19170540 has the boss); 2 x 3/8-16 and the pushrod opening"
+ },
+ "lifters": {
+  "d": 0.8437,
+  "dy": 0.7,
+  "from_cam": 1.0,
+  "len": 2.6,
+  "src": "[spec] .8437\" lifter bores, 16; axis through the cam centre, tilted 30 deg from vertical toward each bank so it opens into the valley floor [est]; intake/exhaust .70\" either side of the cylinder centre [est]",
+  "tilt_deg": 30
+ },
+ "distributor": {
+  "y": 1.35,
+  "d": 1.0,
+  "z_top": 8.2,
+  "z_bot": 5.6,
+  "src": "[est] distributor bore at the rear of the valley, down to the cam's drive gear"
+ },
+ "rear_plugs": [
+  {
+   "x": 1.22,
+   "z": 6.46,
+   "mirror": true
+  },
+  {
+   "x": -1.53,
+   "z": 5.57,
+   "mirror": false
+  }
+ ],
+ "rear_plug_d": 0.56,
+ "rear_plug_depth": 0.6,
+ "rear_plugs_src": "[est] lifter and main oil-gallery plugs at the rear face, on the same gallery lines as the front plugs (photo 29)"
+}

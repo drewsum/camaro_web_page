@@ -45,6 +45,7 @@ P = dict(
     valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40, china_wall=0.45,   # [est]
     case_half=5.15,      # [est] crankcase cavity half-width above the rail
     cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
+    cap_step_x=2.45, cap_outer_drop=1.85,   # [meas] photo 435: outer studs sit on shoulders ~60% of the cap depth (shorter outer studs)
     main_stud_x=(1.95, 3.00),   # [meas] photo 22: inner pair just outside the saddle, outer pair ~1.05" further; all vertical
     main_stud_d=0.50, main_nut_d=0.80, main_nut_h=0.55, main_washer_d=0.95, main_stud_out=0.85,  # [est] ARP 235-5701 hardware
     stud_tap=0.4375, stud_depth=1.75,          # [spec] 7/16-14 blind-tapped head stud holes
@@ -66,6 +67,7 @@ FRONT = json.load(open(os.path.join(HERE, "refs", "front_face.json")))   # photo
 PAN = json.load(open(os.path.join(HERE, "refs", "pan_rail.json")))       # album photo 431
 REAR = json.load(open(os.path.join(HERE, "refs", "rear_face.json")))     # GM bell pattern, Fel-Pro 2920
 BOT = json.load(open(os.path.join(HERE, "refs", "bottom.json")))         # rail ears, filter pad, starter pad, pump
+SIDE = json.load(open(os.path.join(HERE, "refs", "sides.json")))        # freeze plugs, mounts, fuel pump, lifters
 
 
 # ---- helpers ------------------------------------------------------------------
@@ -183,6 +185,21 @@ def build():
     sp = BOT["starter_pad"]
     adds.append(prism([Vector((sp["x0"], sp["y0"], 0)), Vector((sp["x1"], sp["y0"], 0)),
                        Vector((sp["x1"], sp["y1"], 0)), Vector((sp["x0"], sp["y1"], 0))], up, sp["height"]))
+    # Side water-jacket wall: a point h up the wall from its lower edge, and
+    # the wall's outward normal (-t) for each bank.
+    def wall_pt(bank, y, h):
+        b = BANKS[bank]
+        v2 = b["d"] * P["deck"] + b["t"] * P["deck_v_exh"]
+        s1 = v2 - b["d"] * P["wall_len"]
+        return Vector((s1.x, y, s1.z)) + b["d"] * h, -b["t"]
+    mh = SIDE["mount_holes"]; fz = SIDE["freeze_plugs"]
+    for bank in "LR":
+        yp = fz[bank][mh["plug"]]
+        for dy_, h in mh["offsets"]:
+            c, n = wall_pt(bank, yp + dy_, h)
+            adds.append(cyl(c - n * 0.05, n, mh["pad_r"], mh["pad_h"] + 0.05, 20))
+    fpp = SIDE["fuel_pump"]
+    adds.append(cyl(Vector((5.8, fpp["y"], fpp["z"])), Vector((1, 0, 0)), fpp["r"], fpp["x_face"] - 5.8, 40))
     for k, bm_ in enumerate(adds):
         o = obj(f"Boss_{k}", bm_, parts); boolean(block, "UNION", o); bpy.data.objects.remove(o)
 
@@ -295,6 +312,34 @@ def build():
         C(f"StarterHole_{k}", cyl(Vector((x, y, -0.05)), up, sp["d"] / 2, sp["depth"] + 0.05, 20))
     pp = BOT["pump"]["port"]
     C("PumpPortBlock", cyl(Vector((pp["x"], pp["y"], -0.05)), up, pp["d"] / 2, pp["up_into_block"] + 0.05, 24))
+    # Sides: freeze-plug bores, motor-mount holes, the fuel-pump boss.
+    for bank in "LR":
+        for k, y in enumerate(fz[bank]):
+            c, n = wall_pt(bank, y, fz["h"])
+            C(f"FreezePlug_{bank}{k}", cyl(c + n * 0.3, -n, fz["d"] / 2, fz["bore_depth"] + 0.3, 40))
+        yp = fz[bank][mh["plug"]]
+        for k, (dy_, h) in enumerate(mh["offsets"]):
+            c, n = wall_pt(bank, yp + dy_, h)
+            C(f"MountHole_{bank}{k}", cyl(c + n * (mh["pad_h"] + 0.05), -n, mh["d"] / 2, mh["pad_h"] + mh["depth"] + 0.05, 16))
+    xf = Vector((-1, 0, 0))
+    C("FuelPumpOpening", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"], fpp["z"])), xf, fpp["open_d"] / 2, fpp["open_depth"] + 0.05, 32))
+    for k, (dy_, dz_) in enumerate(fpp["bolts"]):
+        C(f"FuelPumpBolt_{k}", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"] + dy_, fpp["z"] + dz_)), xf, fpp["bolt_d"] / 2, fpp["bolt_depth"] + 0.05, 16))
+    # Valley: 16 lifter bores along each bank's axis through the cam centre,
+    # and the distributor bore at the rear.
+    lf = SIDE["lifters"]; camc = Vector((0, 0, P["cam_cd"]))
+    for bank, b in BANKS.items():
+        for k in range(4):
+            yc = b["y0"] - P["bore_sp"] * k
+            for j, sgn in enumerate((-1, 1)):
+                ax = Vector((math.copysign(math.sin(math.radians(lf["tilt_deg"])), b["d"].x), 0, math.cos(math.radians(lf["tilt_deg"]))))
+                C(f"Lifter_{bank}{k}{j}", cyl(camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * lf["from_cam"], ax, lf["d"] / 2, lf["len"], 24))
+    ds = SIDE["distributor"]
+    C("Distributor", cyl(Vector((0, ds["y"], ds["z_top"])), Vector((0, 0, -1)), ds["d"] / 2, ds["z_top"] - ds["z_bot"], 32))
+    # Rear oil-gallery plug bores.
+    for k, g in enumerate(SIDE["rear_plugs"]):
+        for x in ((g["x"], -g["x"]) if g["mirror"] else (g["x"],)):
+            C(f"RearGallery_{k}_{x:+.2f}", cyl(Vector((x, -0.05, g["z"])), Vector((0, 1, 0)), SIDE["rear_plug_d"] / 2, SIDE["rear_plug_depth"] + 0.05, 6))
     # Rear face: bellhousing bolts and dowel holes, the one-piece seal bore.
     fwd = Vector((0, 1, 0))
     for h in REAR["bell_holes"]:
@@ -315,27 +360,48 @@ def build():
     # Main caps: separate parts hanging under each bulkhead, bored with the
     # block, four vertical studs each (inner and outer pair), ARP nuts.
     hw, dz, ch_ = P["cap_half"], P["cap_drop"], P["cap_chamfer"]
-    cap_sec = [Vector((-hw, 0, 0)), Vector((-hw, 0, -dz + ch_)), Vector((-hw + ch_, 0, -dz)),
-               Vector((hw - ch_, 0, -dz)), Vector((hw, 0, -dz + ch_)), Vector((hw, 0, 0))]
+    xs_, sd = P["cap_step_x"], P["cap_outer_drop"]
+    def cap_section(step_l, step_r):
+        """XZ section: the centre runs full depth; stepped sides carry the
+        outer studs on shoulders (photo 435)."""
+        def side(sg, step):
+            if step:
+                return [Vector((sg * hw, 0, 0)), Vector((sg * hw, 0, -sd)), Vector((sg * xs_, 0, -sd)),
+                        Vector((sg * xs_, 0, -dz + ch_)), Vector((sg * (xs_ - ch_), 0, -dz))]
+            return [Vector((sg * hw, 0, 0)), Vector((sg * hw, 0, -dz + ch_)), Vector((sg * (hw - ch_), 0, -dz))]
+        return side(-1, step_l) + list(reversed(side(1, step_r)))
     for i, (a, b) in enumerate(webs):
         ym = (a + b) / 2
         if i == 4: a = 0.0   # the rear cap runs to the rear face and carries the lower half of the seal bore (photo 435)
-        cap = obj(f"MainCap_{i+1}", prism([p + Vector((0, a, 0)) for p in cap_sec], Vector((0, 1, 0)), b - a), parts)
+        rear = i == 4
+        cap = obj(f"MainCap_{i+1}", prism([p + Vector((0, a, 0)) for p in cap_section(not rear, True)], Vector((0, 1, 0)), b - a), parts)
+        if rear:   # passenger-side outer stud stands on a full-depth round column (photo 435)
+            rc = BOT["rear_cap"]
+            col = obj("col_tmp", cyl(Vector((rc["column_x"], ym, -sd + 0.05)), Vector((0, 0, -1)), rc["column_r"], dz - sd - 0.05, 32), parts)
+            boolean(cap, "UNION", col); bpy.data.objects.remove(col)
         capcut = coll("Cap_Cutters_tmp", root, hide=True)
         obj("bore", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), capcut)
         if i == 4:
             seal_cuts(capcut)
             obj("pump_port", cyl(Vector((pp["x"], pp["y"], -dz - 0.1)), up, pp["d"] / 2, dz + 0.2, 24), capcut)
+            obj("pump_pocket", cyl(Vector((pp["x"], pp["y"], -dz - 0.05)), up, pp["pocket_d"] / 2, pp["pocket_depth"] + 0.05, 32), capcut)
             ps = BOT["pump"]["stud"]
             obj("pump_stud", cyl(Vector((ps["x"], ps["y"], -dz - 0.05)), up, ps["d"] / 2, ps["depth"] + 0.05, 20), capcut)
+            pdw = BOT["pump"]["dowel"]
+            obj("pump_dowel", cyl(Vector((pdw["x"], pdw["y"], -dz - 0.05)), up, pdw["d"] / 2, pdw["depth"] + 0.05, 16), capcut)
         hw_bm = bmesh.new()
         for x in P["main_stud_x"]:
             for sx in (-x, x):
                 obj("stud", cyl(Vector((sx, ym, -dz - 0.1)), Vector((0, 0, 1)), P["main_stud_d"] / 2 + 0.015, dz + 0.2, 20), capcut)
-                base = Vector((sx, ym, -dz))
+                # Outer studs land on the shoulders (shorter), except the rear
+                # cap's driver side (full depth, pump pad) and its column.
+                outer = x == max(P["main_stud_x"])
+                zb = -sd if (outer and not rear) else -dz
+                if rear and outer and sx > 0: zb = -dz
+                base = Vector((sx, ym, zb))
                 # Stud: threaded ~1" up into the bulkhead, down through the cap, past the nut.
                 extra = BOT["windage_studs"]["extra"] if (i + 1 in BOT["windage_studs"]["caps"] and x == min(P["main_stud_x"])) else 0
-                cyl(Vector((sx, ym, 1.0)), Vector((0, 0, -1)), P["main_stud_d"] / 2, 1.0 + dz + P["main_stud_out"] + extra, 16, hw_bm)
+                cyl(Vector((sx, ym, 1.0)), Vector((0, 0, -1)), P["main_stud_d"] / 2, 1.0 - zb + P["main_stud_out"] + extra, 16, hw_bm)
                 cyl(base, Vector((0, 0, -1)), P["main_washer_d"] / 2, 0.10, 24, hw_bm)
                 cyl(base - Vector((0, 0, 0.10)), Vector((0, 0, -1)), P["main_nut_d"] / 2, P["main_nut_h"], 12, hw_bm)
         boolean(cap, "DIFFERENCE", capcut)
@@ -350,8 +416,19 @@ def build():
             for x in xs(h): cyl(Vector((x, yf - 0.45, h["z"])), Vector((0, 1, 0)), h["d"] / 2 - 0.002, 0.75, 16, hw_bm)
     for x in (dw["x"], -dw["x"]):
         cyl(Vector((x, dw["hole_depth"] - 0.02, dw["z"])), Vector((0, -1, 0)), dw["d"] / 2 - 0.002, dw["hole_depth"] + dw["proud"], 24, hw_bm)
-    obj("DowelPins", hw_bm, parts)   # timing-cover and bellhousing dowels
+    pdw = BOT["pump"]["dowel"]
+    cyl(Vector((pdw["x"], pdw["y"], -dz + pdw["depth"] - 0.02)), Vector((0, 0, -1)), pdw["d"] / 2 - 0.002, pdw["depth"] + pdw["proud"], 16, hw_bm)
+    obj("DowelPins", hw_bm, parts)   # timing-cover, bellhousing and oil-pump dowels
+    cups = bmesh.new()
+    for bank in "LR":
+        for y in fz[bank]:
+            c, n = wall_pt(bank, y, fz["h"])
+            cyl(c - n * fz["cup_recess"], -n, fz["d"] / 2 - 0.003, fz["cup_len"], 40, cups)
+    obj("FreezePlugs", cups, parts)
     hw_bm = bmesh.new()
+    for k, g in enumerate(SIDE["rear_plugs"]):
+        for x in ((g["x"], -g["x"]) if g["mirror"] else (g["x"],)):
+            cyl(Vector((x, 0.03, g["z"])), Vector((0, 1, 0)), SIDE["rear_plug_d"] / 2 - 0.005, 0.42, 6, hw_bm)
     for h in FRONT["floor_holes"]:
         if h["name"].endswith("Plug"):
             for x in xs(h): cyl(Vector((x, yr - 0.45, h["z"])), Vector((0, 1, 0)), h["d"] / 2 - 0.005, 0.42, 6, hw_bm)
@@ -375,9 +452,10 @@ def build():
         "iron": material("Block_BareIron", (0.30, 0.30, 0.31, 1), 0.85, 0.5),      # unpainted caps (photo 24)
         "arp": material("ARP_BlackOxide", (0.03, 0.03, 0.03, 1), 0.8, 0.35),       # ARP studs and nuts
         "black": material("Block_BlackPaint", (0.025, 0.025, 0.025, 1), 0.0, 0.6),  # timing chest (photo 29)
+        "brass": material("Brass_FreezePlug", (0.80, 0.62, 0.22, 1), 1.0, 0.3),       # brass cups (photo 431)
     }
     for o in parts.objects:
-        kind = ("arp" if o.name.startswith("MainStuds") else
+        kind = ("brass" if o.name == "FreezePlugs" else "arp" if o.name.startswith("MainStuds") else
                 "iron" if o.name.startswith(("MainCap", "DowelPins", "GalleryPlugs")) else "paint")
         o.data.materials.clear(); o.data.materials.append(mats[kind])
     # Machined faces are bare iron, as on Drew's block (photos 29/30): the

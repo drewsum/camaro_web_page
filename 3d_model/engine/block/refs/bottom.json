@@ -102,17 +102,26 @@
  "pump": {
   "port": {
    "x": -2.45,
-   "y": 3.35,
+   "y": 1.35,
    "d": 0.55,
-   "up_into_block": 0.8
+   "up_into_block": 0.8,
+   "pocket_d": 0.95,
+   "pocket_depth": 0.35
   },
   "stud": {
-   "x": -1.0,
-   "y": 1.2,
+   "x": -1.6,
+   "y": 0.6,
    "d": 0.375,
    "depth": 1.0
   },
-  "src": "[est] oil pump on the rear main cap: one 7/16 stud into the cap bottom, outlet through the cap into the block with an O-ring at the joint (photo 22 shows the O-ring between the driver-side studs)"
+  "dowel": {
+   "x": -3.05,
+   "y": 0.55,
+   "d": 0.25,
+   "depth": 0.4,
+   "proud": 0.35
+  },
+  "src": "[meas] layout from photo 435 (driver side of the rear cap, between the cap studs and the rear face): counterbored outlet pocket, dowel pin, pump stud; sizes [est]. The outlet continues up into the rear of the block."
  },
  "windage_studs": {
   "caps": [
@@ -121,5 +130,10 @@
   ],
   "extra": 2.5,
   "src": "[meas] photo 431: the inner studs on caps 3 and 4 are long windage-tray studs; extension [est]"
+ },
+ "rear_cap": {
+  "column_x": 3.0,
+  "column_r": 0.5,
+  "src": "[meas] photo 435: on the rear cap the passenger-side outer stud stands on a full-depth round column; the driver-side outer shoulder is full depth to carry the pump pad"
  }
 }

@@ -32,6 +32,8 @@
   "cap_half": 3.45,
   "cap_drop": 3.1,
   "cap_chamfer": 0.3,
+  "cap_step_x": 2.45,
+  "cap_outer_drop": 1.85,
   "main_stud_x": [
    1.95,
    3.0
@@ -52,7 +54,7 @@
  },
  "parts": {
   "Block": {
-   "tris": 17838,
+   "tris": 22312,
    "dims_in": [
     19.347,
     24.0,
@@ -60,7 +62,7 @@
    ]
   },
   "MainCap_1": {
-   "tris": 480,
+   "tris": 488,
    "dims_in": [
     6.9,
     1.1,
@@ -76,7 +78,7 @@
    ]
   },
   "MainCap_2": {
-   "tris": 484,
+   "tris": 496,
    "dims_in": [
     6.9,
     1.0,
@@ -92,7 +94,7 @@
    ]
   },
   "MainCap_3": {
-   "tris": 484,
+   "tris": 496,
    "dims_in": [
     6.9,
     1.0,
@@ -108,7 +110,7 @@
    ]
   },
   "MainCap_4": {
-   "tris": 484,
+   "tris": 496,
    "dims_in": [
     6.9,
     1.0,
@@ -124,9 +126,9 @@
    ]
   },
   "MainCap_5": {
-   "tris": 942,
+   "tris": 1278,
    "dims_in": [
-    6.9,
+    6.95,
     3.71,
     3.1
    ]
@@ -140,23 +142,31 @@
    ]
   },
   "DowelPins": {
-   "tris": 304,
+   "tris": 364,
    "dims_in": [
     16.001,
     24.87,
-    1.524
+    6.101
+   ]
+  },
+  "FreezePlugs": {
+   "tris": 936,
+   "dims_in": [
+    16.394,
+    12.444,
+    1.445
    ]
   },
   "GalleryPlugs": {
-   "tris": 60,
+   "tris": 120,
    "dims_in": [
     3.3,
-    0.42,
+    23.09,
     1.366
    ]
   }
  },
- "cutters": 137,
+ "cutters": 172,
  "mains_y": [
   22.27,
   17.43,
