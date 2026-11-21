@@ -38,4 +38,4 @@ Throws 1 and 4 are 180 degrees apart, 2 and 3 are 180 apart, and the pairs are 9
 
 ## Not modelled yet
 
-Fillet radii, counterweight drilling and knife-edging, the real counterweight shapes and angles (Scat's are not simply opposite each throw), the bearing locating tangs, and the rods and pistons.
+Fillet radii, counterweight drilling and knife-edging, the real counterweight shapes and angles (Scat's are not simply opposite each throw), and the bearing locating tangs. The rods and pistons are in `../rods` (see `../rods/PARTS.md`).

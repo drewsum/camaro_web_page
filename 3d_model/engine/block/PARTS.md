@@ -110,3 +110,5 @@ All cuts use Blender's MANIFOLD boolean solver (Blender 4.5+). The EXACT solver 
 ## Rear bulkhead and crank clearance
 
 The rear (thrust) bulkhead is 1.20" thick [est], faced for the flanged #5 thrust bearing, and a 3.60" pocket [est] runs from the seal clearance (0.90" deep) to the bulkhead's rear face, around the crank's thrust collar. The crankshaft and main bearings are built by `../crank/build_crank.py`; see `../crank/PARTS.md`.
+
+Each crankcase bay also has a 4.30" clearance cut about the crank axis (`rod_sweep_r`, [derived]): the rod big ends sweep 4.21" (`../rods/PARTS.md`), past the 3.80" bay roof estimated before. The cut opens the bays into the cam tunnel, as on a real BBC.

@@ -32,6 +32,7 @@ P = dict(
     length=24.0,         # [forum] front face to bellhousing face
     main_bore=2.9375,    # [spec] line-honed housing bore
     web=1.00, web_front=1.10, web_rear=1.20,   # [est] bulkhead thicknesses; the rear (thrust) one is faced to take the 1.33" flanged thrust bearing
+    rod_sweep_r=4.30,    # [derived] crankcase clearance in each bay for the rods: big-end sweep 4.21" (../rods) + .09"; opens into the cam tunnel
     rear_pocket_d=3.60,  # [est] drain-back pocket between the thrust bearing and the seal, clears the crank's rear thrust collar
     cam_cd=5.147,        # [derived] crank-to-cam centre distance
     cam_bore=2.120,      # [spec] cam bearing housing bore
@@ -281,6 +282,7 @@ def build():
     for i in range(4):
         y_a, y_b = webs[i + 1][1], webs[i][0]
         C(f"Bay_{i+1}", prism([p + Vector((0, y_a, 0)) for p in case_sec("bay")], Vector((0, 1, 0)), y_b - y_a))
+        C(f"RodSweep_{i+1}", cyl(Vector((0, y_a, 0)), Vector((0, 1, 0)), P["rod_sweep_r"], y_b - y_a, 96))
     # Below the parting line the bulkheads end: the crankcase is open the full
     # width under every web, and the caps hang free (no side bolts, no pockets).
     y_a, y_b = webs[4][0], webs[0][1]

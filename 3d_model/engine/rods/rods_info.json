@@ -1,0 +1,187 @@
+{
+ "params": {
+  "rod_cc": 6.385,
+  "big_bore": 2.3247,
+  "big_w": 0.99,
+  "big_r": 1.52,
+  "boss_x": 1.74,
+  "boss_top": 1.15,
+  "cap_drop": 0.72,
+  "bolt_x": 1.42,
+  "bolt_d": 0.4375,
+  "bolt_into": 0.95,
+  "head_d": 0.56,
+  "head_h": 0.4,
+  "beam_t": 0.94,
+  "flange": 0.17,
+  "web": 0.3,
+  "beam_lo": 1.3,
+  "beam_hi": 1.0,
+  "chan_z": [
+   1.95,
+   5.35
+  ],
+  "small_od": 1.38,
+  "bush_od": 1.115,
+  "pin_fit": 0.0015,
+  "small_oil": 0.16,
+  "rb_w": 0.88,
+  "rb_clear": 0.0025,
+  "ch": 1.27,
+  "ptw": 0.0045,
+  "pin_d": 0.99,
+  "pin_len": 2.52,
+  "pin_wall": 0.18,
+  "clip_wire": 0.06299212598425198,
+  "top_land": 0.25,
+  "land2": 0.17,
+  "land3": 0.16,
+  "ring1": 0.05905511811023623,
+  "ring2": 0.05905511811023623,
+  "oil": 0.11811023622047245,
+  "rail_t": 0.03,
+  "groove_d": 0.2,
+  "oil_groove_d": 0.19,
+  "ring_radial": 0.18,
+  "rail_radial": 0.1,
+  "gap_top": 0.025,
+  "gap_2nd": 0.03,
+  "gap_rail": 0.015,
+  "crown_t": 0.33,
+  "belt_in": 1.95,
+  "skirt_t": 0.13,
+  "belt_bottom": 0.32,
+  "skirt_bottom": -0.8,
+  "boss_r": 0.78,
+  "boss_gap": 0.53,
+  "boss_face": 1.38,
+  "boss_wall": 0.15,
+  "cw_clear": 0.1,
+  "relief_r": 1.2,
+  "relief_c": [
+   0.38,
+   0.91
+  ],
+  "relief_tilt": 18.0,
+  "relief_depth": 0.18
+ },
+ "R_piston": 2.2459903787335347,
+ "R_ring": 2.246490378733535,
+ "grooves": {
+  "Top": [
+   0.9609448818897638,
+   1.02
+  ],
+  "Second": [
+   0.7318897637795275,
+   0.7909448818897638
+  ],
+  "Oil": [
+   0.423779527559055,
+   0.5718897637795275
+  ]
+ },
+ "cylinders": [
+  {
+   "cyl": 1,
+   "bank": "L",
+   "throw": 1,
+   "y": 20.35,
+   "intake": "-Y"
+  },
+  {
+   "cyl": 2,
+   "bank": "R",
+   "throw": 1,
+   "y": 19.35,
+   "intake": "-Y"
+  },
+  {
+   "cyl": 3,
+   "bank": "L",
+   "throw": 2,
+   "y": 15.51,
+   "intake": "+Y"
+  },
+  {
+   "cyl": 4,
+   "bank": "R",
+   "throw": 2,
+   "y": 14.51,
+   "intake": "+Y"
+  },
+  {
+   "cyl": 5,
+   "bank": "L",
+   "throw": 3,
+   "y": 10.67,
+   "intake": "-Y"
+  },
+  {
+   "cyl": 6,
+   "bank": "R",
+   "throw": 3,
+   "y": 9.67,
+   "intake": "-Y"
+  },
+  {
+   "cyl": 7,
+   "bank": "L",
+   "throw": 4,
+   "y": 5.83,
+   "intake": "+Y"
+  },
+  {
+   "cyl": 8,
+   "bank": "R",
+   "throw": 4,
+   "y": 4.83,
+   "intake": "+Y"
+  }
+ ],
+ "drivers_simple": true,
+ "crown_at_tdc": {
+  "1": {
+   "deg": 0.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "2": {
+   "deg": 270.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "3": {
+   "deg": 270.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "4": {
+   "deg": 180.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "5": {
+   "deg": 90.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "6": {
+   "deg": 0.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "7": {
+   "deg": 180.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  },
+  "8": {
+   "deg": 90.0,
+   "crown_from_crank": 9.78,
+   "below_deck": 0.02
+  }
+ },
+ "clash": [],
+ "clash_checked_against": 21
+}
