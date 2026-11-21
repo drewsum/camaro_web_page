@@ -21,9 +21,9 @@ Built by `build_oiling.py`, after the block and crank. Collection `BBC_Oiling`. 
 | `OilPanDrainPlug` | 1/2" plug, .62" hex [est]. | |
 | `WindageTray` | Flat plate .075" [est] at z −4.30 to −4.375, ±4.55" wide, from y 6.55 to 13.95 [est].<br>Four square panels pressed .13" down, each with three drain slots [est; photo 190 shows the panels, the slots are a guess].<br>Holes for the four .50" long studs. | Photos 168, 190 |
 | `WindageTrayNuts` | Spacers from the cap nuts down to the tray, and nuts under it [est]. | |
-| `OilPump` | One-piece billet aluminium pump with the pickup machined into the body (Drew). Sizes [est].<br>**Ear:** on the rear cap's driver-side pad, carrying the 7/16 stud and the dowel hole, from the pad layout [meas].<br>**Outlet nipple:** in the cap's .95" pocket.<br>**Gear section:** 2.4" × 2.05" × 1.55" below the ear, with the cover machined in (no separate cover).<br>**Pickup:** a 1.6" × 1.5" leg down into the box, flaring to a 2.6" × 3.1" inlet foot. The foot's face is .375" above the sump floor, with a .30" deep inlet pocket. | Drew; `../block/refs/bottom.json` |
-| `OilPumpHardware` | The pump stud and nut, and four socket screws in the gear section [est]. | |
-| `OilPickupScreen` | Screen across the mouth of the inlet pocket [est]. | |
+| `OilPump` | One-piece billet pump, black anodized, with the pickup machined into the body (Drew; finish and squared tower from Drew's photo). Sizes [est].<br>**Ear:** on the rear cap's driver-side pad, carrying the 7/16 stud and the dowel hole, from the pad layout [meas].<br>**Outlet nipple:** in the cap's .95" pocket.<br>**Gear section:** 2.4" × 2.05" × 1.55" below the ear, with the cover machined in (no separate cover).<br>**Pickup:** a 1.6" × 1.5" leg down into the box, flaring to a 2.6" × 3.1" square-cornered inlet foot with a .30" deep inlet pocket. | Drew; `../block/refs/bottom.json` |
+| `OilPumpHardware` | The pump stud and nut, four socket screws in the gear section, and six button-head screws on the screen plate [est]. | |
+| `OilPickupScreen` | Flat .10" black screen plate bolted over the inlet, perforated with .10" square holes on a .20" grid. Its face is .375" above the sump floor (layout from Drew's photo, sizes [est]). | Drew photo |
 
 ## Block change
 
@@ -31,7 +31,7 @@ The long windage-tray studs on caps 3 and 4 now extend .90" below the cap nuts (
 
 ## Checks (`oiling_info.json`)
 
-- **Static clashes:** none against the block, main caps, studs, dowels and plugs, or between these parts. The expected contacts are listed: the pump stud and nut, and the tray nuts on their studs.
+- **Static clashes:** none against the block, main caps, studs, dowels and plugs, or between these parts. The expected contacts are listed: the pump stud and nut, the screen-plate screws, and the tray nuts on their studs.
 - **Rotating clashes:** none, every 10° over 720° against the crank, rods, rod caps and bolts, pistons, cam and flywheel.
 - **Rotating clearance:** the lowest rotating point is z −3.98. The tray clears it by .32".
 - **Oil volume:** the sump box below the front floor holds about 4.7 qt. The whole pan below the rail is about 24 qt of space, most of it crankcase above any oil level.
@@ -41,6 +41,6 @@ The long windage-tray studs on caps 3 and 4 now extend .90" below the cap nuts (
 
 - **Pan shape:** the oval stiffening emboss on the stamping's floor (photo 170) and any kick-out are not modelled. The box is drawn centred and flat-sided; listings call these pans "kicked-out", and from the photos I can't tell whether this box kicks out to one side.
 - **Inside the pan:** no baffles, trap doors or scraper.
-- **Pump shape:** the billet pump's outline is estimated; there's no photo of it yet.
+- **Pump shape:** finish, squared tower and bolted screen plate follow Drew's installed photo; the dimensions are still estimated.
 - **Not modelled:** dipstick tube, pan gasket, the pump's drive shaft and its intermediate shaft to the distributor.
 - **Branding:** the box's lettering is left off.

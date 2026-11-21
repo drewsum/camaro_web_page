@@ -61,8 +61,9 @@ K = dict(
               body=(-3.45, -1.05, 1.05, 3.10), body_z=(-5.55, -3.999), body_r=0.40,   # gear section, cover machined in (one billet piece)
               nipple_r=0.44, nipple_h=0.30),
     # Pickup machined into the pump body (Drew): a leg down into the sump and an inlet foot [est sizes]
-    pickup=dict(leg=(-3.05, -1.45, 1.35, 2.85), leg_r=0.45, foot=(-3.55, -0.95, 0.55, 3.65), foot_r=0.35,
-                foot_z=(-7.55, -7.00), inlet_inset=0.25, inlet_depth=0.30),
+    pickup=dict(leg=(-3.05, -1.45, 1.35, 2.85), leg_r=0.15, foot=(-3.55, -0.95, 0.55, 3.65), foot_r=0.12,
+                foot_z=(-7.45, -6.90), inlet_inset=0.25, inlet_depth=0.30,
+                plate_t=0.10, hole=0.10, pitch=0.20, hole_inset=0.40, screw_inset=0.20),  # bolted perforated screen plate (Drew photo)
 )
 CAP_Z = -3.10                      # main-cap bottoms (block)
 
@@ -248,9 +249,28 @@ def build_pump(root, tmp):
     zb = P["body_z"][0]
     for cx, cy in ((bx0 + 0.22, by0 + 0.20), (bx1 - 0.22, by0 + 0.20), (bx0 + 0.22, by1 - 0.20), (bx1 - 0.22, by1 - 0.20)):
         zcyl(0.16, zb - 0.19, zb - 0.001, cx, cy, 20, bm)
+    pt, si = PK["plate_t"], PK["screw_inset"]                # six button-head screws hold the screen plate
+    pz0 = fz0 - pt
+    ym = 0.5 * (fy0 + fy1)
+    for cx in (fx0 + si, fx1 - si):
+        for cy in (fy0 + si, ym, fy1 - si):
+            zcyl(0.07, pz0 + 0.01, fz0 + 0.30, cx, cy, 12, bm)
+            zcyl(0.13, pz0 - 0.08, pz0 + 0.002, cx, cy, 20, bm)
     hw = obj("OilPumpHardware", bm, root)
-    i2 = ins + 0.01
-    scr = obj("OilPickupScreen", zprism(rrect(fx0 + i2, fx1 - i2, fy0 + i2, fy1 - i2, max(PK["foot_r"] - i2, 0.07)), fz0 + 0.002, fz0 + 0.05), root)
+    # screen plate: flat plate on the inlet face, perforated over the inlet pocket
+    scr = obj("OilPickupScreen", zprism(rrect(fx0, fx1, fy0, fy1, PK["foot_r"]), pz0, fz0 - 0.002), root)
+    hi, hp, hs = PK["hole_inset"], PK["pitch"], PK["hole"] / 2
+    bm = bmesh.new()
+    nx = int(((fx1 - fx0) - 2 * hi) / hp) + 1; ny = int(((fy1 - fy0) - 2 * hi) / hp) + 1
+    ox = 0.5 * (fx0 + fx1) - 0.5 * (nx - 1) * hp; oy = ym - 0.5 * (ny - 1) * hp
+    for i in range(nx):
+        for j in range(ny):
+            cx, cy = ox + i * hp, oy + j * hp
+            zprism([(cx - hs, cy - hs), (cx + hs, cy - hs), (cx + hs, cy + hs), (cx - hs, cy + hs)], pz0 - 0.05, fz0 + 0.05, bm)
+    for cx in (fx0 + si, fx1 - si):
+        for cy in (fy0 + si, ym, fy1 - si):
+            zcyl(0.075, pz0 - 0.05, fz0 + 0.05, cx, cy, 12, bm)
+    obj("perf", bm, tmp); boolean(scr, "DIFFERENCE", tmp); clear(tmp)
     return pump, hw, scr
 
 
@@ -264,12 +284,12 @@ def build():
     bpy.data.collections.remove(tmp)
     black = material("Pan_GlossBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.22)
     grey = material("Tray_Grey", (0.33, 0.34, 0.35, 1), 0.5, 0.55)
-    billet = material("Pump_BilletAluminium", (0.78, 0.79, 0.80, 1), 1.0, 0.28)
+    billet = material("Pump_BlackAnodize", (0.022, 0.022, 0.025, 1), 0.6, 0.32)
     zinc = material("Pickup_Steel", (0.55, 0.56, 0.57, 1), 1.0, 0.40)
     mesh = material("Pickup_Screen", (0.12, 0.12, 0.13, 1), 0.9, 0.55)
     oxide = material("Oiling_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
     for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, billet),
-                 (pump_hw, oxide), (scr, mesh)):
+                 (pump_hw, oxide), (scr, billet)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
     for n in ("OilPumpCover", "OilPickupTube"):          # parts of the earlier three-piece pump
         if n in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
@@ -310,7 +330,8 @@ def checks(parts, step=10.0):
             for p in parts:
                 if PT[p.name].overlap(mt): hits.add((p.name, n))
     set_crank(0.0)
-    allowed = {("OilPumpHardware", "OilPump"),                 # stud and nut through the pump ear
+    allowed = {("OilPumpHardware", "OilPump"),                 # stud and nut through the pump ear, plate screws
+               ("OilPumpHardware", "OilPickupScreen"),         # screen-plate screws through the plate
                ("WindageTrayNuts", "MainStuds_3"), ("WindageTrayNuts", "MainStuds_4")}  # spacers and nuts on the long studs (.50" at the tray, from the block)
     return dict(clash=sorted(h for h in hits if h not in allowed and h[::-1] not in allowed),
                 contacts_expected=sorted(allowed), rotating_lowest_z_in=round(low, 3),

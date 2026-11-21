@@ -80,20 +80,25 @@
     1.35,
     2.85
    ],
-   "leg_r": 0.45,
+   "leg_r": 0.15,
    "foot": [
     -3.55,
     -0.95,
     0.55,
     3.65
    ],
-   "foot_r": 0.35,
+   "foot_r": 0.12,
    "foot_z": [
-    -7.55,
-    -7.0
+    -7.45,
+    -6.9
    ],
    "inlet_inset": 0.25,
-   "inlet_depth": 0.3
+   "inlet_depth": 0.3,
+   "plate_t": 0.1,
+   "hole": 0.1,
+   "pitch": 0.2,
+   "hole_inset": 0.4,
+   "screw_inset": 0.2
   }
  },
  "manifold": {
@@ -119,20 +124,24 @@
   ],
   "OilPump": [
    0,
-   17.81668283970147
+   17.84772641628562
   ],
   "OilPumpHardware": [
    0,
-   0.3771466688741716
+   0.4372389147409468
   ],
   "OilPickupScreen": [
    0,
-   0.2572452014198161
+   0.6728761800623028
   ]
  },
  "checks": {
   "clash": [],
   "contacts_expected": [
+   [
+    "OilPumpHardware",
+    "OilPickupScreen"
+   ],
    [
     "OilPumpHardware",
     "OilPump"
@@ -160,7 +169,7 @@
   "WindageTray": 2828,
   "WindageTrayNuts": 448,
   "OilPump": 1104,
-  "OilPumpHardware": 400,
-  "OilPickupScreen": 140
+  "OilPumpHardware": 1120,
+  "OilPickupScreen": 2612
  }
 }
