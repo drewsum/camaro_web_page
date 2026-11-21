@@ -1,0 +1,41 @@
+{
+ "_about": "Rear (bellhousing) face, y=0. Face coords x across (+ passenger), z above the crank centreline.",
+ "bell_holes": [
+  {
+   "x": 7.8,
+   "z": 0.44
+  },
+  {
+   "x": 7.8,
+   "z": 4.2
+  },
+  {
+   "x": 4.1,
+   "z": 7.02
+  }
+ ],
+ "bell_d": 0.375,
+ "bell_depth": 1.0,
+ "bell_src": "[spec] GM V8 bellhousing pattern (Chevy Power / jalopyjournal): bolts (+/-7.800, .440), (+/-7.800, 4.200), (+/-4.100, 7.020); the (0, 9.220) hole of the pattern falls on the block's top edge and is not drilled on the BBC. 3/8-16 tapped.",
+ "dowel": {
+  "x": 7.69,
+  "z": 2.32,
+  "d": 0.625,
+  "hole_depth": 0.6,
+  "proud": 0.55,
+  "src": "[spec] (+/-7.690, 2.320), .625 pins; stand-out [est]"
+ },
+ "flange": {
+  "half": 8.35,
+  "top": 4.6,
+  "depth": 1.25,
+  "src": "[est] lower ears with bosses for the bottom bell bolts (1\" tapped) and dowels; photos 431/435 show the rail flaring out at the rear"
+ },
+ "seal": {
+  "bore_d": 5.125,
+  "bore_depth": 0.42,
+  "clear_d": 4.3,
+  "clear_depth": 0.9,
+  "src": "[spec] Fel-Pro 2920 one-piece seal: OD 5.125, ID 4.245; bore depth and clearance [est]; lower half is in the rear main cap (photo 435)"
+ }
+}

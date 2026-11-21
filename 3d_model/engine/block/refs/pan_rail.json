@@ -1,0 +1,63 @@
+{
+ "_about": "Oil pan rail (pan face at z=0). Measured from Drew's build-album photo 431 (block inverted, crank in): camera solved from the main-cap stud nuts (caps 1-4, 4.840\" spacing; rms 10 px), pan plane rectified to a true top view, holes found by Hough. Left/right averaged (they agree within ~0.2\"). Coordinates in inches: x across (+ passenger), y forward from the rear face.",
+ "rail_x": 5.95,
+ "rail_inner": 4.75,
+ "rail_src": "[meas] photo 431 rectified: flange outer and inner edges (was est 5.65/4.85)",
+ "holes": [
+  {
+   "x": 5.4,
+   "y": 2.15,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 5.45,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 8.2,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 10.88,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 13.52,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 16.11,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 18.7,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 5.4,
+   "y": 21.52,
+   "d": 0.3125,
+   "depth": 0.75
+  },
+  {
+   "x": 4.88,
+   "y": 23.58,
+   "d": 0.3125,
+   "depth": 0.75
+  }
+ ],
+ "holes_src": "[meas] photo 431; tapped 5/16-18 (ARP 135-1801 pan bolts, 12 ft-lb); front pair is in the front-face flange"
+}

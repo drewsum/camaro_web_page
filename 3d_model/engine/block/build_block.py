@@ -41,7 +41,7 @@ P = dict(
     deck_clip_v=3.80,    # [meas] gasket ears beyond this hang over the valley (photo 38)
     wall_len=4.30,       # [est] side water-jacket wall length below the deck edge
     pan_rail_z=0.0,      # [Drew] the oil pan face is one flat plane at the crank centreline (the main cap parting line), full length
-    rail_x=5.65, rail_t=0.40, rail_inner=4.85,   # [est] pan rail flange outer/inner half-width, thickness
+    rail_x=5.95, rail_t=0.40, rail_inner=4.75,   # [meas] photo 431 rectified: rail flange outer/inner half-width; thickness [est]
     valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40, china_wall=0.45,   # [est]
     case_half=5.15,      # [est] crankcase cavity half-width above the rail
     cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
@@ -63,6 +63,8 @@ BANKS = {
 }
 DECK = json.load(open(os.path.join(HERE, "refs", "deck_c5333.json")))
 FRONT = json.load(open(os.path.join(HERE, "refs", "front_face.json")))   # photos 29/30, see PARTS.md
+PAN = json.load(open(os.path.join(HERE, "refs", "pan_rail.json")))       # album photo 431
+REAR = json.load(open(os.path.join(HERE, "refs", "rear_face.json")))     # GM bell pattern, Fel-Pro 2920
 
 
 # ---- helpers ------------------------------------------------------------------
@@ -164,6 +166,12 @@ def build():
     flange = obj("FrontFlange", prism(fsec, Vector((0, 1, 0)), fl["depth"]), parts)
     boolean(block, "UNION", flange); bpy.data.objects.remove(flange)
 
+    # Rear flange ears for the lower bellhousing bolts and dowels.
+    rf = REAR["flange"]
+    rsec = [Vector((-rf["half"], 0, 0)), Vector((rf["half"], 0, 0)), Vector((rf["half"], 0, rf["top"])), Vector((-rf["half"], 0, rf["top"]))]
+    ears = obj("RearEars", prism(rsec, Vector((0, 1, 0)), rf["depth"]), parts)
+    boolean(block, "UNION", ears); bpy.data.objects.remove(ears)
+
     # ---- cutters
     def C(name, bm):
         info["cutters"] += 1
@@ -259,6 +267,23 @@ def build():
            [Vector((pl["half_outline"][-1][0], yrel, -1)), Vector((12, yrel, -1)), Vector((12, yrel, 16))]
     for side, sx in (("R", 1), ("L", -1)):
         C(f"F_CastRelief_{side}", prism([Vector((sx * p.x, p.y, p.z)) for p in half], Vector((0, 1, 0)), pl["relief"] + 0.1))
+    # Oil pan rail bolt holes, tapped up from the pan face.
+    for h in PAN["holes"]:
+        for i, x in enumerate((h["x"], -h["x"])):
+            C(f"Pan_{h['y']:.2f}_{i}", cyl(Vector((x, h["y"], -0.05)), Vector((0, 0, 1)), h["d"] / 2, h["depth"] + 0.05, 16))
+    # Rear face: bellhousing bolts and dowel holes, the one-piece seal bore.
+    fwd = Vector((0, 1, 0))
+    for h in REAR["bell_holes"]:
+        for i, x in enumerate((h["x"], -h["x"])):
+            C(f"Bell_{h['z']:.2f}_{i}", cyl(Vector((x, -0.05, h["z"])), fwd, REAR["bell_d"] / 2, REAR["bell_depth"] + 0.05, 20))
+    dw = REAR["dowel"]
+    for i, x in enumerate((dw["x"], -dw["x"])):
+        C(f"BellDowel_{i}", cyl(Vector((x, -0.05, dw["z"])), fwd, dw["d"] / 2, dw["hole_depth"] + 0.05, 24))
+    sl = REAR["seal"]
+    def seal_cuts(coll_):
+        obj("SealBore", cyl(Vector((0, -0.05, 0)), fwd, sl["bore_d"] / 2, sl["bore_depth"] + 0.05, 64), coll_)
+        obj("SealClear", cyl(Vector((0, -0.05, 0)), fwd, sl["clear_d"] / 2, sl["clear_depth"] + 0.05, 64), coll_)
+    seal_cuts(cut); info["cutters"] += 2
     info["front_features"] = sum(len(xs(h)) for g in ("holes", "floor_holes") for h in FRONT[g])
 
     boolean(block, "DIFFERENCE", cut)
@@ -269,11 +294,13 @@ def build():
     cap_sec = [Vector((-hw, 0, 0)), Vector((-hw, 0, -dz + ch_)), Vector((-hw + ch_, 0, -dz)),
                Vector((hw - ch_, 0, -dz)), Vector((hw, 0, -dz + ch_)), Vector((hw, 0, 0))]
     for i, (a, b) in enumerate(webs):
+        ym = (a + b) / 2
+        if i == 4: a = 0.0   # the rear cap runs to the rear face and carries the lower half of the seal bore (photo 435)
         cap = obj(f"MainCap_{i+1}", prism([p + Vector((0, a, 0)) for p in cap_sec], Vector((0, 1, 0)), b - a), parts)
         capcut = coll("Cap_Cutters_tmp", root, hide=True)
         obj("bore", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), capcut)
+        if i == 4: seal_cuts(capcut)
         hw_bm = bmesh.new()
-        ym = (a + b) / 2
         for x in P["main_stud_x"]:
             for sx in (-x, x):
                 obj("stud", cyl(Vector((sx, ym, -dz - 0.1)), Vector((0, 0, 1)), P["main_stud_d"] / 2 + 0.015, dz + 0.2, 20), capcut)
@@ -292,7 +319,9 @@ def build():
     for h in FRONT["holes"]:
         if h["name"] == "CoverDowel":
             for x in xs(h): cyl(Vector((x, yf - 0.45, h["z"])), Vector((0, 1, 0)), h["d"] / 2 - 0.002, 0.75, 16, hw_bm)
-    obj("FrontDowels", hw_bm, parts)
+    for x in (dw["x"], -dw["x"]):
+        cyl(Vector((x, dw["hole_depth"] - 0.02, dw["z"])), Vector((0, -1, 0)), dw["d"] / 2 - 0.002, dw["hole_depth"] + dw["proud"], 24, hw_bm)
+    obj("DowelPins", hw_bm, parts)   # timing-cover and bellhousing dowels
     hw_bm = bmesh.new()
     for h in FRONT["floor_holes"]:
         if h["name"].endswith("Plug"):
@@ -320,7 +349,7 @@ def build():
     }
     for o in parts.objects:
         kind = ("arp" if o.name.startswith("MainStuds") else
-                "iron" if o.name.startswith(("MainCap", "FrontDowels", "GalleryPlugs")) else "paint")
+                "iron" if o.name.startswith(("MainCap", "DowelPins", "GalleryPlugs")) else "paint")
         o.data.materials.clear(); o.data.materials.append(mats[kind])
     # Machined faces are bare iron, as on Drew's block (photos 29/30): the
     # front face, the decks and the pan face. Cast surfaces stay painted.
@@ -333,7 +362,7 @@ def build():
     dl, dr = BANKS["L"]["d"], BANKS["R"]["d"]
     for poly in blk.data.polygons:
         c, n = poly.center / IN, poly.normal
-        if ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
+        if ((n.y > 0.999 and c.y > P["length"] - 0.01) or (n.y < -0.999 and c.y < 0.01) or (n.z < -0.999 and abs(c.z) < 0.01)
                 or any(n.dot(d) > 0.999 and abs(c.dot(d) - P["deck"]) < 0.01 for d in (dl, dr))):
             poly.material_index = 1
         elif yr - 0.01 < c.y < yf - 0.01 and c.z > -0.01 and abs(c.x) < rec_w(c.z) + 0.02:
