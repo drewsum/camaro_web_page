@@ -13,3 +13,11 @@ web/public/draco/
 3d_model/mustang69/
 # Sketchfab download that scripts/build_charger.py builds charger.blend from
 3d_model/charger69/
+
+# Sketchfab downloads used only as size references for the engine model (CC BY 4.0, Jorma Rysky; see 3d_model/engine/block/PARTS.md)
+3d_model/engine/*.glb
+3d_model/engine/*_LICENSE.txt
+3d_model/engine/bbc_block_work.blend
+# Manufacturer product images used as measurement references (not ours to redistribute)
+3d_model/engine/block/refs/*.jpg
+3d_model/engine/block/refs/*.pdf

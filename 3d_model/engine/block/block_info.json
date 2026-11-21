@@ -1,0 +1,105 @@
+{
+ "params": {
+  "deck": 9.8,
+  "bore": 4.499,
+  "bore_sp": 4.84,
+  "bank": 45.0,
+  "stagger": 1.0,
+  "front_to_cyl1": 3.65,
+  "length": 24.0,
+  "main_bore": 2.9375,
+  "web": 1.0,
+  "web_front": 1.1,
+  "web_rear": 1.6,
+  "cam_cd": 5.147,
+  "cam_bore": 2.12,
+  "cam_plug": 2.218,
+  "bore_len": 6.6,
+  "deck_thk": 1.1,
+  "deck_v_valley": 3.3,
+  "deck_v_exh": -3.15,
+  "deck_clip_v": 3.8,
+  "wall_len": 4.3,
+  "skirt_x": 6.1,
+  "rail_x": 6.55,
+  "rail_t": 0.4,
+  "pan_rail_z": -3.5,
+  "valley_floor_z": 7.3,
+  "valley_top_half": 3.6,
+  "valley_floor_half": 2.4,
+  "china_wall": 0.45,
+  "case_half": 5.55,
+  "cap_half": 3.1,
+  "cap_drop": 2.9,
+  "stud_tap": 0.4375,
+  "stud_depth": 1.75,
+  "dowel_d": 0.609,
+  "dowel_depth": 0.35,
+  "port_depth": 0.7,
+  "y_front": 24.0,
+  "y_cyl1": 20.35
+ },
+ "parts": {
+  "Block": {
+   "tris": 11069,
+   "dims_in": [
+    19.347,
+    24.014,
+    13.117
+   ]
+  },
+  "MainCap_1": {
+   "tris": 116,
+   "dims_in": [
+    6.2,
+    1.1,
+    2.9
+   ]
+  },
+  "MainCap_2": {
+   "tris": 116,
+   "dims_in": [
+    6.2,
+    1.0,
+    2.9
+   ]
+  },
+  "MainCap_3": {
+   "tris": 116,
+   "dims_in": [
+    6.2,
+    1.0,
+    2.9
+   ]
+  },
+  "MainCap_4": {
+   "tris": 116,
+   "dims_in": [
+    6.2,
+    1.0,
+    2.9
+   ]
+  },
+  "MainCap_5": {
+   "tris": 116,
+   "dims_in": [
+    6.2,
+    1.6,
+    2.9
+   ]
+  }
+ },
+ "cutters": 77,
+ "mains_y": [
+  22.27,
+  17.43,
+  12.59,
+  7.75,
+  2.91
+ ],
+ "deck_features_per_bank": {
+  "coolant": 10,
+  "stud": 16,
+  "stud_dowel": 1
+ }
+}
