@@ -63,18 +63,10 @@
  },
  "lifters": {
   "d": 0.8437,
-  "dy": 0.7,
+  "dy": 0.65,
+  "tilt_deg": 38,
   "from_cam": 1.0,
-  "len": 2.6,
-  "src": "[spec] .8437\" lifter bores, 16; axis through the cam centre, tilted 30 deg from vertical toward each bank so it opens into the valley floor [est]; intake/exhaust .70\" either side of the cylinder centre [est]",
-  "tilt_deg": 30
- },
- "distributor": {
-  "y": 1.35,
-  "d": 1.0,
-  "z_top": 8.2,
-  "z_bot": 5.6,
-  "src": "[est] distributor bore at the rear of the valley, down to the cam's drive gear"
+  "src": "[spec] .8437\" bores, 16. Pair spacing 1.3\" and boss tops about 2.3\" either side of the centreline [meas] from album photo 545 (scaled by the 4.84\" bore spacing), which gives a 38 deg tilt from vertical through the cam centre [derived]"
  },
  "rear_plugs": [
   {
@@ -90,5 +82,54 @@
  ],
  "rear_plug_d": 0.56,
  "rear_plug_depth": 0.6,
- "rear_plugs_src": "[est] lifter and main oil-gallery plugs at the rear face, on the same gallery lines as the front plugs (photo 29)"
+ "rear_plugs_src": "[est] lifter and main oil-gallery plugs at the rear face, on the same gallery lines as the front plugs (photo 29)",
+ "valley": {
+  "boss": {
+   "r": 0.72,
+   "top_z": 8.1,
+   "height": 1.7,
+   "src": "[meas] photos 545/547: each cylinder's two lifters share one dog-bone boss with a machined top, rising out of the floor and blending into the wall; outer radius and top height [est] from the photo scale"
+  },
+  "drain_slots": {
+   "len": 1.5,
+   "w": 0.5,
+   "z_top": 7.6,
+   "z_bot": 5.6,
+   "src": "[meas] photo 545: 4 windows on the centreline, open onto the cam lobes, centred between each left/right boss pair"
+  },
+  "spider_boss": {
+   "dy": 1.05,
+   "r": 0.38,
+   "h": 0.25,
+   "tap_d": 0.3125,
+   "tap_depth": 0.6,
+   "src": "[meas] photo 545: a round boss with a tapped hole just ahead of each window (lifter retainer / spider bolt); sizes [est]"
+  },
+  "dist_boss": {
+   "r": 0.95,
+   "h": 0.5,
+   "src": "[meas] photo 545: raised round boss round the distributor bore at the rear; size [est]"
+  },
+  "galleries": [
+   {
+    "x": 1.22,
+    "z": 6.46,
+    "mirror": true
+   },
+   {
+    "x": -1.53,
+    "z": 5.57,
+    "mirror": false
+   }
+  ],
+  "gallery_d": 0.5,
+  "galleries_src": "[derived] lifter galleries and the main gallery drilled front to rear between the front and rear plugs; the lifter galleries break into the lifter bores"
+ },
+ "distributor": {
+  "y": 1.35,
+  "d": 1.0,
+  "z_top": 8.4,
+  "z_bot": 5.6,
+  "src": "[est] distributor bore at the rear of the valley, down to the cam's drive gear (photo 545 shows it on its boss)"
+ }
 }

@@ -80,24 +80,24 @@
   "x1": 8.35,
   "y0": 0.0,
   "y1": 2.6,
-  "height": 0.8,
+  "height": 1.3,
   "holes": [
    [
     6.4,
-    1.0
+    1.6
    ],
    [
     7.9,
-    1.0
+    1.6
    ],
    [
     7.15,
-    2.1
+    2.35
    ]
   ],
   "d": 0.375,
   "depth": 1.0,
-  "src": "[est] passenger-side rear corner (photos 22, 431): pad with three 3/8-16 holes, a straight pair across the crank plus the offset hole, as Chevy blocks are drilled for both starter patterns"
+  "src": "[est] passenger-side rear corner (photos 22, 431): pad with three 3/8-16 holes, a straight pair across the crank plus the offset hole, as Chevy blocks are drilled for both starter patterns; moved to 1.6\"/2.35\" from the rear face so they clear the lower bellhousing bolt holes (1.0\" deep)"
  },
  "pump": {
   "port": {

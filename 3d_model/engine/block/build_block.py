@@ -115,7 +115,7 @@ def deck_pt(bank, u, v, h=0.0):
     return Vector((0, b["y0"], 0)) + b["d"] * (P["deck"] + h) + b["t"] * v + Vector((0, -1, 0)) * u
 
 def boolean(target, kind, operand):
-    m = target.modifiers.new(kind, "BOOLEAN"); m.operation = kind; m.solver = "EXACT"
+    m = target.modifiers.new(kind, "BOOLEAN"); m.operation = kind; m.solver = "MANIFOLD"   # robust on these closed operands; EXACT dropped or inverted some valley bosses and left ~1,100 non-manifold edges
     if isinstance(operand, bpy.types.Collection): m.operand_type = "COLLECTION"; m.collection = operand
     else: m.object = operand
     with bpy.context.temp_override(object=target, active_object=target):
@@ -325,17 +325,6 @@ def build():
     C("FuelPumpOpening", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"], fpp["z"])), xf, fpp["open_d"] / 2, fpp["open_depth"] + 0.05, 32))
     for k, (dy_, dz_) in enumerate(fpp["bolts"]):
         C(f"FuelPumpBolt_{k}", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"] + dy_, fpp["z"] + dz_)), xf, fpp["bolt_d"] / 2, fpp["bolt_depth"] + 0.05, 16))
-    # Valley: 16 lifter bores along each bank's axis through the cam centre,
-    # and the distributor bore at the rear.
-    lf = SIDE["lifters"]; camc = Vector((0, 0, P["cam_cd"]))
-    for bank, b in BANKS.items():
-        for k in range(4):
-            yc = b["y0"] - P["bore_sp"] * k
-            for j, sgn in enumerate((-1, 1)):
-                ax = Vector((math.copysign(math.sin(math.radians(lf["tilt_deg"])), b["d"].x), 0, math.cos(math.radians(lf["tilt_deg"]))))
-                C(f"Lifter_{bank}{k}{j}", cyl(camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * lf["from_cam"], ax, lf["d"] / 2, lf["len"], 24))
-    ds = SIDE["distributor"]
-    C("Distributor", cyl(Vector((0, ds["y"], ds["z_top"])), Vector((0, 0, -1)), ds["d"] / 2, ds["z_top"] - ds["z_bot"], 32))
     # Rear oil-gallery plug bores.
     for k, g in enumerate(SIDE["rear_plugs"]):
         for x in ((g["x"], -g["x"]) if g["mirror"] else (g["x"],)):
@@ -356,6 +345,63 @@ def build():
     info["front_features"] = sum(len(xs(h)) for g in ("holes", "floor_holes") for h in FRONT[g])
 
     boolean(block, "DIFFERENCE", cut)
+
+    # ---- valley (photos 545/547): after the valley is opened, add the lifter
+    # bosses, retainer bosses and distributor boss, then cut the lifter
+    # bores, the cam drain windows, the retainer taps, the distributor bore
+    # and the oil galleries.
+    V, lf = SIDE["valley"], SIDE["lifters"]
+    camc = Vector((0, 0, P["cam_cd"])); th = math.radians(lf["tilt_deg"])
+    def lifter_axis(b): return Vector((math.copysign(math.sin(th), b["d"].x), 0, math.cos(th)))
+    def stadium(c, ax, half, r, seg=12):
+        e1 = Vector((0, 1, 0)); e2 = ax.cross(e1).normalized()
+        pts = []
+        for k in range(seg + 1):
+            a_ = math.pi * k / seg
+            pts.append(c + e1 * (half + r * math.sin(a_)) + e2 * (r * math.cos(a_)))
+        for k in range(seg + 1):
+            a_ = math.pi + math.pi * k / seg
+            pts.append(c + e1 * (-half + r * math.sin(a_)) + e2 * (r * math.cos(a_)))
+        return pts
+    pairs = []
+    for bank, b in BANKS.items():
+        ax = lifter_axis(b)
+        for k in range(4):
+            yc = b["y0"] - P["bore_sp"] * k
+            pairs.append((bank, k, yc, ax))
+    bo = V["boss"]
+    for bank, k, yc, ax in pairs:
+        t_top = (bo["top_z"] - P["cam_cd"]) / ax.z
+        base = camc + Vector((0, yc, 0)) + ax * (t_top - bo["height"])
+        o = obj(f"LifterBoss_{bank}{k}", prism(stadium(base, ax, lf["dy"], bo["r"]), ax, bo["height"]), parts)
+        boolean(block, "UNION", o); bpy.data.objects.remove(o)
+    ds, db, sb = SIDE["distributor"], V["dist_boss"], V["spider_boss"]
+    slot_y = [P["y_cyl1"] - P["stagger"] / 2 - P["bore_sp"] * k for k in range(4)]
+    extra = [cyl(Vector((0, ds["y"], P["valley_floor_z"] - 0.3)), up, db["r"], db["h"] + 0.3, 40)]
+    for y in slot_y:
+        extra.append(cyl(Vector((0, y + sb["dy"], P["valley_floor_z"] - 0.3)), up, sb["r"], sb["h"] + 0.3, 24))
+    for k, bm_ in enumerate(extra):
+        o = obj(f"ValleyBoss_{k}", bm_, parts); boolean(block, "UNION", o); bpy.data.objects.remove(o)
+
+    vcut = coll("Block_Cutters_Valley", root, hide=True)
+    def VC(name, bm_):
+        info["cutters"] += 1; return obj(name, bm_, vcut)
+    for bank, k, yc, ax in pairs:
+        for j, sgn in enumerate((-1, 1)):
+            VC(f"Lifter_{bank}{k}{j}", cyl(camc + Vector((0, yc + sgn * lf["dy"], 0)) + ax * lf["from_cam"], ax, lf["d"] / 2,
+                                          (bo["top_z"] - P["cam_cd"]) / ax.z - lf["from_cam"] + 0.3, 32))
+    dsl = V["drain_slots"]
+    for k, y in enumerate(slot_y):
+        r = dsl["w"] / 2; half = dsl["len"] / 2 - r
+        pts = stadium(Vector((0, y, dsl["z_bot"])), up, half, r)
+        VC(f"CamDrain_{k}", prism(pts, up, dsl["z_top"] - dsl["z_bot"]))
+        VC(f"SpiderTap_{k}", cyl(Vector((0, y + sb["dy"], P["valley_floor_z"] + sb["h"] + 0.05)), Vector((0, 0, -1)),
+                                 sb["tap_d"] / 2, sb["tap_depth"] + 0.05, 16))
+    VC("Distributor", cyl(Vector((0, ds["y"], ds["z_top"])), Vector((0, 0, -1)), ds["d"] / 2, ds["z_top"] - ds["z_bot"], 32))
+    for g in V["galleries"]:
+        for x in ((g["x"], -g["x"]) if g["mirror"] else (g["x"],)):
+            VC(f"Gallery_{x:+.2f}", cyl(Vector((x, 0.3, g["z"])), Vector((0, 1, 0)), V["gallery_d"] / 2, P["length"] - 0.3 - FRONT["recess"]["depth"] + 0.05, 16))
+    boolean(block, "DIFFERENCE", vcut)
 
     # Main caps: separate parts hanging under each bulkhead, bored with the
     # block, four vertical studs each (inner and outer pair), ARP nuts.
