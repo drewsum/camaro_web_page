@@ -80,9 +80,27 @@ K = dict(
     hdr_bolts=((-1.20, 0.70), (1.20, -0.70)),   # [est] header bolts per port (du, dh), 3/8-16
     int_bolts=((-0.75, 3.30), (7.00, 3.05), (9.30, 3.05), (16.05, 3.30)),   # [est] intake bolts (u, h), 3/8-16
     end_ports=dict(u=(-2.45, 17.30), h=2.55, w=0.55, ht=0.80, depth=1.0),  # [meas] photo 335 water ports at the ends; size [est]
-    cover_bolts_u=(-1.60, 3.00, 7.26, 11.52, 16.12),                       # [est] perimeter-bolt valve cover
+    # Valve-cover rail: the BBC seven-bolt cover pattern, four along the exhaust side and three along the
+    # intake side, 1/4-20 [spec, count]; positions [est]. Each bolt sits in a lug cast on the inside of the
+    # rail wall, and the rail top carries a thin outward lip (the cover-gasket land) [est] photos 335/337
+    cover_bolts=dict(E=(-1.30, 4.45, 10.15, 15.95), I=(1.80, 8.45, 13.30)),
+    cover_tap=0.105, cover_lug_r=0.32, cover_lug_h=0.85,
+    rail_lip=0.07, rail_lip_h=0.22,
+    # Spring seats [est] photo (Drew's head, exhaust side, springs in): each spring stands in a machined
+    # pocket on a round boss that flares into the rocker-box floor; the guide boss stands up in the middle
+    spring_boss=(0.12, 0.42, 1.25),   # boss radius over the pocket at the seat, at the foot, and its length
+    spring_cbore=0.05,                # spot-faced counterbore round the seat: .05 deep, .06 over the pocket
+    spring_lead=(0.25, 0.70, 0.35),   # machined lead-in round each pocket: starts .25 over the seat, a cone
+                                      # out to .35 past the pocket wall at .70 [est]; the ports run close beside the
+                                      # seats (port roof within .1 of the seat plane 1.2" off the stem), so the floor
+                                      # can't be cast down round the bosses
+    stud_pillar_r=0.40,               # the stud boss carried up through intake port 2 (BBC "hidden" head-bolt boss)
 )
 H0 = K["gasket_t"]
+# Head studs: the gasket's 17 stud holes less those the block has no stud in (refs/deck_block.json): 16 per
+# head [meas] Drew's photo with the ARP studs in. Hole 13 rises through intake port 2 on a boss.
+STUDS = [h for i, h in enumerate(GASK["holes"]) if h["kind"] in ("stud", "stud_dowel") and i not in BDECK["drop_gasket_holes"]]
+assert len(STUDS) == 16, len(STUDS)
 
 
 # ---------- 2D helpers ----------
@@ -294,11 +312,17 @@ def exh_runner(k, scale, bm=None, face_ext=0.0):
 def port_solid(k, kind, scale, tmp, face_ext=0.0):
     """Runner + throat down to the valve face plane: the port volume (face_ext 0) or its cutter."""
     f = int_runner if kind == "I" else exh_runner
+    if isinstance(scale, (list, tuple)): scale = scale[k]
     bm, path, L = f(k, scale, None, face_ext)
     o = obj("port", bm, tmp)
     cv, s, _ = valve(k, kind); rt = K["v" + kind]["seat_id"] / 2
     th = obj("th", cyl_axis(cv, s, rt, 0.42, 48), tmp)
     boolean(o, "UNION", th); bpy.data.objects.remove(th, do_unlink=True)
+    if kind == "I":                                    # a stud boss standing up through the port
+        for h in STUDS:
+            if h["v"] > 3.2 and abs(h["u"] - INT_U[k]) < 1.2:
+                pl = obj("pil", zprism(circ(h["u"], h["v"], K["stud_pillar_r"], 32), -0.5, 7.0), tmp)
+                boolean(o, "DIFFERENCE", pl); bpy.data.objects.remove(pl, do_unlink=True)
     return o, path, L
 
 # ---------- pushrods (both banks' lifters, in left-head coordinates) ----------
@@ -313,7 +337,7 @@ def lifter_cups():
     return out
 
 R_OF = {0: 8, 1: 6, 2: 4, 3: 2}                       # right-bank cylinder that sits at left-head slot k once turned
-PUSH_TOP = dict(I=((0.25, 4.35, 5.30), (6.70, 4.35, 5.30), (10.25, 4.35, 5.30), (16.25, 4.35, 5.30)),
+PUSH_TOP = dict(I=((0.25, 4.35, 5.30), (6.70, 4.35, 5.30), (10.25, 4.35, 5.30), (16.40, 4.35, 5.30)),
                 E=(None, None, None, None))           # [est] intake cups just outside the paired ports; exhaust cups over their lifters
 E_CUP_V, E_CUP_H = 2.75, 5.50
 
@@ -341,6 +365,16 @@ def head_outline():
         run.append(o[i % len(o)]); i += 1
     uf, ur = run[0][0], run[-1][0]
     return ccw(run + [(ur, K["v_int"]), (uf, K["v_int"])]), uf, ur
+
+def lead_in(k, kind):
+    """Cone cutter: the machined lead-in round a spring pocket."""
+    cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]; a0, a1, dr = K["spring_lead"]; r0 = K["spring_r"] + 0.06
+    return loft([ring_pts(sp + s * a0, s, r0, 48), ring_pts(sp + s * a1, s, r0 + dr, 48), ring_pts(sp + s * 3.0, s, r0 + dr, 48)])
+
+def cover_bolt_pts():
+    """Valve-cover bolt centres on the rail (u, v): mid-wall on each side."""
+    return [(u, K["v_exh"] + K["wall"] / 2) for u in K["cover_bolts"]["E"]] + \
+           [(u, K["rail_v_int"] - K["wall"] / 2) for u in K["cover_bolts"]["I"]]
 
 def tune(f, target, lo, hi, it=14):
     vlo, vhi = f(lo), f(hi)
@@ -372,9 +406,21 @@ def build_left(root, tmp, info):
     cav = ccw(clip(inset(core, K["wall"]), 0, 1, K["rail_v_int"] - K["wall"]))
     bot = [V(x, y, floor_h(y)) for x, y in cav]; top = [V(x, y, K["rail"] + 1) for x, y in cav]
     o = obj("box", loft([bot, top]), tmp); boolean(head, "DIFFERENCE", o); clear(tmp)
+    # valve-cover rail: outward gasket lip and the seven bolt lugs inside the wall
+    rail_ol = ccw(clip(core, 0, 1, K["rail_v_int"]))
+    lip = ccw(clip(inset(rail_ol, -K["rail_lip"]), 0, 1, K["rail_v_int"] + K["rail_lip"]))
+    o = obj("lip", zprism(lip, K["rail"] - K["rail_lip_h"], K["rail"]), tmp)     # a ring: the box stays open
+    inner = obj("lipin", zprism(cav, K["rail"] - 1.0, K["rail"] + 1.0), root)
+    boolean(o, "DIFFERENCE", inner); bpy.data.objects.remove(inner, do_unlink=True)
+    for u, v in cover_bolt_pts():
+        vi = v + (0.18 if v < 0 else -0.18)          # lug centre a little inside the wall
+        obj("lug", zprism(circ(u, vi, K["cover_lug_r"], 32), K["rail"] - K["cover_lug_h"], K["rail"]), tmp)
+        obj("lugb", loft([ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] - 0.30), V(0, 0, 1), 0.06, 32),
+                          ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] + 0.001), V(0, 0, 1), K["cover_lug_r"], 32)]), tmp)
+    boolean(head, "UNION", tmp); clear(tmp)
 
     # bosses in the box: studs, spring seats, guides, rocker studs
-    studs = [h for i, h in enumerate(GASK["holes"]) if h["kind"] in ("stud", "stud_dowel") and i not in BDECK["drop_gasket_holes"]]
+    studs = STUDS
     info["studs"] = [(round(h["u"], 3), round(h["v"], 3)) for h in studs]
     low = [h for h in studs if h["v"] < -2.5]; high = [h for h in studs if h["v"] >= -2.5]
     for h in high:
@@ -382,7 +428,9 @@ def build_left(root, tmp, info):
     for k in range(4):
         for kind in "IE":
             cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]
-            obj("spb", cyl_axis(cv + s * (K["spring_h"] - 0.9), s, K["spring_r"] + 0.13, 0.9, 48), tmp)
+            rt, rf, ln = K["spring_boss"]
+            obj("spb", loft([ring_pts(sp - s * ln, s, K["spring_r"] + rf, 48), ring_pts(sp - s * 0.5, s, K["spring_r"] + rt + 0.10, 48),
+                             ring_pts(sp, s, K["spring_r"] + rt, 48)]), tmp)
             obj("gb", cyl_axis(sp - s * 0.05, s, 0.34, 0.62, 24), tmp)
     lines = pushrod_lines(); pivots = {}
     for (k, kind), ln in lines.items():
@@ -406,14 +454,18 @@ def build_left(root, tmp, info):
                 o, _, _ = port_solid(k, kind, sc, tmp); vs.append(vol(o)); clear(tmp)
             return float(np.mean(vs)) / 0.0610237
         return f
-    sI = tune(pcc("I"), K["int_cc"], 0.75, 1.35, 10); sE = tune(pcc("E"), K["exh_cc"], 0.75, 1.40, 10)
-    info["port_scale"] = dict(I=round(sI, 4), E=round(sE, 4))
+    def pk(k):                                      # one intake port: port 2 carries the stud boss, so each is sized alone
+        def f(sc):
+            o, _, _ = port_solid(k, "I", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
+        return f
+    sI = [tune(pk(k), K["int_cc"], 0.75, 1.45, 10) for k in range(4)]; sE = tune(pcc("E"), K["exh_cc"], 0.75, 1.40, 10)
+    info["port_scale"] = dict(I=[round(x, 4) for x in sI], E=round(sE, 4))
     iv, ev, lens = [], [], {}
     for k in range(4):
         o, _, L = port_solid(k, "I", sI, tmp); iv.append(round(vol(o) / 0.0610237, 1)); lens[f"I{k}"] = round(L, 2); clear(tmp)
         o, _, L = port_solid(k, "E", sE, tmp); ev.append(round(vol(o) / 0.0610237, 1)); lens[f"E{k}"] = round(L, 2); clear(tmp)
     info["intake_cc"] = iv; info["exhaust_cc"] = ev; info["runner_len"] = lens
-    info["intake_min_csa"] = round(min(1.515 * 2.30 - (4 - math.pi) * 0.50 ** 2, (1.68 * 2.05 * sI * sI) - (4 - math.pi) * 0.60 ** 2), 3)
+    info["intake_min_csa"] = round(min(1.515 * 2.30 - (4 - math.pi) * 0.50 ** 2, (1.68 * 2.05 * min(sI) ** 2) - (4 - math.pi) * 0.60 ** 2), 3)
 
     cutters = []
     for k in range(4):
@@ -428,10 +480,21 @@ def build_left(root, tmp, info):
         for kind in "IE":
             cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"]
             obj("spk", cyl_axis(sp, s, K["spring_r"], 3.0, 48), tmp)
+            obj("spf", cyl_axis(sp + s * K["spring_cbore"], s, K["spring_r"] + 0.06, 3.0, 48), tmp)
             obj("stem", cyl_axis(cv + s * 0.3, s, 0.172, K["spring_h"] + 1.0, 16), tmp)
         tip, dr, ex = plug_line(k); P = K["plug"]
         obj("pth", cyl_axis(tip - dr * 0.2, dr, P["thread_r"], P["reach"] + 0.2, 24), tmp)
         obj("pse", seg_cyl(tip + dr * P["reach"], ex + dr * 0.6, P["seat_r"], 32), tmp)
+    lim = obj("lim", zprism(cav, 0.0, K["rail"] + 2.0), root)
+    keep = bmesh.new()
+    for h in high: zprism(circ(h["u"], h["v"], K["boss_r"] + 0.04, 32), 0.0, 9.0, keep)
+    for pv in pivots.values(): zprism(circ(pv.x, pv.y, 0.49, 32), 0.0, 9.0, keep)
+    keep = obj("keep", keep, root)
+    for k in range(4):
+        for kind in "IE":
+            o = obj("lead", lead_in(k, kind), tmp)
+            boolean(o, "DIFFERENCE", keep); boolean(o, "INTERSECT", lim)
+    bpy.data.objects.remove(lim, do_unlink=True); bpy.data.objects.remove(keep, do_unlink=True)
     for h in studs:
         obj("shl", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0 - 0.2, (H0 + K["lip"] + 0.05) if h in low else K["rail"]), tmp)
     for h in low:
@@ -463,10 +526,8 @@ def build_left(root, tmp, info):
                 obj("wp", zprism(ccw([tuple(p) for p in h["contour"]]), H0 - 0.1, H0 + 0.60), tmp)
     for dw in BDECK["dowels"]:
         obj("dw", zprism(circ(dw["u"], dw["v"], BLK["dowel_d"] / 2, 32), H0 - 0.1, H0 + 0.30), tmp)
-    vcx = [(u, K["v_exh"] + K["wall"] / 2) for u in K["cover_bolts_u"]] + [(u, K["rail_v_int"] - K["wall"] / 2) for u in K["cover_bolts_u"]]
-    vcx += [(uf + K["wall"] / 2, 1.25), (ur - K["wall"] / 2, 1.25)]
-    for u, v in vcx:
-        obj("vcb", zprism(circ(u, v, 0.10, 12), K["rail"] - 0.6, K["rail"] + 0.1), tmp)
+    for u, v in cover_bolt_pts():
+        obj("vcb", zprism(circ(u, v, K["cover_tap"], 16), K["rail"] - 0.65, K["rail"] + 0.1), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
     info["head_outline_u"] = (round(uf, 3), round(ur, 3))
     info["breaches"] = breaches(tmp, studs, low, lines, sI, sE)
@@ -500,6 +561,7 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
         for kind in "IE":
             cv, s, _ = valve(k, kind)
             others[f"spring{k}{kind}"] = obj("x", cyl_axis(cv + s * K["spring_h"], s, K["spring_r"], 3.0, 48), tmp)
+            others[f"lead{k}{kind}"] = obj("x", lead_in(k, kind), tmp)
     out = []
     for pn, pt in ports.items():
         for on, o in others.items():

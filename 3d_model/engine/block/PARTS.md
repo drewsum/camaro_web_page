@@ -52,7 +52,7 @@ Per deck:
 
 - **Valley edge:** traced from the photo, v = 3.0–3.5". It bulges out round the valley-side ports and dips beside the lifter bosses. It ends at v = 3.35–3.40" at the front and rear. The gasket's two triangular ears and the two bolt holes in them (v ≈ 3.4") are not on the block.
 - **Valley wall:** drops from the deck edge straight into the valley floor, parallel to the bores, with no ledge between the deck and the valley. The edge's bulges run down the wall as flutes (photo above, album 351/352). The wall itself sits at v = 3.0".
-- **12 head-stud holes, 7/16-14 blind-tapped:** 4 along the exhaust edge (v ≈ −2.74"), 3 between the bores on the exhaust side (v ≈ −1.25"), 3 on the valley side (v ≈ +1.9 to +2.1") and 2 at v ≈ +2.72" (cylinders 1 and 5).
+- **16 head-stud holes, 7/16-14 blind-tapped** (Drew's photo with the ARP studs in): 4 along the exhaust edge (v ≈ −2.74"), a stacked pair between each pair of bores on the exhaust side (v ≈ −2.2" and −1.25"), 3 between the bores on the valley side (v ≈ +1.9 to +2.1"), 2 at v ≈ +2.72" (cylinders 1 and 5) and one at v = 3.41" at cylinder 3's position, on a boss standing past the valley edge [est]. The traced exhaust-side ports round the stacked pairs' lower studs now leave the stud bosses standing.
 - **Water ports, all larger than the gasket's holes, modelled as .70" pockets** (the water jacket isn't modelled):
   - 3 exhaust-side triangles between the bores, about 2.3 × .8". The gasket's round holes at v = −2.22" sit inside them, so those are not bolt holes.
   - 3 valley-side kidneys between the bores, about 1.6 × .9", and a rounded triangle behind cylinder 7.

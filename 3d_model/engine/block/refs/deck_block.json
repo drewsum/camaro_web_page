@@ -39,8 +39,20 @@
    3.3
   ],
   [
-   4.5,
-   3.25
+   4.45,
+   3.27
+  ],
+  [
+   4.58,
+   3.62
+  ],
+  [
+   4.93,
+   3.8
+  ],
+  [
+   5.28,
+   3.62
   ],
   [
    5.4,
@@ -276,20 +288,76 @@
    "name": "exh_tri_1",
    "contour": [
     [
-     1.25,
-     -2.4
-    ],
-    [
      1.6,
      -2.05
     ],
     [
-     2.1,
-     -1.88
+     2.111,
+     -1.879
     ],
     [
-     2.6,
-     -1.85
+     2.027,
+     -1.961
+    ],
+    [
+     1.973,
+     -2.056
+    ],
+    [
+     1.941,
+     -2.19
+    ],
+    [
+     1.949,
+     -2.299
+    ],
+    [
+     1.997,
+     -2.427
+    ],
+    [
+     2.064,
+     -2.514
+    ],
+    [
+     2.175,
+     -2.594
+    ],
+    [
+     2.279,
+     -2.629
+    ],
+    [
+     2.443,
+     -2.629
+    ],
+    [
+     2.571,
+     -2.581
+    ],
+    [
+     2.676,
+     -2.494
+    ],
+    [
+     2.758,
+     -2.352
+    ],
+    [
+     2.78,
+     -2.19
+    ],
+    [
+     2.749,
+     -2.056
+    ],
+    [
+     2.676,
+     -1.94
+    ],
+    [
+     2.568,
+     -1.852
     ],
     [
      3.05,
@@ -318,23 +386,88 @@
     [
      1.28,
      -2.58
+    ],
+    [
+     1.25,
+     -2.4
     ]
-   ]
+   ],
+   "note": "traced port with the stud boss of gasket hole 8 (Drew photo: studs between the bores on the exhaust side) left standing"
   },
   {
    "name": "exh_tri_2",
    "contour": [
     [
-     6.15,
-     -2.45
-    ],
-    [
      6.5,
      -2.1
     ],
     [
-     7.0,
-     -1.9
+     6.931,
+     -1.928
+    ],
+    [
+     6.858,
+     -2.032
+    ],
+    [
+     6.818,
+     -2.163
+    ],
+    [
+     6.823,
+     -2.299
+    ],
+    [
+     6.871,
+     -2.427
+    ],
+    [
+     6.958,
+     -2.533
+    ],
+    [
+     7.074,
+     -2.606
+    ],
+    [
+     7.207,
+     -2.637
+    ],
+    [
+     7.317,
+     -2.629
+    ],
+    [
+     7.42,
+     -2.594
+    ],
+    [
+     7.512,
+     -2.533
+    ],
+    [
+     7.584,
+     -2.451
+    ],
+    [
+     7.623,
+     -2.378
+    ],
+    [
+     7.654,
+     -2.245
+    ],
+    [
+     7.64,
+     -2.109
+    ],
+    [
+     7.584,
+     -1.984
+    ],
+    [
+     7.49,
+     -1.884
     ],
     [
      7.6,
@@ -367,27 +500,88 @@
     [
      6.15,
      -2.6
+    ],
+    [
+     6.15,
+     -2.45
     ]
-   ]
+   ],
+   "note": "traced port with the stud boss of gasket hole 15 (Drew photo: studs between the bores on the exhaust side) left standing"
   },
   {
    "name": "exh_tri_3",
    "contour": [
     [
-     10.93,
-     -2.4
-    ],
-    [
      11.28,
      -2.05
     ],
     [
-     11.78,
-     -1.88
+     11.818,
+     -1.878
     ],
     [
-     12.28,
-     -1.85
+     11.723,
+     -1.979
+    ],
+    [
+     11.667,
+     -2.103
+    ],
+    [
+     11.653,
+     -2.239
+    ],
+    [
+     11.684,
+     -2.373
+    ],
+    [
+     11.757,
+     -2.489
+    ],
+    [
+     11.863,
+     -2.576
+    ],
+    [
+     11.991,
+     -2.624
+    ],
+    [
+     12.127,
+     -2.628
+    ],
+    [
+     12.258,
+     -2.589
+    ],
+    [
+     12.369,
+     -2.509
+    ],
+    [
+     12.436,
+     -2.422
+    ],
+    [
+     12.484,
+     -2.294
+    ],
+    [
+     12.489,
+     -2.157
+    ],
+    [
+     12.461,
+     -2.051
+    ],
+    [
+     12.388,
+     -1.935
+    ],
+    [
+     12.286,
+     -1.851
     ],
     [
      12.73,
@@ -416,8 +610,13 @@
     [
      10.96,
      -2.58
+    ],
+    [
+     10.93,
+     -2.4
     ]
-   ]
+   ],
+   "note": "traced port with the stud boss of gasket hole 22 (Drew photo: studs between the bores on the exhaust side) left standing"
   },
   {
    "name": "front_slot",
@@ -598,13 +797,10 @@
  ],
  "drop_gasket_holes": [
   0,
-  8,
-  13,
-  15,
-  22,
   27,
   29,
   31
  ],
- "drop_src": "13/27: gasket ears beyond the deck edge, no hole in the block; 8/15/22: inside the exhaust-side triangle ports; 0/29/31: replaced by the traced ports"
+ "drop_src": "27: gasket ear with no stud (Drew's studded-deck photo shows 16 per side; the intake-port boss at cylinder 3 is used, the one at 7 is not); 0/29/31: replaced by the traced ports. Holes 8/15/22 are studs (photo with the ARP studs in), standing inside the traced exhaust-side ports",
+ "valley_edge_src": "boss round gasket hole 13 (stud under intake port 2, the 'hidden' BBC head-bolt boss), standing past the valley edge as in the bare-deck photo [est]"
 }
