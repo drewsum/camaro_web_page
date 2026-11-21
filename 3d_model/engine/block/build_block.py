@@ -40,10 +40,13 @@ P = dict(
     deck_v_valley=3.30, deck_v_exh=-3.15,      # [meas] gasket body edges (tabs/bosses go further)
     deck_clip_v=3.80,    # [meas] gasket ears beyond this hang over the valley (photo 38)
     wall_len=4.30,       # [est] side water-jacket wall length below the deck edge
-    skirt_x=6.10, rail_x=6.55, rail_t=0.40, pan_rail_z=-3.50,   # [est] crankcase skirt and pan rail
+    pan_rail_z=-2.25,    # [meas] photos 22/24/41: caps stand ~.85" proud of the rail; cap drop 3.10 below the parting line
+    rail_x=5.65, rail_t=0.40, rail_inner=4.45,   # [est] pan rail flange outer/inner half-width, thickness
     valley_floor_z=7.30, valley_top_half=3.60, valley_floor_half=2.40, china_wall=0.45,   # [est]
-    case_half=5.55,      # [est] crankcase cavity half-width
-    cap_half=3.10, cap_drop=2.90,              # [est] main cap half-width and depth below the parting line
+    case_half=5.15,      # [est] crankcase cavity half-width above the rail
+    cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
+    main_stud_x=(1.95, 3.00),   # [meas] photo 22: inner pair just outside the saddle, outer pair ~1.05" further; all vertical
+    main_stud_d=0.50, main_nut_d=0.80, main_nut_h=0.55, main_washer_d=0.95, main_stud_out=0.85,  # [est] ARP 235-5701 hardware
     stud_tap=0.4375, stud_depth=1.75,          # [spec] 7/16-14 blind-tapped head stud holes
     dowel_d=0.609, dowel_depth=0.35,           # [meas] head dowel counterbore (gasket hole)
     port_depth=0.70,     # [est] coolant ports cut as pockets; the jacket itself is not modelled
@@ -124,8 +127,9 @@ def body_section():
     v2 = b["d"] * P["deck"] + b["t"] * P["deck_v_exh"]
     s1 = v2 - b["d"] * P["wall_len"]
     z0 = P["pan_rail_z"]
+    # The skirt tapers in from the water-jacket wall to the pan rail flange.
     half = [Vector((0, 0, v1.z)), v1, v2, s1,
-            Vector((-P["skirt_x"], 0, z0 + P["rail_t"])), Vector((-P["rail_x"], 0, z0 + P["rail_t"])),
+            Vector((-P["rail_x"], 0, z0 + P["rail_t"])),
             Vector((-P["rail_x"], 0, z0)), Vector((0, 0, z0))]
     return half
 
@@ -170,18 +174,24 @@ def build():
     info["mains_y"] = [round(m, 3) for m in mains]
 
     # Crankcase bays between bulkheads (open to the bores above, the pan below).
-    ch = P["case_half"]
-    bay_sec = [Vector((-ch, 0, P["pan_rail_z"] - 0.5)), Vector((ch, 0, P["pan_rail_z"] - 0.5)),
-               Vector((ch, 0, 1.0)), Vector((1.6, 0, P["cam_cd"] - 1.35)),
-               Vector((-1.6, 0, P["cam_cd"] - 1.35)), Vector((-ch, 0, 1.0))]
+    # Through the rail the opening narrows to the flange's inner edge.
+    ch, ri, zr = P["case_half"], P["rail_inner"], P["pan_rail_z"]
+    def case_sec(top):
+        lo = [Vector((-ri, 0, zr - 1)), Vector((ri, 0, zr - 1)), Vector((ri, 0, zr + P["rail_t"])),
+              Vector((ch, 0, zr + P["rail_t"] + 0.35))]
+        if top == "bay":
+            return lo + [Vector((ch, 0, 1.0)), Vector((1.6, 0, P["cam_cd"] - 1.35)),
+                         Vector((-1.6, 0, P["cam_cd"] - 1.35)), Vector((-ch, 0, 1.0)),
+                         Vector((-ch, 0, zr + P["rail_t"] + 0.35)), Vector((-ri, 0, zr + P["rail_t"]))]
+        return lo + [Vector((ch, 0, 0)), Vector((-ch, 0, 0)),
+                     Vector((-ch, 0, zr + P["rail_t"] + 0.35)), Vector((-ri, 0, zr + P["rail_t"]))]
     for i in range(4):
         y_a, y_b = webs[i + 1][1], webs[i][0]
-        C(f"Bay_{i+1}", prism([p + Vector((0, y_a, 0)) for p in bay_sec], Vector((0, 1, 0)), y_b - y_a))
-    # Under each bulkhead: the pocket the main cap sits in, below the parting line.
-    for i, (a, b) in enumerate(webs):
-        cp = [Vector((-P["cap_half"], a, P["pan_rail_z"] - 0.5)), Vector((P["cap_half"], a, P["pan_rail_z"] - 0.5)),
-              Vector((P["cap_half"], a, 0)), Vector((-P["cap_half"], a, 0))]
-        C(f"CapPocket_{i+1}", prism(cp, Vector((0, 1, 0)), b - a))
+        C(f"Bay_{i+1}", prism([p + Vector((0, y_a, 0)) for p in case_sec("bay")], Vector((0, 1, 0)), y_b - y_a))
+    # Below the parting line the bulkheads end: the crankcase is open the full
+    # width under every web, and the caps hang free (no side bolts, no pockets).
+    y_a, y_b = webs[4][0], webs[0][1]
+    C("UnderWebs", prism([p + Vector((0, y_a, 0)) for p in case_sec("under")], Vector((0, 1, 0)), y_b - y_a))
 
     # Main line bore and cam tunnel, full length.
     C("MainBore", cyl(Vector((0, -0.5, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, P["length"] + 1, 48))
@@ -211,22 +221,50 @@ def build():
 
     boolean(block, "DIFFERENCE", cut)
 
-    # Main caps: separate parts under each bulkhead, bored with the block.
+    # Main caps: separate parts hanging under each bulkhead, bored with the
+    # block, four vertical studs each (inner and outer pair), ARP nuts.
+    hw, dz, ch_ = P["cap_half"], P["cap_drop"], P["cap_chamfer"]
+    cap_sec = [Vector((-hw, 0, 0)), Vector((-hw, 0, -dz + ch_)), Vector((-hw + ch_, 0, -dz)),
+               Vector((hw - ch_, 0, -dz)), Vector((hw, 0, -dz + ch_)), Vector((hw, 0, 0))]
     for i, (a, b) in enumerate(webs):
-        bm = prism([Vector((-P["cap_half"], a, -P["cap_drop"])), Vector((P["cap_half"], a, -P["cap_drop"])),
-                    Vector((P["cap_half"], a, 0)), Vector((-P["cap_half"], a, 0))], Vector((0, 1, 0)), b - a)
-        cap = obj(f"MainCap_{i+1}", bm, parts)
-        bore = obj("tmp", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), parts)
-        boolean(cap, "DIFFERENCE", bore); bpy.data.objects.remove(bore)
+        cap = obj(f"MainCap_{i+1}", prism([p + Vector((0, a, 0)) for p in cap_sec], Vector((0, 1, 0)), b - a), parts)
+        capcut = coll("Cap_Cutters_tmp", root, hide=True)
+        obj("bore", cyl(Vector((0, a - 0.1, 0)), Vector((0, 1, 0)), P["main_bore"] / 2, b - a + 0.2, 48), capcut)
+        hw_bm = bmesh.new()
+        ym = (a + b) / 2
+        for x in P["main_stud_x"]:
+            for sx in (-x, x):
+                obj("stud", cyl(Vector((sx, ym, -dz - 0.1)), Vector((0, 0, 1)), P["main_stud_d"] / 2 + 0.015, dz + 0.2, 20), capcut)
+                base = Vector((sx, ym, -dz))
+                # Stud: threaded ~1" up into the bulkhead, down through the cap, past the nut.
+                cyl(Vector((sx, ym, 1.0)), Vector((0, 0, -1)), P["main_stud_d"] / 2, 1.0 + dz + P["main_stud_out"], 16, hw_bm)
+                cyl(base, Vector((0, 0, -1)), P["main_washer_d"] / 2, 0.10, 24, hw_bm)
+                cyl(base - Vector((0, 0, 0.10)), Vector((0, 0, -1)), P["main_nut_d"] / 2, P["main_nut_h"], 12, hw_bm)
+        boolean(cap, "DIFFERENCE", capcut)
+        clear(capcut); bpy.data.collections.remove(capcut)
+        studs = obj(f"MainStuds_{i+1}", hw_bm, parts)
 
     for o in parts.objects:
         o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
         info["parts"][o.name] = dict(tris=sum(len(p.vertices) - 2 for p in o.data.polygons),
                                      dims_in=[round(d / IN, 3) for d in o.dimensions])
-    mat = bpy.data.materials.get("Block_CastIron") or bpy.data.materials.new("Block_CastIron")
-    mat.diffuse_color = (0.85, 0.24, 0.05, 1)  # Chevy orange, as painted (photo 26)
+    def material(name, rgba, metal, rough):
+        m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+        m.diffuse_color = rgba
+        bsdf = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if bsdf:
+            bsdf.inputs["Base Color"].default_value = rgba
+            bsdf.inputs["Metallic"].default_value = metal
+            bsdf.inputs["Roughness"].default_value = rough
+        return m
+    mats = {
+        "paint": material("Block_ChevyOrange", (0.85, 0.24, 0.05, 1), 0.0, 0.45),   # painted (photo 26)
+        "iron": material("Block_BareIron", (0.30, 0.30, 0.31, 1), 0.85, 0.5),      # unpainted caps (photo 24)
+        "arp": material("ARP_BlackOxide", (0.03, 0.03, 0.03, 1), 0.8, 0.35),       # ARP studs and nuts
+    }
     for o in parts.objects:
-        o.data.materials.clear(); o.data.materials.append(mat)
+        kind = "arp" if o.name.startswith("MainStuds") else "iron" if o.name.startswith("MainCap") else "paint"
+        o.data.materials.clear(); o.data.materials.append(mats[kind])
     # The cutters stay in the hidden collection for inspection; the block is final.
     with open(os.path.join(HERE, "block_info.json"), "w") as f:
         json.dump(dict(params=P, **info), f, indent=1, default=str)

@@ -20,17 +20,27 @@
   "deck_v_exh": -3.15,
   "deck_clip_v": 3.8,
   "wall_len": 4.3,
-  "skirt_x": 6.1,
-  "rail_x": 6.55,
+  "pan_rail_z": -2.25,
+  "rail_x": 5.65,
   "rail_t": 0.4,
-  "pan_rail_z": -3.5,
+  "rail_inner": 4.45,
   "valley_floor_z": 7.3,
   "valley_top_half": 3.6,
   "valley_floor_half": 2.4,
   "china_wall": 0.45,
-  "case_half": 5.55,
-  "cap_half": 3.1,
-  "cap_drop": 2.9,
+  "case_half": 5.15,
+  "cap_half": 3.45,
+  "cap_drop": 3.1,
+  "cap_chamfer": 0.3,
+  "main_stud_x": [
+   1.95,
+   3.0
+  ],
+  "main_stud_d": 0.5,
+  "main_nut_d": 0.8,
+  "main_nut_h": 0.55,
+  "main_washer_d": 0.95,
+  "main_stud_out": 0.85,
   "stud_tap": 0.4375,
   "stud_depth": 1.75,
   "dowel_d": 0.609,
@@ -41,55 +51,95 @@
  },
  "parts": {
   "Block": {
-   "tris": 11069,
+   "tris": 11309,
    "dims_in": [
     19.347,
     24.014,
-    13.117
+    11.867
    ]
   },
   "MainCap_1": {
-   "tris": 116,
+   "tris": 480,
    "dims_in": [
-    6.2,
+    6.9,
     1.1,
-    2.9
+    3.1
+   ]
+  },
+  "MainStuds_1": {
+   "tris": 784,
+   "dims_in": [
+    6.95,
+    0.95,
+    4.95
    ]
   },
   "MainCap_2": {
-   "tris": 116,
+   "tris": 484,
    "dims_in": [
-    6.2,
+    6.9,
     1.0,
-    2.9
+    3.1
+   ]
+  },
+  "MainStuds_2": {
+   "tris": 784,
+   "dims_in": [
+    6.95,
+    0.95,
+    4.95
    ]
   },
   "MainCap_3": {
-   "tris": 116,
+   "tris": 484,
    "dims_in": [
-    6.2,
+    6.9,
     1.0,
-    2.9
+    3.1
+   ]
+  },
+  "MainStuds_3": {
+   "tris": 784,
+   "dims_in": [
+    6.95,
+    0.95,
+    4.95
    ]
   },
   "MainCap_4": {
-   "tris": 116,
+   "tris": 484,
    "dims_in": [
-    6.2,
+    6.9,
     1.0,
-    2.9
+    3.1
+   ]
+  },
+  "MainStuds_4": {
+   "tris": 784,
+   "dims_in": [
+    6.95,
+    0.95,
+    4.95
    ]
   },
   "MainCap_5": {
-   "tris": 116,
+   "tris": 484,
    "dims_in": [
-    6.2,
+    6.9,
     1.6,
-    2.9
+    3.1
+   ]
+  },
+  "MainStuds_5": {
+   "tris": 784,
+   "dims_in": [
+    6.95,
+    0.95,
+    4.95
    ]
   }
  },
- "cutters": 77,
+ "cutters": 73,
  "mains_y": [
   22.27,
   17.43,
