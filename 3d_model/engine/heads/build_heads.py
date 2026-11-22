@@ -510,9 +510,9 @@ END = dict(
     face=((-3.20, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.90, 3.40)),   # (v, z), z from the block deck: exhaust-deck,
                                                          # intake-deck, the short edge up off the china wall [Drew's 3rd
                                                          # photo: it leans back from the intake face], apex
-    inner=((-1.55, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.45, 3.40)),    # where the end block blends into the casting
+    inner=((-1.95, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.45, 3.40)),   # where the corner has faired into the exhaust wall (v_exh)    # where the end block blends into the casting
     chamfer_edges=(True, False, False, True),            # deck, the two top edges (meet the cast roll-back), exhaust side
-    full=0.60, depth=1.20, chamfer=0.08,
+    full=0.60, blend=1.40, chamfer=0.08,
     roll0=20.0, roll_top=3.40, roll_exh=0.85,            # roll-back: leaves the face at 20 deg, meets the flange foot at the
                                                          # shelf height; .85" in from the end beyond the rail's exhaust side
     holes=((4.60, 0.45), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
@@ -525,11 +525,20 @@ def end_axes(s):
     return Vector((0.7071 * s, -0.7071 * s)), Vector((0.7071, 0.7071))
 
 def end_blocks(uf, ur, tmp):
+    """Each end's casting behind the machined face. The face's leaning exhaust edge carries on inwards as the
+    corner's sloped wall (photos 265/266/337), then fairs into the exhaust wall: full width for END["full"],
+    then a cosine blend in to END["blend"], so the corner is one solid casting with no fin or notch, and it
+    stands behind the end port's flange ear (a hair proud of it at most)."""
+    face, inner = END["face"], END["inner"]
+    D, F = END["blend"], END["full"]
+    ds = [0.0, F] + [F + (D - F) * k / 8 for k in range(1, 9)]
     for ue, s in ((ur, 1), (uf, -1)):
-        pts = []
-        for d, poly in ((0.0, END["face"]), (END["full"], END["face"]), (END["depth"], END["inner"])):
-            pts += [V(ue - s * d, v, max(z, H0)) for v, z in poly]
-        obj("endb", hull3(pts), tmp)
+        rings = []
+        for d in ds:
+            f = 1.0 if d <= F else 0.5 * (1 + math.cos(math.pi * (d - F) / (D - F)))
+            poly = [(vi + (vf - vi) * f, z) for (vf, z), (vi, _) in zip(face, inner)]
+            rings.append([V(ue - s * d, v, max(z, H0)) for v, z in poly])
+        obj("endb", loft(rings), tmp)
 
 def end_sweep(uf, ur, tmp):
     """Cutters for the cast roll-back above each end's machined triangle: in each slice across the bank (fixed v) the
