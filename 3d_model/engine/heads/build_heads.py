@@ -52,9 +52,10 @@ K = dict(
     v_int=6.40,              # plan extent of the casting on the valley side, before the intake face is cut (face_v)
     rail=4.00,               # [meas] photo 336 (square-on, scaled from the 2.435" port): intake face ~3.6-4.0" tall, rail flush with it
     int_face_top=3.55,       # [meas] Drew's close-up of the intake face: the machined manifold face stops ~.5" above the ports;
-    int_lip_t=0.15,          # above it the cover rail overhangs the face as a cast lip, its underside sloping out to the rail's
-                             # outer edge, .15" thick there [est] (Drew's photo of the intake face, gasket on)
-    rail_v_int=6.10,         # [meas] photo 336: intake-side rail over the intake face (the cast band trims its outer edge)
+                             # above it a cast band runs on up, flush with the face, to the valve-cover flange (Drew's photos)
+    rail_v_int=5.45,         # [Drew] the cover flange's intake side ends on the intake-face plane (BLK china_top_v); nothing,
+                             # not even the cover-bolt lugs, stands out past it
+    port_v0=6.10,            # intake runners are laid out from here and trimmed at the face (port_solid)
     wall=0.30,               # [meas] photo 267: thin machined rail
     floor=(3.50, 3.50),      # [est] rocker-box floor: ~.6" below the rail (photos 267/337)
     # Valves [spec] AFR: 2.300/1.880, 24/4 intake, 15/4 exhaust; seats 2.450 x 2.000 and 2.000 x 1.580
@@ -358,7 +359,7 @@ SC_MID = 0.936   # the short-turn roof (t .71) keeps the height it had with the 
 def int_runner(k, scale, bm=None, face_ext=0.0, smooth=True):
     cv, s, _ = valve(k, "I"); hc = K["int_hc"]; up = INT_U[k]; rt = K["vI"]["seat_id"] / 2
     a, b, c = INT_PATH[k]
-    v0 = K["rail_v_int"]                              # the runner is laid out from 6.10 and trimmed at the leaning face (port_solid)
+    v0 = K["port_v0"]                                 # the runner is laid out from 6.10 and trimmed at the leaning face (port_solid)
     ctrl = [V(up, v0 + face_ext, hc), V(up, v0 - 0.4, hc), V(a, 4.4, hc), V(b, 3.6, hc),
             V(c, 2.3, hc + 0.02), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.35, cv - s * 0.10]   # runs just past the valve face (smoothed, then cut back to the seat)
     w0, h0_, r0 = K["int_w"], K["int_h"], K["int_r"]
@@ -506,12 +507,10 @@ def build_left(root, tmp, info):
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     boolean(head, "UNION", tmp); clear(tmp)
-    # the intake face: square to the deck on the deck/china-wall line, machined up to int_face_top; above it the
-    # cover rail overhangs it as a cast lip whose underside slopes out to the rail's outer edge
-    ft, zt, vr = K["int_face_top"], K["rail"] + 2, K["rail_v_int"]
-    obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((face_v(-1.0), -1.0), (face_v(ft), ft), (12.0, ft), (12.0, -1.0))]), tmp)
-    obj("lip", hull3([V(u, v, z) for u in (-9.0, 24.0)
-                      for v, z in ((face_v(ft), ft - 0.001), (vr, K["rail"] - K["int_lip_t"]), (vr, zt), (12.0, zt), (12.0, ft - 0.001))]), tmp)
+    # the intake face: square to the deck on the deck/china-wall line, one plane from the deck to the cover-flange
+    # top; machined up to int_face_top, cast band above (material pass)
+    zt = K["rail"] + 2
+    obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((face_v(-1.0), -1.0), (face_v(zt), zt), (12.0, zt), (12.0, -1.0))]), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
@@ -712,7 +711,7 @@ def assign_head_materials(head, cast, mach):
     for p in me.polygons:
         c = p.center / IN; n = p.normal; m = 0
         if n.z < -0.99 and abs(c.z - H0) < 0.004: m = 1                       # deck
-        elif n.dot(FACE_N) > 0.999 and abs(c.y - face_v(c.z)) < 0.004: m = 1   # intake face
+        elif n.dot(FACE_N) > 0.999 and abs(c.y - face_v(c.z)) < 0.004 and c.z < K["int_face_top"]: m = 1   # intake face
         elif n.y < -0.99 and abs(c.y - K["exh_face"]) < 0.004: m = 1          # exhaust pads
         elif n.z > 0.99 and abs(c.z - K["rail"]) < 0.004: m = 1               # cover rail
         elif n.z > 0.99 and abs(c.z - K["mid_seat"]) < 0.004: m = 1           # middle-row spot faces
