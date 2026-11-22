@@ -43,65 +43,74 @@ VALVES = ["EI"] * 4                                # E-I-E-I front to rear on th
 K = dict(
     gasket_t=0.027,          # [meas] Drew's engine: Cometic C5333 MLS, .027" compressed (block PARTS.md)
     gasket_bore=4.540,       # [spec] C5333 bore
-    lip=0.85,                # [est] exhaust-side deck flange (the scalloped lip with the bottom stud bosses, photo 337)
-    v_exh=-2.95,             # [est] exhaust-side wall of the casting above the lip
-    v_int=5.45,              # [derived] intake face: where the deck plane meets the china-wall top plane (z 10.78)
-    rail=4.65,               # [meas] valve-cover rail top above the block deck: photo 335, the rail stands ~.6" over the 3.9" intake face
-    int_face_top=3.90,       # [meas] photo 335: the intake face is ~1.6 port heights tall
-    rail_v_int=5.05,         # [est] the rail steps in from the intake face above it
-    wall=0.45,               # [est] rocker-box wall / rail width (perimeter-bolt rail)
-    floor=(4.10, 3.95),      # [est] rocker-box floor height, exhaust side and intake side
+    lip=0.65,                # [meas] photo 265: the exhaust-side deck ledge the bottom-row bolts sit on; thickness [est]
+    v_exh=-2.05,             # [est] casting wall between the exhaust flanges, below the shelf
+    shelf=3.40,              # [meas] photos 265/337: shelf above the exhaust ports, outside the valve cover, carrying the middle-row bolts; height [est]
+    rail_v_exh=-0.65,        # [meas] photo 267: the cover rail runs ~.6" inboard of the middle-row bolts
+    rail_corner=1.10, rail_end=0.35,   # [meas] photos 336/337: racetrack rail with rounded ends, a little short of the head ends
+    v_int=6.10,              # [meas] photo 334 (deck face, scaled from the stud holes): the intake face, perpendicular to the deck
+    rail=4.00,               # [meas] photo 336 (square-on, scaled from the 2.435" port): intake face ~3.6-4.0" tall, rail flush with it
+    int_face_top=4.00,       # the rail is flush with the intake face (photo 336)
+    rail_v_int=6.10,         # [meas] photo 336: intake-side rail flush with the intake face
+    wall=0.30,               # [meas] photo 267: thin machined rail
+    floor=(3.50, 3.50),      # [est] rocker-box floor: ~.6" below the rail (photos 267/337)
     # Valves [spec] AFR: 2.300/1.880, 24/4 intake, 15/4 exhaust; seats 2.450 x 2.000 and 2.000 x 1.580
-    vI=dict(d=2.300, ang=24.0, cant=4.0, du=0.90, dv=0.48, seat_od=2.450, seat_id=2.000, hs=0.80),
-    vE=dict(d=1.880, ang=15.0, cant=4.0, du=0.75, dv=-0.87, seat_od=2.000, seat_id=1.580, hs=0.70),
+    vI=dict(d=2.300, ang=24.0, cant=4.0, du=0.95, dv=0.55, seat_od=2.450, seat_id=2.000, hs=0.80),
+    vE=dict(d=1.880, ang=15.0, cant=4.0, du=1.13, dv=-0.15, seat_od=2.000, seat_id=1.580, hs=0.70),
     # du [derived] the lifters sit under the valves, .90" either side of the bore (../lifters); the exhaust
     # valves sit .15" closer in [est], so each exhaust spring clears the exhaust-side stud beside it;
-    # dv [derived] seats 2.25" apart so the seat rings clear, both inside the 4.5" bore; hs [est] seat
+    # du, dv [meas] photo 334 (deck face scaled from the stud holes): the valves sit nearly side by side along
+    # the bank, the intake .7" nearer the valley; both stems lean towards the valley (photos 267/336); hs [est] seat
     # height above the block deck, tuned with the chamber wall to the 117cc chamber
     chamber_cc=117.0,        # [spec] AFR 2110, partial-CNC chamber
     chamber_r=2.24,          # [derived] inside the 4.499" bore and the 4.540" gasket
-    spring_h=dict(I=3.15, E=3.50),  # [est] valve face to spring seat along the stem: intake seat ~.4" above the port roof;
+    spring_h=dict(I=2.82, E=2.86),  # [est] valve face to spring seat along the stem: machined pockets just below the floor (photos 336/337), the exhaust seats a little higher [Drew]
                              # the exhaust seats stand .35" higher [Drew], over the middle-row studs' spot faces
     spring_r=0.875,          # [spec] 1.725-1.750" spring pocket
-    stem_l=dict(I=5.30, E=5.65),             # [est] valve length, face to tip
+    stem_l=dict(I=5.09, E=5.13),    # [derived] spring seat + 1.900" installed height + retainer and locks (.37")
     # Intake: 345cc, 2.435 x 1.765, 13/32 corner radius, stock location, 3.263 in^2 min CSA [spec]; the
     # ports pair up, cylinders 1/3 and 5/7, 2.07" apart within a pair [meas] photo 335 (perspective fit)
-    int_cc=345.0, int_w=1.765, int_h=2.435, int_r=0.406, int_hc=2.35, int_pair=1.035, int_csa=3.263,
+    int_cc=345.0, int_w=1.765, int_h=2.435, int_r=0.406, int_hc=1.85, int_pair=1.035, int_csa=3.263,
     int_pairs=(3.60, 13.28),  # [derived] 9.68" apart (manifold), placed so the pushrods clear (photo 335 fit gives 2.29/11.97 or 2.87/12.55)
     # Exhaust: 132cc, 1.720 H x 1.920 W, raised .375 [spec]; about evenly spaced, one over each
     # cylinder's exhaust valve, with the plugs between them [meas] photo 337
     # Exhaust ports sit between the bottom-row studs, each under a middle-row stud, so the bottom row is below
     # the ports and the middle row above them [meas] Drew (deck drawing, photo of the head with the springs in);
     # each port runs forward from its valve; the first port is under the front-end stud
-    exh_cc=132.0, exh_w=1.920, exh_h=1.720, exh_r=0.45, exh_hc=2.60, exh_u=(-1.95, 2.39, 7.23, 12.07),
-    exh_face=-3.15,          # [est] machined port pads stand .20 proud of the casting wall
+    exh_cc=132.0, exh_w=1.920, exh_h=1.720, exh_r=0.65, exh_hc=2.25, exh_u=(-0.75, 4.09, 8.93, 13.77),
+    exh_face=-2.30,          # [meas] photo 265: flange face inboard of the bottom-row bolts, which stand on the ledge outside it
     # Spark plug: 14mm x .750" reach, gasket seat [spec]; plugs exit low between the exhaust ports, angled
     # towards their own intake valve [meas] photos 265/266/337; positions [est]
-    plug=dict(tip=(0.45, -1.50, 0.32), exit=(0.25, -3.00, 2.15), thread_r=0.276, reach=0.75, seat_r=0.45, boss_r=0.56),
+    plug=dict(tip=(0.0, -0.95, 0.40), exit=(0.70, -2.75, 1.05), thread_r=0.276, reach=0.75, seat_r=0.45, boss_r=0.56),
+    # Valvetrain (Drew's build doc): COMP 26924 springs (1.519" OD, 1.900" installed), COMP 749 retainers,
+    # 11/32 stems, 1.7 aluminium roller rockers (CSP-S2001NP) on 7/16 studs with poly locks (CSP-PL716K), 3/8 pushrods
+    # (Trick Flow 21418650 / 21417650; 8.650" intake, 7.650" exhaust). Shapes [est]; all valves drawn closed.
+    vt=dict(stem_r=0.171, spring_od=1.519, wire=0.200, installed=1.900, turns=5.5, ret_r=0.74, ret_t=0.10,
+            pushrod_r=0.1875, stud_r=0.2187, roller_r=0.27, trunnion_up=0.30, rocker_w=0.80),
     stud_hole=0.235,         # 7/16 stud clearance
     # The middle (exhaust-side) row stands outside the valve cover, above the exhaust ports: each sits on a
     # spot face at mid_seat in a slot open to the exhaust side, and the cover rail and rocker box step in
     # round it [meas] Drew; sizes [est]
-    mid_seat=3.85, mid_slot=0.40, mid_wall=0.25,
+    mid_seat=3.36,           # spot faces .04 into the shelf
     boss_r=0.42,             # [est] stud bosses in the rocker box
-    nut_pocket=0.50,         # [est] socket clearance round the four bottom studs, above the lip
-    nut_pocket_h=0.62,       # [est] the pocket can't go deeper without breaking into the exhaust port above; the
+    nut_pocket=0.46,         # [est] socket clearance round the four bottom studs, above the ledge
+    nut_pocket_h=0.55,       # [est] below the exhaust port; the bottom-row studs finish flush with their nuts
                              # bottom-row studs are cut to finish flush with their nuts
     pushrod_r=0.24,          # 3/8" pushrod + clearance
-    hdr_bolts=((-1.20, 0.70), (1.20, -0.70)),   # [est] header bolts per port (du, dh), 3/8-16
-    int_bolts=((-0.75, 3.30), (7.00, 3.05), (9.30, 3.05), (16.05, 3.30)),   # [est] intake bolts (u, h), 3/8-16
-    end_ports=dict(u=(-2.45, 17.30), h=2.55, w=0.55, ht=0.80, depth=1.0),  # [meas] photo 335 water ports at the ends; size [est]
+    hdr_bolts=((-1.50, -0.45), (1.40, 0.25)),   # [meas] photo 265: header bolts lower-front and upper-rear of each port (du, dh), 3/8-16
+    int_bolts=((-1.60, 1.75), (0.90, 1.75), (6.70, 1.75), (9.90, 1.75), (15.80, 1.75), (17.90, 1.75)),   # [meas] photo 336: six intake bolts (u, h), 3/8-16
+    end_ports=dict(u=(-0.45, 16.80), h=1.75, w=0.60, ht=1.00, depth=1.0),  # [meas] photo 336: water ports near the ends; size [est]
     # Valve-cover rail: the BBC seven-bolt cover pattern, four along the exhaust side and three along the
     # intake side, 1/4-20 [spec, count]; positions [est]. Each bolt sits in a lug cast on the inside of the
     # rail wall, and the rail top carries a thin outward lip (the cover-gasket land) [est] photos 335/337
-    cover_bolts=dict(E=(-1.30, 4.45, 10.15, 15.95), I=(1.80, 8.45, 13.30)),
-    cover_tap=0.105, cover_lug_r=0.32, cover_lug_h=0.85,
+    cover_bolts=dict(E=(0.22, 0.405, 0.605, 0.80), I=(0.17, 0.505, 0.84)),   # [meas] photo 336: fractions of the rail length from the rear
+    cover_tap=0.105, cover_tab_r=0.25, cover_tab_h=0.50,
     rail_lip=0.07, rail_lip_h=0.22,
     # Spring seats [est] photo (Drew's head, exhaust side, springs in): each spring stands in a machined
     # pocket on a round boss that flares into the rocker-box floor; the guide boss stands up in the middle
     spring_boss=(0.12, 0.42, 1.25),   # boss radius over the pocket at the seat, at the foot, and its length
     spring_cbore=0.05,                # spot-faced counterbore round the seat: .05 deep, .06 over the pocket
-    spring_lead=(0.25, 0.70, 0.35),   # machined lead-in round each pocket: starts .25 over the seat, a cone
+    spring_lead=(0.12, 0.40, 0.14),   # machined lead-in round each pocket [est]; the ports run close beside the
                                       # out to .35 past the pocket wall at .70 [est]; the ports run close beside the
                                       # seats (port roof within .1 of the seat plane 1.2" off the stem), so the floor
                                       # can't be cast down round the bosses
@@ -237,8 +246,7 @@ def nonmanifold(o):
     bm = bmesh.new(); bm.from_mesh(o.data); n = sum(1 for e in bm.edges if not e.is_manifold); bm.free(); return n
 
 def floor_h(v):
-    f0, f1 = K["floor"]; a, b = K["v_exh"] + K["wall"], K["rail_v_int"] - K["wall"]
-    return f0 + (f1 - f0) * min(1.0, max(0.0, (v - a) / (b - a)))
+    return K["floor"][0]
 
 
 # ---------- the left head's frame and the right head's turn ----------
@@ -263,7 +271,7 @@ def valve(k, kind):
     if kind == "I":
         s = V(math.tan(math.radians(q["cant"])) * su, math.tan(math.radians(q["ang"])), 1).normalized()
     else:
-        s = V(math.tan(math.radians(q["cant"])) * su, -math.tan(math.radians(q["ang"])), 1).normalized()
+        s = V(math.tan(math.radians(q["cant"])) * su, math.tan(math.radians(q["ang"])), 1).normalized()   # wedge: both lean to the valley
     c = V(CYL_U[k] + su * q["du"], q["dv"], q["hs"])
     return c, s, su
 
@@ -304,26 +312,26 @@ def chamber_cutter(k, wall_h, tmp, z0):
 INT_U = tuple(c + s * K["int_pair"] for c in K["int_pairs"] for s in (-1, 1))
 # [derived] runner centre u at v = 4.4, 3.6 and 2.1: clear of the valley-side studs (6, 10, 20, 24), the
 # intake pushrods (outside each pair, v ~4.4) and the exhaust pushrods (inside each pair, v ~3.5)
-INT_PATH = ((2.40, 2.15, 1.45), (4.79, 5.12, 5.40), (12.08, 11.85, 11.20), (14.42, 14.73, 15.05))
+INT_PATH = ((2.10, 1.85, 1.40), (4.85, 5.22, 5.45), (11.75, 11.50, 11.10), (14.50, 14.85, 15.10))
 
 def int_runner(k, scale, bm=None, face_ext=0.0):
     cv, s, _ = valve(k, "I"); hc = K["int_hc"]; up = INT_U[k]; rt = K["vI"]["seat_id"] / 2
     a, b, c = INT_PATH[k]
-    ctrl = [V(up, K["v_int"] + face_ext, hc), V(up, K["v_int"] - 0.4, hc), V(a, 4.4, hc - 0.05), V(b, 3.6, hc - 0.15),
-            V(c, 2.1, hc - 0.40), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.40]
+    ctrl = [V(up, K["v_int"] + face_ext, hc), V(up, K["v_int"] - 0.4, hc), V(a, 4.4, hc), V(b, 3.6, hc),
+            V(c, 2.3, hc + 0.02), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.35, cv - s * 0.02]   # the runner itself ends on the valve face
     w0, h0_, r0 = K["int_w"], K["int_h"], K["int_r"]
     def prof(t):    # pinch (t .45) held at the published minimum CSA; scale sizes the rest
-        w = interp(t, [0, .15, .45, .75, .9, 1], [w0, (w0 - .04) * scale, 1.515, 1.68 * scale, 1.88 * scale, 2 * rt])
-        h = interp(t, [0, .15, .45, .75, .9, 1], [h0_, (h0_ - .05) * scale, 2.30, 2.05 * scale, 1.98 * scale, 2 * rt])
-        r = interp(t, [0, .15, .45, .75, .9, 1], [r0, .45, .50, .60, .85, rt])
+        w = interp(t, [0, .15, .43, .71, .85, .94, 1], [w0, (w0 - .04) * scale, 1.515, max(1.68 * scale, 1.72), 1.95 * scale, 2 * rt, 2 * rt])
+        h = interp(t, [0, .15, .43, .71, .85, .94, 1], [h0_, (h0_ - .05) * scale, 2.30, max(2.05 * scale, 2.08), 1.70, 2 * rt, 2 * rt])
+        r = interp(t, [0, .15, .43, .71, .85, .94, 1], [r0, .45, .50, .60, .85, rt, rt])
         return w, h, min(r, w / 2, h / 2)
     return runner(ctrl, V(1, 0, 0), prof, bm)
 
 def exh_runner(k, scale, bm=None, face_ext=0.0):
     cv, s, _ = valve(k, "E"); hc = K["exh_hc"]; up = K["exh_u"][k]; rt = K["vE"]["seat_id"] / 2
-    um = 0.25 * up + 0.75 * cv.x                       # the runner stays near its valve until it is past the middle-row stud
-    ctrl = [V(up, K["exh_face"] - face_ext, hc), V(up, K["exh_face"] + 0.35, hc), V(0.5 * (up + um), -2.35, hc - 0.10),
-            V(um, -1.60, hc - 0.50), cv + s * 1.00, cv + s * 0.40]
+    f = K["exh_face"]                                 # short port: up off the seat, then back over to the exhaust side
+    ctrl = [V(up, f - face_ext, hc), V(up, f + 0.35, hc), V(0.5 * (up + cv.x), -1.15, hc - 0.25),
+            cv + s * 0.95 + V(0, -0.35, 0), cv + s * 0.40]
     w0, h0_, r0 = K["exh_w"], K["exh_h"], K["exh_r"]
     def prof(t):
         w = interp(t, [0, .2, .5, .8, 1], [w0, w0 - .03, 1.72 * scale, 1.62, 2 * rt])
@@ -338,9 +346,16 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0):
     if isinstance(scale, (list, tuple)): scale = scale[k]
     bm, path, L = f(k, scale, None, face_ext)
     o = obj("port", bm, tmp)
+    _b = bmesh.new(); _b.from_mesh(o.data)             # a sweep that bends the other way comes out inside-out: turn it
+    if _b.calc_volume(signed=True) < 0:
+        bmesh.ops.reverse_faces(_b, faces=_b.faces[:]); _b.to_mesh(o.data)
+    _b.free()
     cv, s, _ = valve(k, kind); rt = K["v" + kind]["seat_id"] / 2
-    th = obj("th", cyl_axis(cv, s, rt, 0.42, 48), tmp)
-    boolean(o, "UNION", th); bpy.data.objects.remove(th, do_unlink=True)
+    th = obj("th", cyl_axis(cv, s, rt * 1.012, 0.52, 44), tmp)   # overlaps the runner's end, off its ring, so the union is never degenerate
+    if kind == "E": boolean(o, "UNION", th)          # the intake runner reaches the valve face itself
+    bpy.data.objects.remove(th, do_unlink=True)
+    bx = obj("bx", zprism(rrect(-9, 24, -9, 12, 0.1, 1), -3.0, 9.0), tmp)      # resolves the sweep's self-overlap on tight bends
+    boolean(o, "INTERSECT", bx); bpy.data.objects.remove(bx, do_unlink=True)
     if kind == "I":                                    # a stud boss standing up through the port
         for h in STUDS:
             if h["v"] > 3.2 and abs(h["u"] - INT_U[k]) < 1.2:
@@ -365,9 +380,9 @@ def lifter_cups():
     return out
 
 R_OF = {0: 8, 1: 6, 2: 4, 3: 2}                       # right-bank cylinder that sits at left-head slot k once turned
-PUSH_TOP = dict(I=((0.25, 4.35, 5.30), (6.70, 4.35, 5.30), (10.25, 4.35, 5.30), (16.40, 4.35, 5.30)),
+PUSH_TOP = dict(I=((0.25, 4.60, 5.20), (6.70, 4.60, 5.20), (10.25, 4.60, 5.20), (16.40, 4.60, 5.20)),
                 E=(None, None, None, None))           # [est] intake cups just outside the paired ports; exhaust cups over their lifters
-E_CUP_V, E_CUP_H = 2.75, 5.50
+E_CUP_V, E_CUP_H = 2.60, 5.45
 
 def pushrod_lines():
     cups = lifter_cups(); lines = {}
@@ -409,10 +424,18 @@ def lead_in(k, kind):
     cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"][kind]; a0, a1, dr = K["spring_lead"]; r0 = K["spring_r"] + 0.06
     return loft([ring_pts(sp + s * a0, s, r0, 48), ring_pts(sp + s * a1, s, r0 + dr, 48), ring_pts(sp + s * 3.0, s, r0 + dr, 48)])
 
+def rail_polys():
+    """Valve-cover rail (outer) and rocker box (inner): a racetrack, flush with the intake face."""
+    _, uf, ur = head_outline(); e, w = K["rail_end"], K["wall"]
+    outer = ccw(rrect(uf + e, ur - e, K["rail_v_exh"], K["rail_v_int"], K["rail_corner"], 10))
+    inner = ccw(rrect(uf + e + w, ur - e - w, K["rail_v_exh"] + w, K["rail_v_int"] - w, K["rail_corner"] - w, 10))
+    return outer, inner, uf + e, ur - e
+
 def cover_bolt_pts():
-    """Valve-cover bolt centres on the rail (u, v): mid-wall on each side."""
-    return [(u, K["v_exh"] + K["wall"] / 2) for u in K["cover_bolts"]["E"]] + \
-           [(u, K["rail_v_int"] - K["wall"] / 2) for u in K["cover_bolts"]["I"]]
+    """Valve-cover bolt centres (u, v): mid-rail, four on the exhaust side and three on the intake side."""
+    _, _, u0, u1 = rail_polys(); L = u1 - u0; w = K["wall"]
+    return [(u1 - f * L, K["rail_v_exh"] + w / 2) for f in K["cover_bolts"]["E"]] + \
+           [(u1 - f * L, K["rail_v_int"] - w / 2) for f in K["cover_bolts"]["I"]]
 
 def tune(f, target, lo, hi, it=14):
     vlo, vhi = f(lo), f(hi)
@@ -424,44 +447,35 @@ def tune(f, target, lo, hi, it=14):
 
 def build_left(root, tmp, info):
     outl, uf, ur = head_outline()
-    core = ccw(hull(clip(outl, 0, -1, -K["v_exh"])))
+    core = ccw(hull(clip(outl, 0, -1, -K["v_exh"])))       # the casting below the shelf
+    rail_ol, cav, _, _ = rail_polys()
     head = obj("CylinderHead_L", zprism(outl, H0, H0 + K["lip"]), root)
-    o = obj("core", zprism(core, H0, K["rail"]), tmp); boolean(head, "UNION", o); clear(tmp)
-    o = obj("step", zprism(rrect(uf - 1, ur + 1, K["rail_v_int"], K["v_int"] + 1, 0.05, 1), K["int_face_top"], K["rail"] + 1), tmp)
-    boolean(head, "DIFFERENCE", o); clear(tmp)
+    obj("core", zprism(core, H0, K["shelf"]), tmp)
+    obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
+    boolean(head, "UNION", tmp); clear(tmp)
 
-    # exhaust port pads, plug bosses
+    # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
     for k in range(4):
         up, hc = K["exh_u"][k], K["exh_hc"]; w, h = K["exh_w"], K["exh_h"]
-        pts = rrect(up - w / 2 - .28, up + w / 2 + .28, hc - h / 2 - .28, hc + h / 2 + .28, .55, 6)
-        for du, dh in K["hdr_bolts"]: pts += circ(up + du, hc + dh, 0.40, 20)
+        pts = rrect(up - w / 2 - .28, up + w / 2 + .28, hc - h / 2 - .28, hc + h / 2 + .28, .80, 8)
+        for du, dh in K["hdr_bolts"]: pts += circ(up + du, hc + dh, 0.36, 20)
         obj("pad", vprism(ccw(hull(pts)), K["v_exh"] + 0.10, K["exh_face"]), tmp)
         tip, dr, ex = plug_line(k)
         obj("pb", seg_cyl(tip + dr * 1.45, ex + dr * 0.06, K["plug"]["boss_r"], 32), tmp)
+    for h in MID:
+        v0 = K["rail_v_exh"]
+        obj("fin", hull3([V(h["u"] + du, v, z) for du in (-0.07, 0.07)
+                          for v, z in ((v0 + 0.02, K["shelf"] - 0.1), (v0 - 0.16, K["shelf"] - 0.1), (v0 + 0.02, K["rail"] - 0.15))]), tmp)
     boolean(head, "UNION", tmp); clear(tmp)
 
-    # rocker box
-    cav = ccw(clip(inset(core, K["wall"]), 0, 1, K["rail_v_int"] - K["wall"]))
+    # rocker box, and the cover-bolt tabs on the rail
     bot = [V(x, y, floor_h(y)) for x, y in cav]; top = [V(x, y, K["rail"] + 1) for x, y in cav]
-    o = obj("box", loft([bot, top]), tmp)
-    for h in MID:
-        x = obj("mx", zprism(stadium(h, K["mid_slot"] + K["mid_wall"]), 0.0, K["rail"] + 3.0), root)
-        boolean(o, "DIFFERENCE", x); bpy.data.objects.remove(x, do_unlink=True)
-    boolean(head, "DIFFERENCE", o); clear(tmp)
-    # valve-cover rail: outward gasket lip and the seven bolt lugs inside the wall
-    rail_ol = ccw(clip(core, 0, 1, K["rail_v_int"]))
-    lip = ccw(clip(inset(rail_ol, -K["rail_lip"]), 0, 1, K["rail_v_int"] + K["rail_lip"]))
-    o = obj("lip", zprism(lip, K["rail"] - K["rail_lip_h"], K["rail"]), tmp)     # a ring: the box stays open
-    inner = obj("lipin", zprism(cav, K["rail"] - 1.0, K["rail"] + 1.0), root)
-    boolean(o, "DIFFERENCE", inner); bpy.data.objects.remove(inner, do_unlink=True)
+    o = obj("box", loft([bot, top]), tmp); boolean(head, "DIFFERENCE", o); clear(tmp)
     for u, v in cover_bolt_pts():
-        vi = v + (0.18 if v < 0 else -0.18)          # lug centre a little inside the wall
-        obj("lug", zprism(circ(u, vi, K["cover_lug_r"], 32), K["rail"] - K["cover_lug_h"], K["rail"]), tmp)
-        obj("lugb", loft([ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] - 0.30), V(0, 0, 1), 0.06, 32),
-                          ring_pts(V(u, vi, K["rail"] - K["cover_lug_h"] + 0.001), V(0, 0, 1), K["cover_lug_r"], 32)]), tmp)
+        obj("tab", zprism(circ(u, v, K["cover_tab_r"], 24), K["rail"] - K["cover_tab_h"], K["rail"]), tmp)
     boolean(head, "UNION", tmp); clear(tmp)
-    for h in MID:                                      # the middle-row slots, open to the exhaust side
-        obj("slot", zprism(stadium(h, K["mid_slot"]), K["mid_seat"], K["rail"] + 1.0), tmp)
+    for h in MID:                                      # spot faces for the middle-row nuts
+        obj("msf", zprism(circ(h["u"], h["v"], 0.50, 32), K["mid_seat"], K["rail"] + 1.0), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # bosses in the box: studs, spring seats, guides, rocker studs
@@ -469,7 +483,7 @@ def build_left(root, tmp, info):
     info["studs"] = [(round(h["u"], 3), round(h["v"], 3)) for h in studs]
     low, high = LOW, HIGH
     for h in high:
-        obj("sb", zprism(circ(h["u"], h["v"], K["boss_r"], 32), H0 + 1.0, floor_h(h["v"]) + 0.45), tmp)
+        obj("sb", zprism(circ(h["u"], h["v"], K["boss_r"], 32), H0 + 1.0, floor_h(h["v"]) + 0.10), tmp)
     for k in range(4):
         for kind in "IE":
             cv, s, _ = valve(k, kind); sp = cv + s * K["spring_h"][kind]
@@ -481,7 +495,7 @@ def build_left(root, tmp, info):
     for (k, kind), ln in lines.items():
         cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"][kind]
         cup = line_at_h(ln[0][0], ln[0][1], tipv.z - 0.25)
-        pv = tipv + (cup - tipv) * (1.7 / 2.7); pivots[(k, kind)] = pv
+        pv = tipv + (cup - tipv) * (1.7 / 2.7); pv = rocker_stud(pv, s)[2]; pivots[(k, kind)] = pv
         obj("rb", zprism(circ(pv.x, pv.y, 0.45, 32), floor_h(pv.y) - 0.5, floor_h(pv.y) + 0.60), tmp)
     boolean(head, "UNION", tmp); clear(tmp)
     info["rocker_pivots"] = {f"{k}{kind}": [round(c, 2) for c in p] for (k, kind), p in pivots.items()}
@@ -515,7 +529,7 @@ def build_left(root, tmp, info):
         o, _, L = port_solid(k, "I", sI, tmp); iv.append(round(vol(o) / 0.0610237, 1)); lens[f"I{k}"] = round(L, 2); clear(tmp)
         o, _, L = port_solid(k, "E", sE, tmp); ev.append(round(vol(o) / 0.0610237, 1)); lens[f"E{k}"] = round(L, 2); clear(tmp)
     info["intake_cc"] = iv; info["exhaust_cc"] = ev; info["runner_len"] = lens
-    info["intake_min_csa"] = round(min(1.515 * 2.30 - (4 - math.pi) * 0.50 ** 2, (1.68 * 2.05 * min(sI) ** 2) - (4 - math.pi) * 0.60 ** 2), 3)
+    info["intake_min_csa"] = round(min(1.515 * 2.30 - (4 - math.pi) * 0.50 ** 2, (max(1.68 * min(sI), 1.72) * max(2.05 * min(sI), 2.08)) - (4 - math.pi) * 0.60 ** 2), 3)
 
     cutters = []
     for k in range(4):
@@ -538,7 +552,6 @@ def build_left(root, tmp, info):
     lim = obj("lim", zprism(cav, 0.0, K["rail"] + 2.0), root)
     keep = bmesh.new()
     for h in high: zprism(circ(h["u"], h["v"], K["boss_r"] + 0.04, 32), 0.0, 9.0, keep)
-    for h in MID: zprism(stadium(h, K["mid_slot"] + K["mid_wall"]), 0.0, 9.0, keep)
     for pv in pivots.values(): zprism(circ(pv.x, pv.y, 0.49, 32), 0.0, 9.0, keep)
     keep = obj("keep", keep, root)
     for k in range(4):
@@ -552,7 +565,7 @@ def build_left(root, tmp, info):
         obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + K["nut_pocket_h"]), tmp)
     for h in high:                                     # socket relief where a stud stands close to the box wall (rear end)
         if edge_dist(cav, h["u"], h["v"]) < K["nut_pocket"] + 0.05:
-            obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), floor_h(h["v"]) + 0.451, K["rail"] + 0.5), tmp)
+            obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), floor_h(h["v"]) + 0.101, K["rail"] + 0.5), tmp)
     for (k, kind), ln in lines.items():
         pts = []
         for a, b in ln:
@@ -603,7 +616,6 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
             ports[f"{kind}{k}"] = bvh(o)
     others = {}
     for h in studs: others[f"stud{h['u']:.1f},{h['v']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0, stud_top(h)), tmp)
-    for h in MID: others[f"slot{h['u']:.1f}"] = obj("x", zprism(stadium(h, K["mid_slot"]), K["mid_seat"], K["rail"] + 1.0), tmp)
     for h in low: others[f"nut{h['u']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + K["nut_pocket_h"]), tmp)
     for (k, kind), ln in lines.items():
         pts = []
@@ -665,7 +677,7 @@ def build_studs(name, root, low, high):
     def star(u, v, z0, z1):
         pts = [(u + (0.36 if i % 2 == 0 else 0.315) * math.cos(math.pi * i / 12), v + (0.36 if i % 2 == 0 else 0.315) * math.sin(math.pi * i / 12)) for i in range(24)]
         zprism(pts, z0, z1, bm)
-    for h, seat in [(h, H0 + K["lip"]) for h in low] + [(h, K["mid_seat"] if h in MID else floor_h(h["v"]) + 0.45) for h in high]:
+    for h, seat in [(h, H0 + K["lip"]) for h in low] + [(h, K["mid_seat"] if h in MID else floor_h(h["v"]) + 0.10) for h in high]:
         u, v = h["u"], h["v"]
         zprism(circ(u, v, 0.2187, 20), -BLK["stud_depth"] + 0.03, seat + 0.12 + 0.44 + (0.02 if h in low else 0.28), bm)
         zprism(circ(u, v, 0.44, 32), seat + 0.001, seat + 0.12, bm)
@@ -678,6 +690,117 @@ def build_dowels(name, root):
     for dw in BDECK["dowels"]:
         zprism(circ(dw["u"], dw["v"], BLK["dowel_d"] / 2 - 0.004, 32), -BLK["dowel_depth"] + 0.01, H0 + 0.28, bm)
     return obj(name, bm, root)
+
+
+# ---------- valvetrain ----------
+def rocker_stud(pv, s):
+    """Rocker stud through the trunnion (just above the tip-cup line): direction (half the valve's lean,
+    BBC studs are not parallel to their valves), trunnion centre and the point where it meets its boss top."""
+    sd = (s + V(0, 0, 1)).normalized(); tr = pv + s * K["vt"]["trunnion_up"]
+    zb = K["floor"][0] + 0.60
+    return sd, tr, tr - sd * ((tr.z - zb) / sd.z)
+
+def rocker_geo(lines):
+    """Per valve: tip, the cup on the left bank's pushrod line, the rocker pivot (as the head's bosses)."""
+    out = {}
+    for (k, kind), ln in lines.items():
+        cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"][kind]
+        cup = line_at_h(ln[0][0], ln[0][1], tipv.z - 0.25)
+        out[(k, kind)] = dict(cv=cv, s=s, tip=tipv, cup=cup, pv=tipv + (cup - tipv) * (1.7 / 2.7), lines=ln)
+    return out
+
+def build_valvetrain(root, tmp, lines, info):
+    T = K["vt"]; G = rocker_geo(lines)
+    valves, springs, rets, studs, rockers, rollers, locks, plates = (bmesh.new() for _ in range(8))
+    pushL, pushR = bmesh.new(), bmesh.new()
+    plens = {}
+    for (k, kind), g in G.items():
+        cv, s, tip, cup, pv = g["cv"], g["s"], g["tip"], g["cup"], g["pv"]
+        q = K["v" + kind]; R = q["d"] / 2
+        # valve: head with margin, tulip, stem
+        loft([ring_pts(cv - s * 0.11, s, R - 0.03, 48), ring_pts(cv - s * 0.05, s, R, 48), ring_pts(cv + s * 0.02, s, R, 48),
+              ring_pts(cv + s * 0.12, s, R - 0.12, 48), ring_pts(cv + s * 0.50, s, 0.36, 48), ring_pts(cv + s * 0.95, s, T["stem_r"], 48)], valves)
+        seg_cyl(cv + s * 0.90, tip, T["stem_r"], 16, valves)
+        # spring: a wire helix on the seat, closed ends
+        sp = cv + s * K["spring_h"][kind]; rw = T["wire"] / 2; Rm = T["spring_od"] / 2 - rw
+        ref = V(0, 0, 1) if abs(s.z) < 0.9 else V(1, 0, 0); e1 = s.cross(ref).normalized(); e2 = s.cross(e1)
+        n = int(T["turns"] * 16); rings = []
+        for i in range(n + 1):
+            f = i / n; th = 2 * math.pi * T["turns"] * f
+            z = rw + (T["installed"] - 2 * rw) * (3 * f * f - 2 * f ** 3) * 0.35 + (T["installed"] - 2 * rw) * f * 0.65
+            rad = e1 * math.cos(th) + e2 * math.sin(th); c = sp + s * z + rad * Rm
+            rings.append([c + (rad * math.cos(a) + s * math.sin(a)) * rw for a in (2 * math.pi * j / 8 for j in range(8))])
+        loft(rings, springs)
+        # retainer and locks
+        rt = sp + s * T["installed"]
+        loft([ring_pts(rt - s * 0.22, s, 0.36, 32), ring_pts(rt - s * 0.02, s, 0.50, 32), ring_pts(rt, s, T["ret_r"], 32),
+              ring_pts(rt + s * T["ret_t"], s, T["ret_r"], 32), ring_pts(rt + s * (T["ret_t"] + 0.08), s, 0.42, 32)], rets)
+        # rocker stud, hex and poly lock, on the stem direction through the pivot
+        sd, tr, base = rocker_stud(pv, s); g["base"] = base
+        seg_cyl(base - sd * 0.02, tr + sd * 0.95, T["stud_r"], 16, studs)
+        loft([ring_pts(base + sd * 0.10, sd, 0.36, 6), ring_pts(base + sd * 0.38, sd, 0.36, 6)], studs)
+        loft([ring_pts(tr + sd * 0.38, sd, 0.36, 12), ring_pts(tr + sd * 0.80, sd, 0.36, 12)], locks)
+        # rocker: trunnion block, arm to the roller over the valve tip, arm to the pushrod cup
+        a_tip = (tip + s * T["roller_r"] - tr); a_cup = (cup + V(0, 0, 0.12) - tr)
+        s_valve, s = s, sd                                # the rocker body is square to its stud
+        side = s.cross(a_tip).normalized(); w = T["rocker_w"] / 2
+        pts = []
+        for sg in (-1, 1):
+            o_ = tr + side * (w * sg)
+            pts += [o_ - s * 0.36, o_ + s * 0.36, o_ + a_tip * 0.80 + s * 0.22, o_ + a_tip * 0.80 - s * 0.20,
+                    o_ + a_cup * 1.10 + s * 0.20, o_ + a_cup * 1.10 - s * 0.16, o_ + a_tip.normalized() * 0.5 + s * 0.42, o_ + a_cup.normalized() * 0.45 + s * 0.42]
+        hull3(pts, rockers)
+        s = s_valve
+        rc = tip + s * T["roller_r"]
+        seg_cyl(rc - side * 0.20, rc + side * 0.20, T["roller_r"], 24, rollers)
+        seg_cyl(tr - side * (w + 0.04), tr + side * (w + 0.04), 0.30, 20, rollers)        # trunnion ends
+        # pushrods: left head on the left bank's lifters, right head on the right bank's
+        for bm_, (a, top), nm in ((pushL, g["lines"][0], "L"), (pushR, g["lines"][1], "R")):
+            end = line_at_h(a, top, tip.z - 0.25) if nm == "L" else cup
+            seg_cyl(a, end, T["pushrod_r"], 14, bm_)
+            plens[f"{nm}{k}{kind}"] = round((end - a).length, 3)
+    # guide plates: one per cylinder under the two stud hexes, slotted for the pushrods
+    for k in range(4):
+        gi, ge = G[(k, "I")], G[(k, "E")]; z = floor_h(0) + 0.60
+        pts = []
+        for g in (gi, ge):
+            pts += circ(g["base"].x, g["base"].y, 0.46, 20)
+            c = line_at_h(g["lines"][0][0], g["lines"][0][1], z); pts += circ(c.x, c.y, 0.40, 16)
+        pl = obj("gp", zprism(ccw(hull(pts)), z + 0.001, z + 0.10), tmp)
+        for g in (gi, ge):
+            pts = []
+            for a, top in g["lines"]:
+                for hh in (z - 0.5, z + 0.6): pts += ring_pts(line_at_h(a, top, hh), top - a, 0.215, 12)
+            c = obj("gps", hull3(pts), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+            c = obj("gph", zprism(circ(g["base"].x, g["base"].y, 0.26, 16), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        for g in (gi, ge):                               # and round the springs
+            sp = g["cv"] + g["s"] * (K["spring_h"]["I" if g is gi else "E"] - 0.3)
+            c = obj("gpsp", cyl_axis(sp, g["s"], K["vt"]["spring_od"] / 2 + 0.05, 2.5, 24), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        for h in HIGH:                                   # relieved round the head-stud nuts beside it
+            c = obj("gpn", zprism(circ(h["u"], h["v"], 0.52, 20), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        plates.from_mesh(pl.data); bpy.data.objects.remove(pl, do_unlink=True)
+    info["pushrod_len"] = plens
+    info["pushrod_spec"] = dict(I=8.650, E=7.650)
+    mats = dict(
+        Valves=material("VT_ValveStainless", (0.62, 0.62, 0.63, 1), 1.0, 0.28),
+        ValveSprings=material("VT_SpringSteel", (0.16, 0.15, 0.14, 1), 1.0, 0.40),
+        Retainers=material("VT_RetainerSteel", (0.07, 0.07, 0.075, 1), 1.0, 0.35),
+        RockerStuds=material("VT_StudOxide", (0.05, 0.05, 0.055, 1), 0.9, 0.38),
+        RockerArms=material("VT_RockerOrangeAnodize", (0.85, 0.30, 0.03, 1), 1.0, 0.32),
+        RockerRollers=material("VT_RollerSteel", (0.70, 0.70, 0.71, 1), 1.0, 0.22),
+        PolyLocks=material("VT_PolyLock", (0.06, 0.06, 0.065, 1), 0.9, 0.35),
+        GuidePlates=material("VT_GuidePlate", (0.05, 0.05, 0.05, 1), 0.8, 0.45),
+        Pushrods=material("VT_PushrodSteel", (0.10, 0.10, 0.105, 1), 1.0, 0.33))
+    left, right = [], []
+    for nm, bm_ in (("Valves", valves), ("ValveSprings", springs), ("Retainers", rets), ("RockerStuds", studs), ("RockerArms", rockers),
+                    ("RockerRollers", rollers), ("PolyLocks", locks), ("GuidePlates", plates)):
+        o = obj(nm + "_L", bm_, root); o.data.materials.append(mats[nm]); left.append(o)
+        r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; root.objects.link(r); right.append(r)
+    o = obj("Pushrods_L", pushL, root); o.data.materials.append(mats["Pushrods"]); left.append(o)
+    r = obj("Pushrods_R", pushR, root); r.data.materials.append(mats["Pushrods"]); right.append(r)
+    for o in left + right:
+        o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
+    return left, right
 
 
 def place(o, m):
@@ -695,6 +818,7 @@ def build():
     gL = build_gasket("HeadGasket_L", root, tmp)
     sL = build_studs("HeadStuds_L", root, low, high)
     dL = build_dowels("HeadDowels_L", root)
+    vtL, vtR = build_valvetrain(root, tmp, lines, info)
     bpy.data.collections.remove(tmp)
     mls = material("HeadGasket_MLS", (0.05, 0.05, 0.055, 1), 0.4, 0.45)
     oxide = material("Heads_StudOxide", (0.04, 0.04, 0.045, 1), 0.8, 0.38)
@@ -707,9 +831,10 @@ def build():
     for o in (head, gL, sL, dL):
         r = o.copy(); r.data = o.data.copy(); r.name = o.name[:-2] + "_R"; r.data.name = r.name
         root.objects.link(r); rights.append(r)
-    for o in (head, gL, sL, dL): place(o, M_L)
-    for r in rights: place(r, ROT_R @ M_L)
+    for o in [head, gL, sL, dL] + vtL: place(o, M_L)
+    for r in rights + vtR: place(r, ROT_R @ M_L)
     info["lines"] = {f"{k}{kind}": [[round(c, 3) for c in p] for pair in ln for p in pair] for (k, kind), ln in lines.items()}
+    info["valvetrain"] = [o.name for o in vtL + vtR]
     return [head, gL, sL, dL] + rights, info
 
 
