@@ -10,7 +10,8 @@
   "rail_end": 0.35,
   "v_int": 6.1,
   "rail": 4.0,
-  "int_face_top": 4.0,
+  "int_face_top": 3.55,
+  "int_band_set": 0.1,
   "rail_v_int": 6.1,
   "wall": 0.3,
   "floor": [
@@ -677,11 +678,11 @@
   "HeadDowels_R": 0
  },
  "tris": {
-  "CylinderHead_L": 53088,
+  "CylinderHead_L": 53292,
   "HeadGasket_L": 5356,
   "HeadStuds_L": 4672,
   "HeadDowels_L": 248,
-  "CylinderHead_R": 53088,
+  "CylinderHead_R": 53292,
   "HeadGasket_R": 5356,
   "HeadStuds_R": 4672,
   "HeadDowels_R": 248

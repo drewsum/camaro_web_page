@@ -51,8 +51,9 @@ K = dict(
     rail_corner=1.10, rail_end=0.35,   # [meas] photos 336/337: racetrack rail with rounded ends, a little short of the head ends
     v_int=6.10,              # [meas] photo 334 (deck face, scaled from the stud holes): the intake face, perpendicular to the deck
     rail=4.00,               # [meas] photo 336 (square-on, scaled from the 2.435" port): intake face ~3.6-4.0" tall, rail flush with it
-    int_face_top=4.00,       # the rail is flush with the intake face (photo 336)
-    rail_v_int=6.10,         # [meas] photo 336: intake-side rail flush with the intake face
+    int_face_top=3.55,       # [meas] Drew's close-up of the intake face: the machined manifold face stops ~.5" above the ports,
+    int_band_set=0.10,       # and an as-cast band, set back from it [est], carries on up to the cover rail (Drew)
+    rail_v_int=6.10,         # [meas] photo 336: intake-side rail over the intake face (the cast band trims its outer edge)
     wall=0.30,               # [meas] photo 267: thin machined rail
     floor=(3.50, 3.50),      # [est] rocker-box floor: ~.6" below the rail (photos 267/337)
     # Valves [spec] AFR: 2.300/1.880, 24/4 intake, 15/4 exhaust; seats 2.450 x 2.000 and 2.000 x 1.580
@@ -468,6 +469,12 @@ def build_left(root, tmp, info):
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     boolean(head, "UNION", tmp); clear(tmp)
+    # the machined intake face stops at int_face_top; above it the casting steps back (a 45-degree edge) to an
+    # as-cast band that runs on up to the cover rail
+    ft, sb, vi = K["int_face_top"], K["int_band_set"], K["v_int"]
+    obj("band", hull3([V(u, v, z) for u in (-9.0, 24.0)
+                       for v, z in ((vi - sb, ft + sb), (vi, ft), (vi + 1.5, ft), (vi + 1.5, K["rail"] + 2), (vi - sb, K["rail"] + 2))]), tmp)
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
     for k in range(4):
@@ -872,7 +879,7 @@ def build_valvetrain(root, tmp, lines, info):
         PolyLocks=material("VT_PolyLock", (0.06, 0.06, 0.065, 1), 0.9, 0.35),
         GuidePlates=material("VT_GuidePlate", (0.05, 0.05, 0.05, 1), 0.8, 0.45),
         Pushrods=material("VT_PushrodSteel", (0.10, 0.10, 0.105, 1), 1.0, 0.33))
-    vt = coll("BBC_Valvetrain", root)
+    vt = coll("BBC_Valvetrain"); clear(vt)              # its own top-level collection, so the castings can be hidden on their own
     for a in [a for a in bpy.data.actions if a.name.startswith("VT_")]: bpy.data.actions.remove(a)
     for m in [m for m in bpy.data.meshes if m.users == 0]: bpy.data.meshes.remove(m)
 
@@ -938,9 +945,9 @@ def build_valvetrain(root, tmp, lines, info):
     info["rocker"] = dict(tip_arm=T["tip_arm"], cup_arm=T["cup_arm"], shared_mesh="RockerArm", users=ME["rocker"].users)
     left, right = [], []
     for nm, bm_ in (("RockerStuds", studs), ("PolyLocks", locks), ("GuidePlates", plates)):
-        o = obj(nm + "_L", bm_, root); o.data.materials.append(mats[nm]); left.append(o)
-        if nm == "GuidePlates": r = obj(nm + "_R", platesR, root); r.data.materials.append(mats[nm])
-        else: r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; root.objects.link(r)
+        o = obj(nm + "_L", bm_, vt); o.data.materials.append(mats[nm]); left.append(o)
+        if nm == "GuidePlates": r = obj(nm + "_R", platesR, vt); r.data.materials.append(mats[nm])
+        else: r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; vt.objects.link(r)
         right.append(r)
     for o in left + right:
         o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
