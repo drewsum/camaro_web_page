@@ -50,6 +50,7 @@ P = dict(
     china_wall=2.30,     # [meas] the rear china wall's inner face (photo PXL_20251220_223513946, camera solved from the deck): the valley runs from here to the front wall
     china_top_v=5.45,    # [meas] the china-wall tops are one horizontal plane where it crosses the deck planes at v = 5.45" (z 10.78"): the photo's camera, and the gasket's end ears that cover the strips
     china_top_t=(0.40, 0.65),   # [meas] rear and front china-wall thickness at the top (photo): the left deck's end strips are their end faces
+    china_bend=dict(x0=0.80, dy=(-0.73, -0.67)),   # [derived] approaching the right (even) head the china walls bend back by the stagger, so their faces end flush with that head's ends (rear 1.17", front 23.33", ../heads), as the left head's ends are with the straight walls (photos: rear corner, album render notes); the bend starts at x = .80" and is complete where the wall top meets the right deck
     front_upper_z=8.90,  # [est] above the timing chest (recess top 8.56") the valley reaches the thin top of the front wall
     case_half=5.15,      # [est] crankcase cavity half-width above the rail
     cap_half=3.45, cap_drop=3.10, cap_chamfer=0.30,   # [meas] photos 22/24, scaled by the 2.9375" saddle: cap width and depth
@@ -149,6 +150,33 @@ def clip_v(poly, v0):
         if ina != inb:
             t = (v0 - a[1]) / (b[1] - a[1]); out.append((a[0] + t * (b[0] - a[0]), v0))
     return out
+
+def bent_prism(poly, yA, yB, x_lo=None, x_hi=None, step=0.08):
+    """Closed solid from a convex XZ section (2D (x, z) pairs, inches) whose two
+    faces sit at y = yA(x) and y = yB(x): a prism bent in plan. Built in vertical
+    columns, so each face is ruled straight in z and follows the bend in x."""
+    xs_ = [q[0] for q in poly]
+    lo = max(min(xs_), x_lo if x_lo is not None else -1e9) + 0.002
+    hi = min(max(xs_), x_hi if x_hi is not None else 1e9) - 0.002
+    X = sorted({lo, hi} | {x for x in xs_ if lo < x < hi} | {lo + k * step for k in range(1, int((hi - lo) / step))})
+    def span(x):
+        zs = []
+        for i, a in enumerate(poly):
+            b = poly[(i + 1) % len(poly)]
+            if (a[0] - x) * (b[0] - x) <= 0 and a[0] != b[0]:
+                zs.append(a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]))
+        return min(zs), max(zs)
+    bm = bmesh.new()
+    cols = []
+    for x in X:
+        z0, z1 = span(x)
+        cols.append([bm.verts.new(Vector((x, y, z)) * IN) for y, z in ((yA(x), z0), (yA(x), z1), (yB(x), z1), (yB(x), z0))])
+    for c, d in zip(cols, cols[1:]):
+        for k in range(4):
+            bm.faces.new((c[k], d[k], d[(k + 1) % 4], c[(k + 1) % 4]))
+    bm.faces.new(cols[0]); bm.faces.new(cols[-1][::-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
 
 def boolean(target, kind, operand):
     m = target.modifiers.new(kind, "BOOLEAN"); m.operation = kind; m.solver = "MANIFOLD"   # robust on these closed operands; EXACT dropped or inverted some valley bosses and left ~1,100 non-manifold edges
@@ -257,6 +285,20 @@ def build():
     vcut1 = obj("ValleyFrontUpper", prism([p + Vector((0, y_f0, 0)) for p in usec], Vector((0, 1, 0)), y_ft - y_f0), parts)
     boolean(block, "DIFFERENCE", vcut1); bpy.data.objects.remove(vcut1)
     info["cutters"] += 2
+    # The china walls bend back approaching the right (even) head, which sits
+    # 1" behind the left one, so their faces end flush with its ends (photos of
+    # the rear corner). bend(x) is the plan offset; the valley follows the rear
+    # wall's inner face round the bend.
+    cb = P["china_bend"]
+    x_bend1 = -deck_pt("L", 0, P["china_top_v"]).x
+    def bend(x, dy):
+        t = min(max((x - cb["x0"]) / (x_bend1 - cb["x0"]), 0.0), 1.0)
+        return dy * t * t * (3 - 2 * t)
+    vsec2 = [(p.x, p.z) for p in vsec]
+    ccut = obj("ValleyBendRear", bent_prism(vsec2, lambda x: P["china_wall"] + bend(x, cb["dy"][0]), lambda x: P["china_wall"] + 0.01,
+                                            x_lo=cb["x0"] - 0.05), parts)
+    boolean(block, "DIFFERENCE", ccut); bpy.data.objects.remove(ccut)
+    info["cutters"] += 1
 
     # Deck slabs: the block's own deck outline swept down the bore axis, and
     # the part of it past the valley wall swept on down to below the floor, so
@@ -281,11 +323,16 @@ def build():
     def deck_xz(sg, v, h=-0.002):
         p = deck_pt("L", 0, v, h); return Vector((sg * -p.x, 0, p.z))
     a, b_ = deck_xz(-1, P["valley_wall_v"]), deck_xz(-1, P["china_top_v"])
-    csec = [Vector((a.x, 0, 8.6)), a, b_, Vector((-b_.x, 0, b_.z)), Vector((-a.x, 0, a.z)), Vector((-a.x, 0, 8.6))]
     info["china_top_z"] = round(b_.z, 3)
-    for name, y0, y1 in (("ChinaRear", P["china_wall"] - P["china_top_t"][0], P["china_wall"]), ("ChinaFront", y_ft, P["length"])):
-        cw = obj(name, prism([p + Vector((0, y0, 0)) for p in csec], Vector((0, 1, 0)), y1 - y0), parts)
+    # Bent in plan near the right head (china_bend above). The front wall's
+    # bent part stands over the valley, so it runs down to the floor.
+    for k, (name, y0, y1, zb) in enumerate((("ChinaRear", P["china_wall"] - P["china_top_t"][0], P["china_wall"], 8.6),
+                                            ("ChinaFront", y_ft, P["length"], P["valley_floor_z"]))):
+        csec = [(a.x, zb), (a.x, a.z), (b_.x, b_.z), (-b_.x, b_.z), (-a.x, a.z), (-a.x, zb)]
+        dy = cb["dy"][k]
+        cw = obj(name, bent_prism(csec, lambda x: y0 + bend(x, dy), lambda x: y1 + bend(x, dy)), parts)
         boolean(block, "UNION", cw); bpy.data.objects.remove(cw)
+    info["china_bend"] = dict(x0=cb["x0"], x1=round(x_bend1, 3), dy=cb["dy"])
 
     # Front plate: wider than the skirt at the bottom, so the lower accessory
     # holes have metal round them (photo 30).
