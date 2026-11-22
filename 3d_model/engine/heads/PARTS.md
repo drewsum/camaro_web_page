@@ -38,28 +38,31 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 
 | Object | Part | Notes |
 |---|---|---|
-| `Valves_L/R` | 2.300" intake, 1.880" exhaust, 11/32" stems | drawn closed; lengths 5.09" / 5.13" [derived] from the seat height, the 1.900" installed height and the retainer |
-| `ValveSprings_L/R` | COMP 26924 | 1.519" OD, 1.900" installed height [spec, build doc]; wire and turns [est] |
-| `Retainers_L/R` | COMP 749 | shape [est] |
-| `RockerStuds_L/R`, `PolyLocks_L/R` | 7/16 studs, CSP-PL716K poly locks | each stud leans half as far as its valve [est] |
-| `RockerArms_L/R`, `RockerRollers_L/R` | CSP-S2001NP 1.7 aluminium roller rockers | block shapes, orange as in photo 204; ratio 1.7 by construction |
+| `Valve_<cyl><I/E>` (+ `Retainer_`) | 2.300" intake, 1.880" exhaust, 11/32" stems | animated, .61-.63" lift; lengths 5.09" / 5.13" [derived] from the seat height, the 1.900" installed height and the retainer |
+| `ValveSpring_<cyl><I/E>` | COMP 26924 | 1.519" OD, 1.900" installed height [spec, build doc]; wire and turns [est]; scaled in z as the valve opens |
+| `RockerStuds_L/R`, `PolyLocks_L/R` | 7/16 studs, CSP-PL716K poly locks | each stud leans half as far as its valve, square to the rocker's trunnion [est]; poly lock 9/16 hex with its set screw standing .16" proud, the stud ending under it [est, photo] |
+| `Rocker_<cyl><I/E>` (+ `RockerRoller_`) | CSP-S2001NP 1.7 aluminium roller rockers | one shared mesh for all 16 [Drew]: trunnion to roller 1.55", to pushrod cup .91" [est]. Shaped after Drew's valve-cover-off photo: flat side plates .90" across, open .68" over the trunnion for the stud and poly lock, a fork closed over a .50" x .38" roller with its axle ends showing, trunnion caps proud of the sides, a narrower rounded nose over the ball socket with a relief for the pushrod's swing [est] |
 | `GuidePlates_L/R` | one per cylinder under the two rocker studs | shape [est] after photo 204 |
-| `Pushrods_L/R` | Trick Flow 21418650 (8.650") intake, 21417650 (7.650") exhaust, 3/8" | the model's run 7.68-7.79" intake and 7.97-8.04" exhaust: the intake side is about an inch short, see below |
+| `Pushrod_<cyl><I/E>` | Trick Flow 21418650 (8.650") intake, 21417650 (7.650") exhaust, 3/8" | lengths in `heads_info.json`: exhaust ~7.6" (close), intake ~7.2" (1.4" short), see below |
 
 ## Checks (`heads_info.json`)
 
 - **Volumes:** chamber 117.0cc; intake 344.9-345.0cc; exhaust 132.0cc; minimum intake section 3.27 in^2. Each port is sized on its own.
 - **Walls:** no port comes within .06" of a stud hole, nut pocket, pushrod slot, plug bore, spring pocket or its lead-in.
-- **Fit:** no clash between the heads, gaskets, studs and dowels and the block, timing cover and freeze plugs, nor with the pistons, rods, cam or lifters over two crank turns. The valvetrain parts touch only where they should (stud in rocker, roller on tip, spring under retainer); pushrods clear both heads, the lifters and the block.
+- **Fit:** no clash between the heads, gaskets, studs and dowels and the block, timing cover and freeze plugs, nor with the pistons, rods, cam or lifters over two crank turns. The valvetrain parts touch only where they should (stud through the trunnion, roller on tip, spring under retainer, pushrod ball in its socket); over two crank turns the rocker bodies clear the poly locks, studs, springs, retainers, guide plates and heads, and the pushrod shafts clear the rockers by .02" or more; pushrods clear both heads, the lifters and the block.
 - All head, gasket, stud and dowel meshes are manifold.
 
 ## What differs from the references
 
-- **Pushrod lengths:** the real intake pushrods are 8.65" and the exhausts 7.65". The model's are all 7.6-7.9", so the real intake rockers sit about an inch higher than the model's. BBC intake and exhaust rockers sit at different heights; the model has them level. Rocker heights, stud angles and guide plates are estimates.
+- **Pushrod lengths:** the real intake pushrods are 8.65" and the exhausts 7.65". The model's exhausts are ~7.6" but the intakes ~7.2", so the real intake rockers sit higher than the model's. BBC intake and exhaust rockers sit at different heights; the model has them level. Rocker heights, stud angles and guide plates are estimates.
 - **Heights:** rail, floor, shelf and spring-seat heights are scaled from oblique photos; a tape measurement of the head height (deck to cover rail) would fix them.
 - **Exhaust side:** the real casting is rounded and ribbed between the flanges (photo 265); the model has flat walls and plain flanges. No raised lettering.
 - **Rocker box:** the real floor is sculpted round each spring and stud; the model's is flat with round bosses.
-- **Rockers and springs** are simplified shapes; no valve locks, seals or shims as separate parts. Valves are closed at every crank angle (no valve motion yet).
+- **Rockers:** no lightening pockets, oil holes or engraving; roller and trunnion sizes [est]. No valve locks, seals or shims as separate parts.
+- **Valve motion:** keyed every crank degree from each lifter (pushrod, rocker on its trunnion, valve, spring); effective ratio 1.67-1.72.
+- **Valve cover bolts** sit .30" in from the rail's outer edge [Drew].
+- **Open valves vs chamber wall:** not yet confirmed clear at full lift; closed valves touch only their seats.
+- **Front middle-row head stud** (block data, -2.03, -1.25) reaches ~.08" into bore 1 and touches pistons 1 and 8; the other middle-row studs sit at +/-2.39. Pre-existing, in `block/refs/deck_block.json`.
 - **Chamber outline** is a convex hull round the seats and plug. No water jacket.
 
 ## Photos used (album numbers)

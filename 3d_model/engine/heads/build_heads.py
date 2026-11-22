@@ -3,7 +3,8 @@ gaskets and ARP 235-4713 head studs for Drew's 540 (Gen VI BBC).
 
 The aluminium castings only: deck, chambers, intake and exhaust ports, spark-plug holes,
 rocker box (floor, spring pockets, guide bosses, rocker-stud bosses, bolt bosses),
-pushrod slots, end water ports and the bolt holes. No valves, springs or rockers.
+pushrod slots, end water ports and the bolt holes; and the valvetrain: valves, springs,
+retainers, one shared rocker mesh on all 16 studs, pushrods, keyed to the lifters on the crank timeline.
 
 One casting fits either bank (BBC heads are interchangeable): the left head is built in
 deck coordinates, and the right head is the same mesh turned 180 deg about the vertical.
@@ -86,7 +87,13 @@ K = dict(
     # 11/32 stems, 1.7 aluminium roller rockers (CSP-S2001NP) on 7/16 studs with poly locks (CSP-PL716K), 3/8 pushrods
     # (Trick Flow 21418650 / 21417650; 8.650" intake, 7.650" exhaust). Shapes [est]; all valves drawn closed.
     vt=dict(stem_r=0.171, spring_od=1.519, wire=0.200, installed=1.900, turns=5.5, ret_r=0.74, ret_t=0.10,
-            pushrod_r=0.1875, stud_r=0.2187, roller_r=0.27, trunnion_up=0.30, rocker_w=0.80),
+            pushrod_r=0.1875, stud_r=0.2187, roller_r=0.25, trunnion_up=0.30, rocker_w=0.90,
+            # one rocker for all 16 valves [Drew]: roller centre 1.55" and pushrod cup .91" from the trunnion along
+            # the arm (1.7:1) [est, CSP 1.7 BBC class]; the trunnion .10" above the roller centre, the cup .25" below it
+            tip_arm=1.55, cup_arm=0.91, tr_up=0.10, cup_dn=0.25,
+            # body shape from Drew's photo [est]: .90" over the side plates, .68" between them over the trunnion,
+            # a .50" x .38" roller, .26" trunnion; poly lock 9/16 hex with its set screw standing proud
+            rk_inner=0.68, roller_w=0.38, trunnion_r=0.26, lock_hex=0.5625, lock_h=(0.27, 0.70), setscrew=(0.14, 0.16)),
     stud_hole=0.235,         # 7/16 stud clearance
     # The middle (exhaust-side) row stands outside the valve cover, above the exhaust ports: each sits on a
     # spot face at mid_seat in a slot open to the exhaust side, and the cover rail and rocker box step in
@@ -105,6 +112,7 @@ K = dict(
     # rail wall, and the rail top carries a thin outward lip (the cover-gasket land) [est] photos 335/337
     cover_bolts=dict(E=(0.22, 0.405, 0.605, 0.80), I=(0.17, 0.505, 0.84)),   # [meas] photo 336: fractions of the rail length from the rear
     cover_tap=0.105, cover_tab_r=0.25, cover_tab_h=0.50,
+    cover_inset=0.30,        # [Drew] the bolt holes sit inboard of the rail's middle, in lugs on the inside of the flange
     rail_lip=0.07, rail_lip_h=0.22,
     # Spring seats [est] photo (Drew's head, exhaust side, springs in): each spring stands in a machined
     # pocket on a round boss that flares into the rocker-box floor; the guide boss stands up in the middle
@@ -383,16 +391,22 @@ R_OF = {0: 8, 1: 6, 2: 4, 3: 2}                       # right-bank cylinder that
 PUSH_TOP = dict(I=((0.25, 4.60, 5.20), (6.70, 4.60, 5.20), (10.25, 4.60, 5.20), (16.40, 4.60, 5.20)),
                 E=(None, None, None, None))           # [est] intake cups just outside the paired ports; exhaust cups over their lifters
 E_CUP_V, E_CUP_H = 2.60, 5.45
+E_CUP_DU = -0.60                                      # the exhaust arms aim .6" forward of their lifters' mid-point, so the pushrods miss the intake ports
 
-def pushrod_lines():
+def design_lines():
+    """Lifter cup to the design cup position: only sets the direction each rocker points in plan."""
     cups = lifter_cups(); lines = {}
     for k, cyl in enumerate((1, 3, 5, 7)):
         for kind in "IE":
             a = to_local(cups[("L", cyl, kind)], "L"); b = to_local(cups[("R", R_OF[k], kind)], "R")
             if kind == "I": top = V(*PUSH_TOP["I"][k])
-            else: top = V(0.5 * (a.x + b.x), E_CUP_V, E_CUP_H)
+            else: top = V(0.5 * (a.x + b.x) + E_CUP_DU, E_CUP_V, E_CUP_H)
             lines[(k, kind)] = [(a, top), (b, top)]
     return lines
+
+def pushrod_lines():
+    """Each bank's lifter cup to the cup of the (one, shared) rocker on that valve."""
+    return {kk: g["lines"] for kk, g in rocker_geo().items()}
 
 def line_at_h(a, b, h):
     t = (h - a.z) / (b.z - a.z); return a + (b - a) * t
@@ -432,10 +446,11 @@ def rail_polys():
     return outer, inner, uf + e, ur - e
 
 def cover_bolt_pts():
-    """Valve-cover bolt centres (u, v): mid-rail, four on the exhaust side and three on the intake side."""
+    """Valve-cover bolt centres (u, v): inset from the rail's outer edge onto the inside lugs, four on the exhaust side and three on the intake side."""
     _, _, u0, u1 = rail_polys(); L = u1 - u0; w = K["wall"]
-    return [(u1 - f * L, K["rail_v_exh"] + w / 2) for f in K["cover_bolts"]["E"]] + \
-           [(u1 - f * L, K["rail_v_int"] - w / 2) for f in K["cover_bolts"]["I"]]
+    ci = K["cover_inset"]
+    return [(u1 - f * L, K["rail_v_exh"] + ci) for f in K["cover_bolts"]["E"]] + \
+           [(u1 - f * L, K["rail_v_int"] - ci) for f in K["cover_bolts"]["I"]]
 
 def tune(f, target, lo, hi, it=14):
     vlo, vhi = f(lo), f(hi)
@@ -492,10 +507,8 @@ def build_left(root, tmp, info):
                              ring_pts(sp, s, K["spring_r"] + rt, 48)]), tmp)
             obj("gb", cyl_axis(sp - s * 0.05, s, 0.34, 0.62, 24), tmp)
     lines = pushrod_lines(); pivots = {}
-    for (k, kind), ln in lines.items():
-        cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"][kind]
-        cup = line_at_h(ln[0][0], ln[0][1], tipv.z - 0.25)
-        pv = tipv + (cup - tipv) * (1.7 / 2.7); pv = rocker_stud(pv, s)[2]; pivots[(k, kind)] = pv
+    for (k, kind), g in rocker_geo().items():
+        pv = rocker_stud(g["tr"], g["s"], g["side"])[2]; pivots[(k, kind)] = pv
         obj("rb", zprism(circ(pv.x, pv.y, 0.45, 32), floor_h(pv.y) - 0.5, floor_h(pv.y) + 0.60), tmp)
     boolean(head, "UNION", tmp); clear(tmp)
     info["rocker_pivots"] = {f"{k}{kind}": [round(c, 2) for c in p] for (k, kind), p in pivots.items()}
@@ -566,12 +579,13 @@ def build_left(root, tmp, info):
     for h in high:                                     # socket relief where a stud stands close to the box wall (rear end)
         if edge_dist(cav, h["u"], h["v"]) < K["nut_pocket"] + 0.05:
             obj("np", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), floor_h(h["v"]) + 0.101, K["rail"] + 0.5), tmp)
-    for (k, kind), ln in lines.items():
-        pts = []
-        for a, b in ln:
-            for hh in (-0.4, floor_h(4.5) + 1.0):
-                p = line_at_h(a, b, hh); pts += ring_pts(p, b - a, K["pushrod_r"], 20)
-        obj("prs", hull3(pts), tmp)
+    for (k, kind), ln in pushrod_sweep().items():
+        for half in (ln[:len(ln) // 2], ln[len(ln) // 2:]):           # left- and right-bank pushrod, swept over the lift
+            pts = []
+            for a, b in half:
+                for hh in (-0.4, floor_h(4.5) + 1.0):
+                    p = line_at_h(a, b, hh); pts += ring_pts(p, b - a, K["pushrod_r"], 20)
+            obj("prs", hull3(pts), tmp)
     for (k, kind), pv in pivots.items():
         obj("rst", zprism(circ(pv.x, pv.y, 0.19, 20), floor_h(pv.y) - 0.40, floor_h(pv.y) + 0.7), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
@@ -617,11 +631,12 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
     others = {}
     for h in studs: others[f"stud{h['u']:.1f},{h['v']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["stud_hole"], 24), H0, stud_top(h)), tmp)
     for h in low: others[f"nut{h['u']:.1f}"] = obj("x", zprism(circ(h["u"], h["v"], K["nut_pocket"], 32), H0 + K["lip"], H0 + K["lip"] + K["nut_pocket_h"]), tmp)
-    for (k, kind), ln in lines.items():
-        pts = []
-        for a, b in ln:
-            for hh in (-0.4, floor_h(4.5) + 1.0): pts += ring_pts(line_at_h(a, b, hh), b - a, K["pushrod_r"], 20)
-        others[f"push{k}{kind}"] = obj("x", hull3(pts), tmp)
+    for (k, kind), ln in pushrod_sweep().items():
+        for j, half in enumerate((ln[:len(ln) // 2], ln[len(ln) // 2:])):
+            pts = []
+            for a, b in half:
+                for hh in (-0.4, floor_h(4.5) + 1.0): pts += ring_pts(line_at_h(a, b, hh), b - a, K["pushrod_r"], 20)
+            others[f"push{k}{kind}{'LR'[j]}"] = obj("x", hull3(pts), tmp)
     for k in range(4):
         tip, dr, ex = plug_line(k)
         others[f"plug{k}"] = obj("x", seg_cyl(tip + dr * K["plug"]["reach"], ex + dr * 0.6, K["plug"]["seat_r"], 32), tmp)
@@ -693,94 +708,160 @@ def build_dowels(name, root):
 
 
 # ---------- valvetrain ----------
-def rocker_stud(pv, s):
-    """Rocker stud through the trunnion (just above the tip-cup line): direction (half the valve's lean,
-    BBC studs are not parallel to their valves), trunnion centre and the point where it meets its boss top."""
-    sd = (s + V(0, 0, 1)).normalized(); tr = pv + s * K["vt"]["trunnion_up"]
+def rocker_stud(tr, s, side=None):
+    """Rocker stud through the trunnion: direction (half the valve's lean, BBC studs are not parallel to
+    their valves, and square to the trunnion axis so the poly lock sits straight between the rocker's side
+    plates), trunnion centre and the point where it meets its boss top."""
+    sd = s + V(0, 0, 1)
+    if side is not None: sd -= side * sd.dot(side)
+    sd = sd.normalized()
     zb = K["floor"][0] + 0.60
     return sd, tr, tr - sd * ((tr.z - zb) / sd.z)
 
-def rocker_geo(lines):
-    """Per valve: tip, the cup on the left bank's pushrod line, the rocker pivot (as the head's bosses)."""
-    out = {}
-    for (k, kind), ln in lines.items():
+def rocker_geo(lines=None):
+    """Per valve, the one rocker placed with its roller on the closed valve's tip: frame (a along the arm
+    towards the pushrod, side = trunnion axis, s = stem), roller centre, trunnion, cup. The arm points in plan
+    towards the design cup; the cup itself, and so the pushrod line, follow from the rocker."""
+    T = K["vt"]; out = {}
+    for (k, kind), ln in design_lines().items():
         cv, s, _ = valve(k, kind); tipv = cv + s * K["stem_l"][kind]
-        cup = line_at_h(ln[0][0], ln[0][1], tipv.z - 0.25)
-        out[(k, kind)] = dict(cv=cv, s=s, tip=tipv, cup=cup, pv=tipv + (cup - tipv) * (1.7 / 2.7), lines=ln)
+        d = ln[0][1] - tipv; a = (d - s * d.dot(s)).normalized(); side = s.cross(a).normalized()
+        rc = tipv + s * T["roller_r"]
+        tr = rc + a * T["tip_arm"] + s * T["tr_up"]
+        cup = tr + a * T["cup_arm"] - s * T["cup_dn"]
+        out[(k, kind)] = dict(cv=cv, s=s, tip=tipv, rc=rc, tr=tr, cup=cup, a=a, side=side, lines0=ln,
+                              lines=[(ln[0][0], cup), (ln[1][0], cup)])
     return out
 
+def frame(o, x, y, z):
+    """4x4 (inches to metres) with origin o and axes x, y, z (head-local)."""
+    m = Matrix.Identity(4)
+    for i in range(3): m[i][0], m[i][1], m[i][2], m[i][3] = x[i], y[i], z[i], o[i] * IN
+    return m
+
+def axes_z(z):
+    ref = V(0, 0, 1) if abs(z.z) < 0.9 else V(1, 0, 0); x = ref.cross(z).normalized(); return x, z.cross(x), z
+
+def lifter_dir_local(bank, cyl, kind):
+    """The lifter's bore axis (upwards) in head-local coordinates."""
+    L = next(x for x in CAMNS["lifter_axes"]() if x["bank"] == bank and x["cyl"] == cyl and x["valve"] == kind)
+    return to_local(V(L["ax"][0], 0, L["ax"][1]), bank) - to_local(V(0, 0, 0), bank)
+
+def solve_rocker(g, a0, dl, L, lift):
+    """Rocker angle (about its trunnion axis) that puts the cup a pushrod length L from the lifted lifter cup.
+    Returns angle, lifter cup, rocker cup, roller centre."""
+    tr, side, cup0, rc0 = g["tr"], g["side"], g["cup"], g["rc"]
+    a = a0 + dl * float(lift)
+    f = lambda th: (tr + Matrix.Rotation(th, 3, side) @ (cup0 - tr) - a).length - L
+    sg = 1.0 if side.cross(cup0 - tr).dot((cup0 - a0).normalized()) > 0 else -1.0
+    lo, hi = 0.0, sg * 0.5
+    if f(lo) < 0:
+        for _ in range(40):
+            mid = 0.5 * (lo + hi)
+            if f(mid) < 0: lo = mid
+            else: hi = mid
+    Rm = Matrix.Rotation(lo, 3, side)
+    return lo, a, tr + Rm @ (cup0 - tr), tr + Rm @ (rc0 - tr)
+
+LIFT_MAX = max(r["lift_max"] for r in LIFT["lifters"]) + 0.01
+
+def pushrod_sweep(n=7):
+    """(k, kind) -> pushrod lines (lifter cup, rocker cup) for both banks from closed to full lift, so the slots
+    in the head and the guide plates clear the pushrod as it moves."""
+    out = {}
+    for (k, kind), g in rocker_geo().items():
+        ls = []
+        for j, bank in enumerate("LR"):
+            a0, cup = g["lines"][j]; L = (cup - a0).length; dl = lifter_dir_local(bank, CYLS[bank][k], kind)
+            for i in range(n):
+                _, a, c, _ = solve_rocker(g, a0, dl, L, LIFT_MAX * i / (n - 1)); ls.append((a, c))
+        out[(k, kind)] = ls
+    return out
+
+CYLS = dict(L=(1, 3, 5, 7), R=tuple(R_OF[k] for k in range(4)))
+BANK_M = dict(L=lambda: M_L, R=lambda: ROT_R @ M_L)
+
+def rocker_body_pts():
+    """Side profile of the rocker (x along the arm towards the pushrod, z up the stem; origin at the trunnion):
+    tall over the trunnion, a closed nose round the roller with a slight hump behind it, and a shallower
+    rounded nose over the pushrod cup [Drew's photo]. Inches."""
+    T = K["vt"]; xr, zr = -T["tip_arm"], -T["tr_up"]; R = 0.40
+    pts = [(xr + R * math.cos(math.radians(t)), zr + R * math.sin(math.radians(t))) for t in range(215, 89, -15)][::-1]
+    pts = [(-1.10, 0.36), (-0.60, 0.44), (0.0, 0.46), (0.55, 0.40), (1.00, 0.24), (1.15, 0.16), (1.20, 0.02),
+           (1.15, -0.12), (1.00, -0.20), (0.75, -0.32), (0.40, -0.52), (-0.45, -0.52), (-0.85, -0.42), (-1.25, -0.32)] + pts[::-1]
+    return pts
+
+def rocker_mesh(tmp):
+    """The one rocker (CSP-S2001NP class, shaped from Drew's photo): a flat-sided channel, open over the trunnion
+    for the stud and poly lock, a fork closed over the top of the roller, and the pushrod end narrowed to a
+    rounded nose with the ball socket underneath. Rocker frame (x along the arm, y = trunnion axis, z = stem),
+    origin at the trunnion centre. Inches."""
+    T = K["vt"]; W = T["rocker_w"] / 2; wi = T["rk_inner"] / 2; xr, zr = -T["tip_arm"], -T["tr_up"]
+    prof = rocker_body_pts()
+    bm = loft([[V(x, -W, z) for x, z in prof], [V(x, W, z) for x, z in prof]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    body = obj("rk_body", bm, tmp)
+    cuts = [zprism(rrect(-0.55, 0.55, -wi, wi, 0.10), -1.0, 1.0),                               # open over the trunnion
+            zprism(rrect(xr - 0.6, xr + 0.47, -T["roller_w"] / 2 - 0.02, T["roller_w"] / 2 + 0.02, 0.02), -1.0, zr + 0.22),  # roller pocket
+            seg_cyl(V(T["cup_arm"], 0, -T["cup_dn"] - 0.3), V(T["cup_arm"], 0, -T["cup_dn"] + 0.12), 0.24, 24),  # ball socket, room for the shoulder
+            # pushrod relief: the pushrod leans up to ~20 deg in the rocker's frame through the lift on the 16 valves
+            hull3([V(T["cup_arm"], 0, -T["cup_dn"]) + q for dx, dy in ((-0.36, -0.24), (-0.36, 0.37), (0.26, -0.24), (0.26, 0.37))
+                   for d in [V(-dx, -dy, -1).normalized()] for t in (0.12, 1.2) for q in ring_pts(d * t, d, 0.23, 12)])]
+    for sg in (-1, 1):                                                                          # pushrod end narrowed
+        cuts.append(hull3([V(x, sg * y, z) for x, y in ((0.55, W + 0.01), (0.95, 0.30), (1.5, 0.30), (1.5, W + 0.2), (0.55, W + 0.2))
+                           for z in (-1.0, 1.0)]))
+    for c_bm in cuts:
+        c = obj("rk_cut", c_bm, tmp); boolean(body, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+    m = body.modifiers.new("bev", "BEVEL"); m.width = 0.025 * IN; m.segments = 2; m.limit_method = "ANGLE"; m.angle_limit = math.radians(40)
+    with bpy.context.temp_override(object=body, active_object=body): bpy.ops.object.modifier_apply(modifier=m.name)
+    out = bmesh.new(); out.from_mesh(body.data); bpy.data.objects.remove(body, do_unlink=True)
+    return out
+
+def roller_mesh_rk():
+    """Steel parts that ride in the rocker: the small roller on its axle (ends showing through both cheeks)
+    and the needle-bearing trunnion across the channel, its caps just proud of the sides. Inches."""
+    T = K["vt"]; W = T["rocker_w"] / 2; bm = bmesh.new()
+    rc = V(-T["tip_arm"], 0, -T["tr_up"]); hw = T["roller_w"] / 2; r = T["roller_r"]
+    loft([ring_pts(rc + V(0, y, 0), V(0, 1, 0), rr, 32) for y, rr in ((-hw, r - 0.03), (-hw + 0.03, r), (hw - 0.03, r), (hw, r - 0.03))], bm)
+    seg_cyl(rc - V(0, W + 0.02, 0), rc + V(0, W + 0.02, 0), 0.085, 16, bm)                                 # axle
+    seg_cyl(V(0, -(W + 0.03), 0), V(0, W + 0.03, 0), T["trunnion_r"], 24, bm)                               # trunnion
+    return bm
+
+def valve_mesh(kind):
+    """Valve in its own frame: origin at the seat centre on the face plane, z up the stem. Inches."""
+    T = K["vt"]; q = K["v" + kind]; R = q["d"] / 2; Z = V(0, 0, 1); bm = bmesh.new()
+    loft([ring_pts(-Z * 0.11, Z, R - 0.03, 48), ring_pts(-Z * 0.05, Z, R, 48), ring_pts(Z * 0.02, Z, R, 48),
+          ring_pts(Z * 0.12, Z, R - 0.12, 48), ring_pts(Z * 0.50, Z, 0.36, 48), ring_pts(Z * 0.95, Z, T["stem_r"], 48)], bm)
+    seg_cyl(Z * 0.90, Z * K["stem_l"][kind], T["stem_r"], 16, bm)
+    return bm
+
+def retainer_mesh(kind):
+    T = K["vt"]; Z = V(0, 0, 1); rt = Z * (K["spring_h"][kind] + T["installed"]); bm = bmesh.new()
+    loft([ring_pts(rt - Z * 0.22, Z, 0.36, 32), ring_pts(rt - Z * 0.02, Z, 0.50, 32), ring_pts(rt, Z, T["ret_r"], 32),
+          ring_pts(rt + Z * T["ret_t"], Z, T["ret_r"], 32), ring_pts(rt + Z * (T["ret_t"] + 0.08), Z, 0.42, 32)], bm)
+    return bm
+
+def spring_mesh():
+    """Wire helix on its seat (origin), z up, closed ends; the object is scaled in z as the valve opens."""
+    T = K["vt"]; rw = T["wire"] / 2; Rm = T["spring_od"] / 2 - rw; s = V(0, 0, 1); bm = bmesh.new()
+    n = int(T["turns"] * 16); rings = []
+    for i in range(n + 1):
+        f = i / n; th = 2 * math.pi * T["turns"] * f
+        z = rw + (T["installed"] - 2 * rw) * (3 * f * f - 2 * f ** 3) * 0.35 + (T["installed"] - 2 * rw) * f * 0.65
+        rad = V(math.cos(th), math.sin(th), 0); c = s * z + rad * Rm
+        rings.append([c + (rad * math.cos(a) + s * math.sin(a)) * rw for a in (2 * math.pi * j / 8 for j in range(8))])
+    loft(rings, bm); return bm
+
+def pushrod_mesh(L):
+    T = K["vt"]; Z = V(0, 0, 1); bm = bmesh.new(); r = T["pushrod_r"]
+    loft([ring_pts(Z * 0.0, Z, 0.08, 16), ring_pts(Z * 0.10, Z, r, 16), ring_pts(Z * (L - 0.10), Z, r, 16), ring_pts(Z * L, Z, 0.08, 16)], bm)
+    return bm
+
 def build_valvetrain(root, tmp, lines, info):
-    T = K["vt"]; G = rocker_geo(lines)
-    valves, springs, rets, studs, rockers, rollers, locks, plates = (bmesh.new() for _ in range(8))
-    pushL, pushR = bmesh.new(), bmesh.new()
-    plens = {}
-    for (k, kind), g in G.items():
-        cv, s, tip, cup, pv = g["cv"], g["s"], g["tip"], g["cup"], g["pv"]
-        q = K["v" + kind]; R = q["d"] / 2
-        # valve: head with margin, tulip, stem
-        loft([ring_pts(cv - s * 0.11, s, R - 0.03, 48), ring_pts(cv - s * 0.05, s, R, 48), ring_pts(cv + s * 0.02, s, R, 48),
-              ring_pts(cv + s * 0.12, s, R - 0.12, 48), ring_pts(cv + s * 0.50, s, 0.36, 48), ring_pts(cv + s * 0.95, s, T["stem_r"], 48)], valves)
-        seg_cyl(cv + s * 0.90, tip, T["stem_r"], 16, valves)
-        # spring: a wire helix on the seat, closed ends
-        sp = cv + s * K["spring_h"][kind]; rw = T["wire"] / 2; Rm = T["spring_od"] / 2 - rw
-        ref = V(0, 0, 1) if abs(s.z) < 0.9 else V(1, 0, 0); e1 = s.cross(ref).normalized(); e2 = s.cross(e1)
-        n = int(T["turns"] * 16); rings = []
-        for i in range(n + 1):
-            f = i / n; th = 2 * math.pi * T["turns"] * f
-            z = rw + (T["installed"] - 2 * rw) * (3 * f * f - 2 * f ** 3) * 0.35 + (T["installed"] - 2 * rw) * f * 0.65
-            rad = e1 * math.cos(th) + e2 * math.sin(th); c = sp + s * z + rad * Rm
-            rings.append([c + (rad * math.cos(a) + s * math.sin(a)) * rw for a in (2 * math.pi * j / 8 for j in range(8))])
-        loft(rings, springs)
-        # retainer and locks
-        rt = sp + s * T["installed"]
-        loft([ring_pts(rt - s * 0.22, s, 0.36, 32), ring_pts(rt - s * 0.02, s, 0.50, 32), ring_pts(rt, s, T["ret_r"], 32),
-              ring_pts(rt + s * T["ret_t"], s, T["ret_r"], 32), ring_pts(rt + s * (T["ret_t"] + 0.08), s, 0.42, 32)], rets)
-        # rocker stud, hex and poly lock, on the stem direction through the pivot
-        sd, tr, base = rocker_stud(pv, s); g["base"] = base
-        seg_cyl(base - sd * 0.02, tr + sd * 0.95, T["stud_r"], 16, studs)
-        loft([ring_pts(base + sd * 0.10, sd, 0.36, 6), ring_pts(base + sd * 0.38, sd, 0.36, 6)], studs)
-        loft([ring_pts(tr + sd * 0.38, sd, 0.36, 12), ring_pts(tr + sd * 0.80, sd, 0.36, 12)], locks)
-        # rocker: trunnion block, arm to the roller over the valve tip, arm to the pushrod cup
-        a_tip = (tip + s * T["roller_r"] - tr); a_cup = (cup + V(0, 0, 0.12) - tr)
-        s_valve, s = s, sd                                # the rocker body is square to its stud
-        side = s.cross(a_tip).normalized(); w = T["rocker_w"] / 2
-        pts = []
-        for sg in (-1, 1):
-            o_ = tr + side * (w * sg)
-            pts += [o_ - s * 0.36, o_ + s * 0.36, o_ + a_tip * 0.80 + s * 0.22, o_ + a_tip * 0.80 - s * 0.20,
-                    o_ + a_cup * 1.10 + s * 0.20, o_ + a_cup * 1.10 - s * 0.16, o_ + a_tip.normalized() * 0.5 + s * 0.42, o_ + a_cup.normalized() * 0.45 + s * 0.42]
-        hull3(pts, rockers)
-        s = s_valve
-        rc = tip + s * T["roller_r"]
-        seg_cyl(rc - side * 0.20, rc + side * 0.20, T["roller_r"], 24, rollers)
-        seg_cyl(tr - side * (w + 0.04), tr + side * (w + 0.04), 0.30, 20, rollers)        # trunnion ends
-        # pushrods: left head on the left bank's lifters, right head on the right bank's
-        for bm_, (a, top), nm in ((pushL, g["lines"][0], "L"), (pushR, g["lines"][1], "R")):
-            end = line_at_h(a, top, tip.z - 0.25) if nm == "L" else cup
-            seg_cyl(a, end, T["pushrod_r"], 14, bm_)
-            plens[f"{nm}{k}{kind}"] = round((end - a).length, 3)
-    # guide plates: one per cylinder under the two stud hexes, slotted for the pushrods
-    for k in range(4):
-        gi, ge = G[(k, "I")], G[(k, "E")]; z = floor_h(0) + 0.60
-        pts = []
-        for g in (gi, ge):
-            pts += circ(g["base"].x, g["base"].y, 0.46, 20)
-            c = line_at_h(g["lines"][0][0], g["lines"][0][1], z); pts += circ(c.x, c.y, 0.40, 16)
-        pl = obj("gp", zprism(ccw(hull(pts)), z + 0.001, z + 0.10), tmp)
-        for g in (gi, ge):
-            pts = []
-            for a, top in g["lines"]:
-                for hh in (z - 0.5, z + 0.6): pts += ring_pts(line_at_h(a, top, hh), top - a, 0.215, 12)
-            c = obj("gps", hull3(pts), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-            c = obj("gph", zprism(circ(g["base"].x, g["base"].y, 0.26, 16), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        for g in (gi, ge):                               # and round the springs
-            sp = g["cv"] + g["s"] * (K["spring_h"]["I" if g is gi else "E"] - 0.3)
-            c = obj("gpsp", cyl_axis(sp, g["s"], K["vt"]["spring_od"] / 2 + 0.05, 2.5, 24), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        for h in HIGH:                                   # relieved round the head-stud nuts beside it
-            c = obj("gpn", zprism(circ(h["u"], h["v"], 0.52, 20), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        plates.from_mesh(pl.data); bpy.data.objects.remove(pl, do_unlink=True)
-    info["pushrod_len"] = plens
-    info["pushrod_spec"] = dict(I=8.650, E=7.650)
+    """Static parts (rocker studs, poly locks, guide plates) are returned per bank for place(); the moving
+    parts are one object per valve (pushrod, rocker + roller, valve + retainer, spring), each in its own
+    frame, keyed on the crank timeline by animate_valvetrain()."""
+    T = K["vt"]; G = rocker_geo()
     mats = dict(
         Valves=material("VT_ValveStainless", (0.62, 0.62, 0.63, 1), 1.0, 0.28),
         ValveSprings=material("VT_SpringSteel", (0.16, 0.15, 0.14, 1), 1.0, 0.40),
@@ -791,16 +872,136 @@ def build_valvetrain(root, tmp, lines, info):
         PolyLocks=material("VT_PolyLock", (0.06, 0.06, 0.065, 1), 0.9, 0.35),
         GuidePlates=material("VT_GuidePlate", (0.05, 0.05, 0.05, 1), 0.8, 0.45),
         Pushrods=material("VT_PushrodSteel", (0.10, 0.10, 0.105, 1), 1.0, 0.33))
+    vt = coll("BBC_Valvetrain", root)
+    for a in [a for a in bpy.data.actions if a.name.startswith("VT_")]: bpy.data.actions.remove(a)
+    for m in [m for m in bpy.data.meshes if m.users == 0]: bpy.data.meshes.remove(m)
+
+    def shared(name, bm, mat):
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free(); me.materials.append(mat)
+        me.shade_smooth(); me.set_sharp_from_angle(angle=math.radians(35)); return me
+    ME = dict(rocker=shared("RockerArm", rocker_mesh(tmp), mats["RockerArms"]), roller=shared("RockerRoller", roller_mesh_rk(), mats["RockerRollers"]),
+              spring=shared("ValveSpring", spring_mesh(), mats["ValveSprings"]))
+    for kind in "IE":
+        ME["valve" + kind] = shared("Valve_" + kind, valve_mesh(kind), mats["Valves"])
+        ME["ret" + kind] = shared("Retainer_" + kind, retainer_mesh(kind), mats["Retainers"])
+
+    def mk(name, me, parent=None, m=None):
+        o = bpy.data.objects.new(name, me); vt.objects.link(o); o.rotation_mode = "QUATERNION"
+        if parent: o.parent = parent; o.matrix_parent_inverse = Matrix.Identity(4)
+        else: o.matrix_world = m
+        return o
+
+    studs, locks, plates = bmesh.new(), bmesh.new(), bmesh.new()
+    rig = []; plens = {}
+    for (k, kind), g in G.items():
+        cv, s, tr, side, a_ = g["cv"], g["s"], g["tr"], g["side"], g["a"]
+        sd, _, base = rocker_stud(tr, s, side); g["base"] = base
+        h0, h1 = T["lock_h"]; rh = T["lock_hex"] / 2 / math.cos(math.pi / 6); rs, hs = T["setscrew"]
+        seg_cyl(base - sd * 0.02, tr + sd * (h1 - 0.02), T["stud_r"], 16, studs)              # stud ends under the set screw
+        loft([ring_pts(base + sd * 0.10, sd, 0.36, 6), ring_pts(base + sd * 0.38, sd, 0.36, 6)], studs)
+        loft([ring_pts(tr + sd * hh, sd, rr, 6) for hh, rr in ((h0, rh - 0.04), (h0 + 0.04, rh), (h1 - 0.04, rh), (h1, rh - 0.04))], locks)
+        loft([ring_pts(tr + sd * hh, sd, rr, 24) for hh, rr in ((h1 - 0.02, rs), (h1 + hs - 0.02, rs), (h1 + hs, rs - 0.02),
+                                                                 (h1 + hs, 0.075), (h1 + hs - 0.09, 0.075))], locks)   # set screw, hex socket
+        Fv = frame(cv, *axes_z(s)); Fs = frame(cv + s * K["spring_h"][kind], *axes_z(s)); Fr = frame(tr, a_, side, s)
+        for j, bank in enumerate("LR"):
+            Mb = BANK_M[bank](); cyl = CYLS[bank][k]; tag = f"{cyl}{kind}"
+            a0, cup = g["lines"][j]; L = (cup - a0).length; plens[f"{bank}{k}{kind}"] = round(L, 3)
+            pr = mk(f"Pushrod_{tag}", shared(f"Pushrod_{tag}", pushrod_mesh(L), mats["Pushrods"]), m=Mb @ frame(a0, *axes_z((cup - a0).normalized())))
+            rk = mk(f"Rocker_{tag}", ME["rocker"], m=Mb @ Fr); mk(f"RockerRoller_{tag}", ME["roller"], rk)
+            va = mk(f"Valve_{tag}", ME["valve" + kind], m=Mb @ Fv); mk(f"Retainer_{tag}", ME["ret" + kind], va)
+            sp = mk(f"ValveSpring_{tag}", ME["spring"], m=Mb @ Fs)
+            rig.append(dict(bank=bank, k=k, kind=kind, cyl=cyl, g=g, a0=a0, L=L, Mb=Mb, Fr=Fr, Fv=Fv, pr=pr, rk=rk, va=va, sp=sp))
+    # guide plates: one per cylinder under the two stud hexes, slotted for the pushrods
+    SW = pushrod_sweep()
+    platesR = bmesh.new()
+    for j, k in [(j, k) for j in range(2) for k in range(4)]:   # each head's plates slotted for its own bank's pushrods
+        gi, ge = G[(k, "I")], G[(k, "E")]; z = floor_h(0) + 0.60
+        pts = []
+        for g in (gi, ge):
+            pts += circ(g["base"].x, g["base"].y, 0.46, 20)
+            c = line_at_h(g["lines"][j][0], g["lines"][j][1], z); pts += circ(c.x, c.y, 0.40, 16)
+        pl = obj("gp", zprism(ccw(hull(pts)), z + 0.001, z + 0.10), tmp)
+        for kind, g in (("I", gi), ("E", ge)):
+            pts = []
+            for a, top in (SW[(k, kind)][:len(SW[(k, kind)]) // 2], SW[(k, kind)][len(SW[(k, kind)]) // 2:])[j]:
+                for hh in (z - 0.5, z + 0.6): pts += ring_pts(line_at_h(a, top, hh), top - a, 0.225, 12)
+            c = obj("gps", hull3(pts), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+            c = obj("gph", zprism(circ(g["base"].x, g["base"].y, 0.26, 16), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        for g in (gi, ge):                               # and round the springs
+            sp = g["cv"] + g["s"] * (K["spring_h"]["I" if g is gi else "E"] - 0.3)
+            c = obj("gpsp", cyl_axis(sp, g["s"], K["vt"]["spring_od"] / 2 + 0.05, 2.5, 24), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        for h in HIGH:                                   # relieved round the head-stud nuts beside it
+            c = obj("gpn", zprism(circ(h["u"], h["v"], 0.52, 20), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
+        (plates, platesR)[j].from_mesh(pl.data); bpy.data.objects.remove(pl, do_unlink=True)
+    info["pushrod_len"] = plens
+    info["pushrod_spec"] = dict(I=8.650, E=7.650)
+    info["rocker"] = dict(tip_arm=T["tip_arm"], cup_arm=T["cup_arm"], shared_mesh="RockerArm", users=ME["rocker"].users)
     left, right = [], []
-    for nm, bm_ in (("Valves", valves), ("ValveSprings", springs), ("Retainers", rets), ("RockerStuds", studs), ("RockerArms", rockers),
-                    ("RockerRollers", rollers), ("PolyLocks", locks), ("GuidePlates", plates)):
+    for nm, bm_ in (("RockerStuds", studs), ("PolyLocks", locks), ("GuidePlates", plates)):
         o = obj(nm + "_L", bm_, root); o.data.materials.append(mats[nm]); left.append(o)
-        r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; root.objects.link(r); right.append(r)
-    o = obj("Pushrods_L", pushL, root); o.data.materials.append(mats["Pushrods"]); left.append(o)
-    r = obj("Pushrods_R", pushR, root); r.data.materials.append(mats["Pushrods"]); right.append(r)
+        if nm == "GuidePlates": r = obj(nm + "_R", platesR, root); r.data.materials.append(mats[nm])
+        else: r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; root.objects.link(r)
+        right.append(r)
     for o in left + right:
         o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
+    info["valve_motion"] = animate_valvetrain(rig)
     return left, right
+
+
+def lifter_lift(cyl, kind, frames):
+    """Lift (inches) of a lifter along its bore at the given frames, read from its keyed location."""
+    o = bpy.data.objects[f"Lifter_{cyl}{kind}"]; ad = o.animation_data
+    fcs = ad.action.layers[0].strips[0].channelbag(ad.action_slot).fcurves
+    loc = np.array([[fcs.find("location", index=i).evaluate(f) for i in range(3)] for f in frames])
+    L = next(x for x in CAMNS["lifter_axes"]() if x["cyl"] == cyl and x["valve"] == kind)
+    ax = np.array((L["ax"][0], 0.0, L["ax"][1])); p = loc @ ax / IN
+    return p - p.min(), Vector(ax)
+
+def key_object(o, frames, channels):
+    """channels: {(data_path, index): values}; linear keys, cycled."""
+    ad = o.animation_data_create(); act = bpy.data.actions.new("VT_" + o.name); ad.action = act
+    for (path, idx), vals in channels.items():
+        fc = act.fcurve_ensure_for_datablock(o, path, index=idx)
+        fc.keyframe_points.add(len(frames))
+        co = np.empty(2 * len(frames)); co[0::2] = frames; co[1::2] = vals
+        fc.keyframe_points.foreach_set("co", co)
+        try: fc.keyframe_points.foreach_set("interpolation", [1] * len(frames))
+        except Exception:
+            for kp in fc.keyframe_points: kp.interpolation = "LINEAR"
+        fc.update(); fc.modifiers.new("CYCLES")
+
+def animate_valvetrain(rig, step=1.0):
+    """Each lifter's keyed lift drives its pushrod; the rocker turns on its trunnion until the cup is a pushrod
+    length from the lifter cup; the roller's travel along the stem opens the valve and closes the spring."""
+    T = K["vt"]; degs = np.arange(0.0, 720.0 + step / 2, step); frames = 1 + degs / 7.5; out = {}
+    for r in rig:
+        g = r["g"]; s, tr, side = g["s"], g["tr"], g["side"]; cup0, rc0 = g["cup"], g["rc"]; a0, L, Mb = r["a0"], r["L"], r["Mb"]
+        lift, ax_w = lifter_lift(r["cyl"], r["kind"], frames)
+        dl = lifter_dir_local(r["bank"], r["cyl"], r["kind"])
+        P = {("location", i): [] for i in range(3)}; P.update({("rotation_quaternion", i): [] for i in range(4)})
+        Rk = {("rotation_quaternion", i): [] for i in range(4)}; Vl = {("location", i): [] for i in range(3)}; Sp = {("scale", 2): []}
+        vlift = []; qp = qr = None
+        for l in lift:
+            th, a, cup, rc = solve_rocker(g, a0, dl, L, l)
+            vl = max(0.0, -(rc - rc0).dot(s)); vlift.append(vl)
+            loc, q, _ = (Mb @ frame(a, *axes_z((cup - a).normalized()))).decompose()
+            if qp is not None: q.make_compatible(qp)
+            qp = q
+            for i in range(3): P[("location", i)].append(loc[i])
+            for i in range(4): P[("rotation_quaternion", i)].append(q[i])
+            _, q2, _ = (Mb @ r["Fr"] @ Matrix.Rotation(th, 4, "Y")).decompose()
+            if qr is not None: q2.make_compatible(qr)
+            qr = q2
+            for i in range(4): Rk[("rotation_quaternion", i)].append(q2[i])
+            lv = (Mb @ r["Fv"] @ Matrix.Translation((0, 0, -vl * IN))).translation
+            for i in range(3): Vl[("location", i)].append(lv[i])
+            Sp[("scale", 2)].append((T["installed"] - vl) / T["installed"])
+        key_object(r["pr"], frames, P); key_object(r["rk"], frames, Rk); key_object(r["va"], frames, Vl); key_object(r["sp"], frames, Sp)
+        vlift = np.array(vlift)
+        out[f"{r['cyl']}{r['kind']}"] = dict(lifter_max=round(float(lift.max()), 4), valve_max=round(float(vlift.max()), 4),
+                                             ratio=round(float(vlift.max() / lift.max()), 3), open_deg=round(float(degs[vlift > 0.001].size * step), 1))
+    bpy.context.scene.frame_set(1)
+    return out
 
 
 def place(o, m):
