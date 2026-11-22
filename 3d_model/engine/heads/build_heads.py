@@ -990,18 +990,16 @@ BANK_M = dict(L=lambda: M_L, R=lambda: ROT_R @ M_L)
 
 def rocker_body_pts():
     """Side profile of the rocker (x along the arm towards the pushrod, z up the stem; origin at the trunnion):
-    tall over the trunnion, a closed nose round the roller with a slight hump behind it, and a shallower
-    rounded nose over the pushrod cup [Drew's photo]. Inches."""
-    T = K["vt"]; xr, zr = -T["tip_arm"], -T["tr_up"]; R = 0.40
-    pts = [(xr + R * math.cos(math.radians(t)), zr + R * math.sin(math.radians(t))) for t in range(215, 89, -15)][::-1]
-    pts = [(-1.10, 0.36), (-0.60, 0.44), (0.0, 0.46), (0.55, 0.40), (1.00, 0.24), (1.15, 0.16), (1.20, 0.02),
-           (1.15, -0.12), (1.00, -0.20), (0.75, -0.32), (0.40, -0.52), (-0.45, -0.52), (-0.85, -0.42), (-1.25, -0.32)] + pts[::-1]
-    return pts
+    a squared-off box [Drew's photo of his rockers]: tallest over the trunnion, square ends over the roller and the
+    pushrod cup, small corner breaks only. Inches."""
+    return [(-1.10, 0.38), (-0.60, 0.44), (0.0, 0.46), (0.55, 0.42), (1.10, 0.34), (1.22, 0.30), (1.25, 0.24),
+            (1.25, -0.16), (1.21, -0.22), (1.00, -0.25), (0.75, -0.32), (0.40, -0.52), (-0.45, -0.52), (-0.85, -0.42),
+            (-1.25, -0.32), (-1.89, -0.27), (-1.95, -0.21), (-1.95, 0.25), (-1.89, 0.31), (-1.55, 0.34)]
 
 def rocker_mesh(tmp):
-    """The one rocker (CSP-S2001NP class, shaped from Drew's photo): a flat-sided channel, open over the trunnion
-    for the stud and poly lock, a fork closed over the top of the roller, and the pushrod end narrowed to a
-    rounded nose with the ball socket underneath. Rocker frame (x along the arm, y = trunnion axis, z = stem),
+    """The one rocker (CSP-S2001NP class, shaped from Drew's photo): a square-ended box, open over the trunnion
+    for the stud and poly lock, a fork closed over the top of the roller, and the pushrod end full width with the
+    ball socket underneath. Rocker frame (x along the arm, y = trunnion axis, z = stem),
     origin at the trunnion centre. Inches."""
     T = K["vt"]; W = T["rocker_w"] / 2; wi = T["rk_inner"] / 2; xr, zr = -T["tip_arm"], -T["tr_up"]
     prof = rocker_body_pts()
@@ -1014,9 +1012,6 @@ def rocker_mesh(tmp):
             # pushrod relief: the pushrod leans up to ~20 deg in the rocker's frame through the lift on the 16 valves
             hull3([V(T["cup_arm"], 0, -T["cup_dn"]) + q for dx, dy in ((-0.36, -0.24), (-0.36, 0.37), (0.26, -0.24), (0.26, 0.37))
                    for d in [V(-dx, -dy, -1).normalized()] for t in (0.12, 1.2) for q in ring_pts(d * t, d, 0.23, 12)])]
-    for sg in (-1, 1):                                                                          # pushrod end narrowed
-        cuts.append(hull3([V(x, sg * y, z) for x, y in ((0.55, W + 0.01), (0.95, 0.30), (1.5, 0.30), (1.5, W + 0.2), (0.55, W + 0.2))
-                           for z in (-1.0, 1.0)]))
     for c_bm in cuts:
         c = obj("rk_cut", c_bm, tmp); boolean(body, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
     m = body.modifiers.new("bev", "BEVEL"); m.width = 0.025 * IN; m.segments = 2; m.limit_method = "ANGLE"; m.angle_limit = math.radians(40)

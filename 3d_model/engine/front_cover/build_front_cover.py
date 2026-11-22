@@ -14,7 +14,7 @@ bolts at (+/-2.75, 8.01), (+/-4.17, 4.87), (+/-3.23, 0.30) and two dowels at
 How it is laid out:
   frame   y 24.00-24.30, outline O (round the bolt pattern, cam and crank), opening H
           clear of the cam sprocket and chain (r 3.25 about the cam) and crank sprocket
-          (r 1.82); dowel holes, six bolt holes, tapped holes for the lid screws.
+          (r 1.82); dowel holes, six bolt holes. Only the six block bolts hold the lid and frame [Drew].
   lid     sheet .07", flange on the frame, wall up to a flat front face at y 24.90
           (the cam bolts end at y 24.50); crank seal bore 3.00".
   seal    2.25" ID (balancer hub) x 3.00" OD x .40" [est].
@@ -52,7 +52,12 @@ K = dict(
     F=dict(cam_r=3.30, crank_r=1.90),                                 # lid front face
     seal_bore=3.00, seal_id=2.25, seal_w=0.40,                        # [est] BBC balancer hub 2.25"
     bolt_head=dict(af=0.4375, flange_r=0.30, h=0.20), bolt_r=0.125, bolt_hole=0.140,
-    dowel_hole=0.135, screw=dict(n=8, head_r=0.21, h=0.14, r=0.095),
+    dowel_hole=0.135,
+    # Timing pointer [Drew]: a stamped tab under the driver-side middle cover bolt, rising outboard of the bolt head,
+    # running in across the front of the lid towards the damper and bent forward over the ring's OD, the tip pointing at the TDC stripe (BAL marks zero_at) at crank 0.
+    # Sizes [est].
+    pointer=dict(bolt=2, t=0.06, foot_r=0.30, riser_off=0.36, plate_y=(24.95, 25.01), arm_w=0.36, r_arm=4.32, tip_r=4.10,
+                 tip_y=(26.78, 26.84), front_y=26.90),
     centre=(0.0, 3.0), N=192,
 )
 
@@ -131,6 +136,28 @@ def hex_y(af, y0, y1, x, z, bm=None):
     return prism_y(p, y0, y1, bm)
 
 
+def build_pointer(root, yl):
+    """Timing pointer: a foot under bolt P["bolt"] on the lid flange, a riser at its outer edge, a plate across in
+    front of the lid (between its face and the damper) in to radius r_arm on the TDC line, bent forward along the
+    damper to front_y, and a V tip at tip_r over the OD pointing at the stripe."""
+    P = K["pointer"]; bx, bz = BOLTS[P["bolt"]]; a0 = math.radians(BAL["marks"]["zero_at"])
+    u = Vector((math.sin(a0), math.cos(a0))); t = Vector((math.cos(a0), -math.sin(a0))); hw = P["arm_w"] / 2
+    B = Vector((bx, bz)); ub = B.normalized(); tb = Vector((ub.y, -ub.x))
+    ya, yb = yl + 0.001, yl + 0.001 + P["t"]; yp0, yp1 = P["plate_y"]
+    riser = [tuple(B + ub * (P["riser_off"] + d) + tb * s_) for d, s_ in ((0, -hw), (P["t"], -hw), (P["t"], hw), (0, hw))]
+    bm = prism_y(hull(circle_pts(bx, bz, P["foot_r"], 24) + riser), ya, yb)          # foot on the flange
+    prism_y(riser, yb - 0.001, yp1, bm)                                               # riser, outboard of the bolt head
+    q = lambda r, s_: tuple(u * r + t * s_)
+    arm = [q(P["r_arm"], -hw), q(P["r_arm"] + P["t"], -hw), q(P["r_arm"] + P["t"], hw), q(P["r_arm"], hw)]
+    prism_y(hull(riser + arm), yp0, yp1, bm)                                          # across, in front of the lid
+    prism_y(arm, yp0 + 0.001, P["front_y"], bm)                                       # bent forward over the damper
+    prism_y([q(P["r_arm"] + 0.001, -hw), q(P["r_arm"] + 0.001, hw), q(P["tip_r"], 0.0)], *P["tip_y"], bm)
+    o = obj("TimingPointer", bm, root)
+    hole = obj("ph", ycyl(K["bolt_hole"], ya - 0.1, yb + 0.1, 20, bx, bz), root)
+    boolean(o, "DIFFERENCE", hole); bpy.data.objects.remove(hole, do_unlink=True)
+    return o
+
+
 def build():
     root = coll("BBC_FrontCover"); clear(root)
     tmp = coll("FrontCover_tmp", root, hide=True)
@@ -143,20 +170,7 @@ def build():
     obj("op", prism_y(H, y0 - 0.1, y1 + 0.1), tmp)
     for x, z in BOLTS: obj("bh", ycyl(k["bolt_hole"], y0 - 0.1, y1 + 0.1, 20, x, z), tmp)
     for x, z in DOWELS: obj("dh", ycyl(k["dowel_hole"], y0 - 0.1, y1 + 0.1, 20, x, z), tmp)
-    # Lid screw positions: on the flange band between W and O, away from the six bolts.
-    cands = []
-    for i in range(0, k["N"], 2):
-        po, pw = Vector(O[i]), Vector(W[i])
-        band = (po - pw).length; m = (po + pw) / 2
-        if band < 0.62: continue
-        dmin = min((m - Vector(b)).length for b in BOLTS + DOWELS)
-        cands.append((dmin, i, m))
-    screws = []
-    for dmin, i, m in sorted(cands, key=lambda c: -c[0]):
-        if dmin < 0.85: break
-        if all((m - s).length > 2.4 for s in screws): screws.append(m)
-        if len(screws) == k["screw"]["n"]: break
-    for s in screws: obj("st", ycyl(k["screw"]["r"] - 0.01, y0 + 0.08, y1 + 0.1, 16, s.x, s.y), tmp)
+    screws = []                                        # no lid screws: the six block bolts hold lid and frame [Drew]
     boolean(frame, "DIFFERENCE", tmp); clear(tmp)
     # Lid: flange on the frame face, wall up to the front face; hollowed from behind.
     lid = obj("TimingCoverLid", loft([ysec(O, y1 + 0.001), ysec(O, y1 + 0.001 + lt), ysec(W, y1 + 0.001 + lt), ysec(F, k["lid_front"])]), root)
@@ -164,30 +178,30 @@ def build():
     obj("in", loft([ysec(Wi, y1 - 0.05), ysec(Wi, y1 + 0.001 + lt), ysec(Fi, k["lid_front"] - lt)]), tmp)
     obj("sb", ycyl(k["seal_bore"] / 2, y1 - 0.2, k["lid_front"] + 0.2, 64), tmp)
     for x, z in BOLTS: obj("bh", ycyl(k["bolt_hole"], y1 - 0.1, y1 + 0.2, 20, x, z), tmp)
-    for s in screws: obj("sh", ycyl(k["screw"]["r"] + 0.02, y1 - 0.1, y1 + 0.2, 16, s.x, s.y), tmp)
     boolean(lid, "DIFFERENCE", tmp); clear(tmp)
     # Seal boss: a short collar round the seal bore, inside the lid.
     sb = obj("TimingCoverSeal", ycyl(k["seal_bore"] / 2 - 0.004, k["lid_front"] - k["seal_w"], k["lid_front"] + 0.02, 64), root)
     obj("si", ycyl(k["seal_id"] / 2, k["lid_front"] - 1, k["lid_front"] + 1, 64), tmp)
     boolean(sb, "DIFFERENCE", tmp); clear(tmp)
     bpy.data.collections.remove(tmp)
-    # Hardware: six flanged block bolts through lid and frame, the lid screws.
+    # Hardware: the six flanged block bolts through lid and frame; the timing pointer under one of them.
     bm = bmesh.new(); yl = y1 + 0.001 + lt; bh = k["bolt_head"]
+    P = k["pointer"]; pb = BOLTS[P["bolt"]]
     for x, z in BOLTS:
-        ycyl(bh["flange_r"], yl + 0.001, yl + 0.05, 24, x, z, bm)
-        hex_y(bh["af"], yl + 0.05, yl + bh["h"], x, z, bm)
-        ycyl(k["bolt_r"] - 0.005, y0 - 0.70, yl + 0.002, 16, x, z, bm)
-    for s in screws:
-        ycyl(k["screw"]["head_r"], yl + 0.001, yl + k["screw"]["h"], 20, s.x, s.y, bm)
-        ycyl(k["screw"]["r"] - 0.012, y0 + 0.09, yl + 0.002, 12, s.x, s.y, bm)
+        yb = yl + (P["t"] + 0.001 if (x, z) == pb else 0.0)   # the pointer's foot sits under one bolt head
+        ycyl(bh["flange_r"], yb + 0.001, yb + 0.05, 24, x, z, bm)
+        hex_y(bh["af"], yb + 0.05, yb + bh["h"], x, z, bm)
+        ycyl(k["bolt_r"] - 0.005, y0 - 0.70, yb + 0.002, 16, x, z, bm)
     hw = obj("TimingCoverBolts", bm, root)
+    ptr = build_pointer(root, yl)
     lid_m = material("TimingCover_SatinBlack", (0.02, 0.02, 0.022, 1), 0.4, 0.45)
     frame_m = material("TimingCover_BlackComposite", (0.03, 0.03, 0.032, 1), 0.0, 0.6)
     seal_m = material("TimingCover_SealRubber", (0.04, 0.04, 0.04, 1), 0.0, 0.5)
     oxide = material("FrontCover_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
-    for o, m in ((frame, frame_m), (lid, lid_m), (sb, seal_m), (hw, oxide)):
+    zinc = material("TimingPointer_Zinc", (0.70, 0.70, 0.68, 1), 1.0, 0.32)
+    for o, m in ((frame, frame_m), (lid, lid_m), (sb, seal_m), (hw, oxide), (ptr, zinc)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
-    return [frame, lid, sb, hw], dict(screws=[(round(s.x, 3), round(s.y, 3)) for s in screws],
+    return [frame, lid, sb, hw, ptr], dict(screws=[(round(s.x, 3), round(s.y, 3)) for s in screws],
                                        outline_z=(round(min(p[1] for p in O), 3), round(max(p[1] for p in O), 3)),
                                        outline_half_w=round(max(p[0] for p in O), 3))
 
@@ -297,7 +311,7 @@ def balancer_checks(bal, step=15.0):
     mesh_world, set_crank = CAMNS["mesh_world"], CAMNS["set_crank"]
     def tree(o):
         v, f = mesh_world(o); return BVHTree.FromPolygons([Vector(x) for x in v], f)
-    fixed = [n for n in ("Block", "OilPan", "OilPanBolts", "OilPanGasket", "TimingCoverFrame", "TimingCoverLid", "TimingCoverSeal",
+    fixed = [n for n in ("Block", "OilPan", "OilPanBolts", "OilPanGasket", "TimingCoverFrame", "TimingCoverLid", "TimingCoverSeal", "TimingPointer",
                          "TimingCoverBolts", "CamBolts", "CamSprocket", "TimingChain") if n in bpy.data.objects]
     FT = {n: tree(bpy.data.objects[n]) for n in fixed if n not in ("CamBolts", "CamSprocket", "TimingChain")}
     hits = set(); gap = 9.0
