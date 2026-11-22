@@ -333,6 +333,17 @@ def build():
         cw = obj(name, bent_prism(csec, lambda x: y0 + bend(x, dy), lambda x: y1 + bend(x, dy)), parts)
         boolean(block, "UNION", cw); bpy.data.objects.remove(cw)
     info["china_bend"] = dict(x0=cb["x0"], x1=round(x_bend1, 3), dy=cb["dy"])
+    # The right deck stops where its head does (y = 23.33"): ahead of it, down
+    # to the top of the machined front plate and on out to the deck's exhaust
+    # edge, there is no deck. The cut's back face follows the bent front wall.
+    pl_top = [(x, z) for x, z in FRONT["plate"]["half_outline"] if cb["x0"] < x and z > 7.0]
+    ex = deck_pt("L", 0, P["deck_v_exh"]); ex = (-ex.x, ex.z)
+    slope = (ex[1] - pl_top[-1][1]) / (ex[0] - pl_top[-1][0])
+    floor = [(cb["x0"], 9.06)] + pl_top + [ex, (ex[0] + 0.5, ex[1] + 0.5 * slope)]
+    fsec = floor + [(floor[-1][0], 14.0), (floor[0][0], 14.0)]
+    fcut = obj("RightDeckFrontEnd", bent_prism(fsec, lambda x: P["length"] + bend(x, cb["dy"][1]), lambda x: P["length"] + 0.2,
+                                               x_lo=cb["x0"] + 0.1), parts)
+    boolean(block, "DIFFERENCE", fcut); bpy.data.objects.remove(fcut)
 
     # Front plate: wider than the skirt at the bottom, so the lower accessory
     # holes have metal round them (photo 30).
