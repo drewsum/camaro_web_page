@@ -464,6 +464,13 @@ def build_left(root, tmp, info):
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     boolean(head, "UNION", tmp); clear(tmp)
+    # the valley-side bottom: the casting runs on down the intake face, past the deck plane, to just above the
+    # china-wall tops, so the intake face meets the china walls (Drew); the cut follows the china-top plane
+    tz, dz = M_L[2][1], M_L[2][2]; vc = BLK["china_top_v"] + 0.04   # .03" above the china tops, clear of the gasket edge (v 5.454)
+    zb = tz * (vc - K["v_int"]) / dz
+    obj("skirt", hull3([V(u, v, z) for u in (uf, ur) for v, z in ((vc - H0 * dz / tz, H0), (K["v_int"], H0), (K["v_int"], zb))]), tmp)
+    boolean(head, "UNION", tmp); clear(tmp)
+    info["intake_face_bottom"] = round(zb, 3)
     # the machined intake face stops at int_face_top; above it the casting steps back (a 45-degree edge) to an
     # as-cast band that runs on up to the cover rail
     ft, sb, vi = K["int_face_top"], K["int_band_set"], K["v_int"]
