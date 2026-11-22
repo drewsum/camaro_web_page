@@ -1,8 +1,9 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Center, ContactShadows, Environment, Lightformer, OrbitControls, useGLTF } from "@react-three/drei";
-import { AnimationMixer, Mesh, type Object3D } from "three";
+import { AnimationMixer, Mesh, Vector2, type AnimationAction, type Object3D, type PerspectiveCamera } from "three";
 import { DRACO_URL, dropTransmission, fixTexturedBlending } from "../components/CamaroModel";
+import { Combustion, type FlowData } from "./combustion";
 
 // Exported from 3d_model/engine/bbc_block_work.blend by scripts/export_engine_glb.py,
 // which tags every object with its top-level collection (userData.engine_part).
@@ -29,18 +30,29 @@ const sliderToRpm = (s: number) => snapRpm(RPM_MIN * Math.exp((s / SLIDER_STEPS)
 
 // Tickbox labels for the .blend's collections, in the order they're listed.
 // A collection missing here still gets a tickbox, named after the collection.
+// The export folds some collections together (scripts/export_engine_glb.py,
+// part_of): lifters and spark plugs into the valvetrain, the flywheel into
+// the crank, the main bearings and the oiling parts into the block.
+// COMBUSTION isn't a part of the model: it's the four-stroke overlay.
+const COMBUSTION = "Combustion";
 const PART_LABELS: Record<string, string> = {
-  BBC_Block: "Block & main caps",
-  BBC_Crank: "Crankshaft & bearings",
+  BBC_Block: "Block, mains, oil pan & pump",
+  BBC_Crank: "Crankshaft & flywheel",
   BBC_Rods_Pistons: "Rods & pistons",
   BBC_Cam_Timing: "Cam & timing set",
-  BBC_Lifters: "Lifters",
   BBC_Heads: "Cylinder heads",
-  BBC_Valvetrain: "Valvetrain",
+  BBC_Valvetrain: "Valvetrain, lifters & plugs",
   BBC_FrontCover: "Timing cover & balancer",
-  BBC_Oiling: "Oil pan & pump",
-  BBC_Flywheel: "Flywheel",
+  [COMBUSTION]: "Four-stroke airflow & flame",
 };
+
+const LEGEND: [string, string][] = [
+  ["#3f8cff", "Air & fuel in"],
+  ["#a8b8ff", "Compressed"],
+  ["#eef4ff", "Spark, 20° BTDC"],
+  ["#ff8c1f", "Burning"],
+  ["#c0290a", "Exhaust out"],
+];
 const ORDER = Object.keys(PART_LABELS);
 
 function partLabel(id: string) {
@@ -87,26 +99,59 @@ function EngineParts({ hidden, onParts, rpm }: ModelProps) {
     return groupParts(scene);
   }, [scene]);
 
-  useEffect(() => onParts([...parts.keys()].sort(byOrder)), [parts, onParts]);
+  // The four-stroke overlay, from the geometry the export stores on the scene.
+  const combustion = useMemo(() => {
+    const json = scene.userData.engine_flow as string | undefined;
+    return json ? new Combustion(JSON.parse(json) as FlowData) : null;
+  }, [scene]);
+
+  useEffect(() => {
+    const ids = [...parts.keys()];
+    if (combustion) ids.push(COMBUSTION);
+    onParts(ids.sort(byOrder));
+  }, [parts, combustion, onParts]);
 
   useEffect(() => {
     for (const [id, nodes] of parts) for (const n of nodes) n.visible = !hidden.has(id);
-  }, [parts, hidden]);
+    if (combustion) combustion.group.visible = !hidden.has(COMBUSTION);
+  }, [parts, combustion, hidden]);
+
+  // Added once Center has measured the engine (its layout effect runs
+  // first), so the flame reaching out of the ports doesn't shift it.
+  useEffect(() => {
+    if (!combustion) return;
+    scene.add(combustion.group);
+    return () => {
+      scene.remove(combustion.group);
+      combustion.dispose();
+    };
+  }, [scene, combustion]);
 
   // Crank, rods, pistons, cam, chain and valvetrain all play from the one
   // clip; the speed only scales its playback.
   const mixer = useMemo(() => new AnimationMixer(scene), [scene]);
+  const action = useRef<AnimationAction | null>(null);
   useEffect(() => {
     if (!animations.length) return;
-    const action = mixer.clipAction(animations[0]).play();
+    const a = mixer.clipAction(animations[0]).play();
+    action.current = a;
     return () => {
-      action.stop();
+      a.stop();
+      action.current = null;
     };
   }, [mixer, animations]);
   useEffect(() => {
     mixer.timeScale = rpm / CLIP_RPM;
   }, [mixer, rpm]);
-  useFrame((_, dt) => mixer.update(dt));
+  const drawSize = useMemo(() => new Vector2(), []);
+  useFrame(({ gl, camera, clock }, dt) => {
+    mixer.update(dt);
+    const a = action.current;
+    if (!combustion || !a || !combustion.group.visible) return;
+    gl.getDrawingBufferSize(drawSize);
+    combustion.setPixelScale(drawSize.y, (camera as PerspectiveCamera).fov);
+    combustion.update((a.time / a.getClip().duration) * 720, clock.elapsedTime);
+  });
 
   return (
     <Center top>
@@ -207,6 +252,17 @@ export default function EngineModel() {
             {partLabel(id)}
           </label>
         ))}
+        {parts.includes(COMBUSTION) && !hidden.has(COMBUSTION) && (
+          <ul className="engine-legend engine-flow-legend" aria-label="Four-stroke colours">
+            {LEGEND.map(([colour, text]) => (
+              <li key={text}>
+                <span style={{ background: colour }} />
+                {text}
+              </li>
+            ))}
+            <li className="engine-flow-hint">Hide the heads and block to see inside the cylinders.</li>
+          </ul>
+        )}
         <div className="engine-parts-all">
           <button type="button" disabled={hidden.size === 0} onClick={() => setHidden(new Set())}>
             Show all
