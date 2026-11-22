@@ -512,9 +512,6 @@ END = dict(
                                                          # photo: it leans back from the intake face], apex. The machined
                                                          # face stops at the exhaust wall: it does not run out to the deck's
                                                          # exhaust edge (Drew's close-up of the front corner)
-    cast=((-3.20, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.90, 3.40)),   # the casting behind it: the exhaust corner slopes from the
-                                                         # lip's edge up to the apex, outboard of the face, and stands
-    recess=0.12, corner_r=0.30,                          # this far back from the face, as cast, its outer edge rounded
     inner=((-1.95, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.45, 3.40)),   # where the corner has faired into the exhaust wall (v_exh)
     chamfer_edges=(True, False, False, True),            # deck, the two top edges (meet the cast roll-back), exhaust side
     full=0.60, blend=1.40, chamfer=0.08,
@@ -530,11 +527,10 @@ def end_axes(s):
     return Vector((0.7071 * s, -0.7071 * s)), Vector((0.7071, 0.7071))
 
 def end_blocks(uf, ur, tmp):
-    """Each end's casting behind the machined face. The face's leaning exhaust edge carries on inwards as the
-    corner's sloped wall (photos 265/266/337), then fairs into the exhaust wall: full width for END["full"],
-    then a cosine blend in to END["blend"], so the corner is one solid casting with no fin or notch, and it
-    stands behind the end port's flange ear (a hair proud of it at most)."""
-    face, inner = END["cast"], END["inner"]
+    """Each end's casting behind the machined face: the face's outline for END["full"], then faired by a cosine
+    blend into the casting by END["blend"]. The face starts at the exhaust wall, so nothing stands out beside it
+    on the exhaust side; the deck lip runs on to the end below it (Drew's close-up of the front corner)."""
+    face, inner = END["face"], END["inner"]
     D, F = END["blend"], END["full"]
     ds = [0.0, F] + [F + (D - F) * k / 8 for k in range(1, 9)]
     for ue, s in ((ur, 1), (uf, -1)):
@@ -605,23 +601,7 @@ def text_obj(name, body, h, offset, extrude, ue, s, at, tmp):
 def end_finish(head, tmp, uf, ur):
     """Chamfer round each end face, then the accessory holes and the engraving."""
     c, poly = END["chamfer"], [Vector((v, max(z, H0))) for v, z in END["face"]]
-    (ev, ez), (av_, az_) = END["face"][0], END["face"][3]
-    def edge_v(z): return ev + (av_ - ev) * (z - ez) / (az_ - ez) - 0.004
     for ue, s in ((ur, 1), (uf, -1)):
-        # outboard of the face's exhaust edge the corner and the lip's end stand back, as cast
-        sec = [(edge_v(H0 - 0.3), H0 - 0.3), (edge_v(K["rail"] + 1), K["rail"] + 1), (-6.0, K["rail"] + 1), (-6.0, H0 - 0.3)]
-        obj("erec", hull3([V(ue + s * du, v, z) for du in (-END["recess"], 0.5) for v, z in sec]), tmp)
-        # round the corner's outer edge (it follows the cast polygon's leaning exhaust edge)
-        (cv0, cz0), (cv1, cz1) = END["cast"][0], END["cast"][3]
-        r, uc = END["corner_r"], ue - s * END["recess"]
-        rings = []
-        for z in (H0 - 0.3, K["rail"] + 1):
-            ve = cv0 + (cv1 - cv0) * (z - cz0) / (cz1 - cz0)
-            ring = [V(uc + s * 0.5, ve + r, z)]
-            ring += [V(uc - s * r * (1 - math.cos(a)), ve + r * (1 - math.sin(a)), z) for a in np.linspace(0, math.pi / 2, 9)]
-            ring += [V(uc - s * (r + 0.01), ve - 1.0, z), V(uc + s * 0.5, ve - 1.0, z)]
-            rings.append(ring)
-        obj("eround", loft(rings), tmp)
         for i in range(len(poly)):
             if not END["chamfer_edges"][i]: continue
             a, b = poly[i], poly[(i + 1) % len(poly)]
