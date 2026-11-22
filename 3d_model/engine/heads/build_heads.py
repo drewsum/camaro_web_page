@@ -499,19 +499,23 @@ def tune(f, target, lo, hi, it=14):
         else: hi, vhi = mid, vm
     return 0.5 * (lo + hi)
 
-# Head ends [Drew's photo of the rear of his engine]: each end is one flat machined face from the deck to just under
-# the cover flange, square across from the exhaust-side lip to the intake face, its outer edge leaning in towards the
-# top and the top outer corner cut off; a small chamfer all round, three 3/8-16 accessory holes and an engraved mark.
-# One casting serves both banks (the right head is the left turned round), so both ends carry the face: the left head
-# shows its rear end at the bellhousing, the right head its front end. Sizes [est], scaled off the photo on the deck
-# edge. The engraving is our own: the photo's is the head maker's logo and part number.
+# Head ends [Drew's photos of the rear of his engine]: each end carries a flat machined triangle: along the deck from
+# the exhaust-side lip to the intake face, a short edge up the exhaust side leaning in, and a long top edge running back
+# down to the intake-deck corner. Above that edge the casting rolls back (as cast) to the foot of the valve-cover
+# flange, following the cover's rounded end in plan, so the intake face's end edge is that same curve. A small
+# chamfer round the deck and exhaust edges, three 3/8-16 accessory holes, one near each corner, and an engraving.
+# One casting serves both banks (the right head is the left turned round), so both ends carry it. Sizes [est],
+# scaled off the photos on the deck edge. The engraving is our own: the photo's is the maker's logo and part number.
 END = dict(
-    face=((-3.20, 0.0), (5.45, 0.0), (5.45, 3.75), (-0.95, 3.75), (-1.95, 3.40)),   # (v, z), z from the block deck
-    inner=((-1.55, 0.0), (5.45, 0.0), (5.45, 3.75), (-0.65, 3.75), (-0.65, 3.40), (-1.45, 3.40)),   # where it blends in
+    face=((-3.20, 0.0), (5.45, 0.0), (-1.90, 3.40)),     # (v, z), z from the block deck: exhaust-deck, intake-deck, apex
+    inner=((-1.55, 0.0), (5.45, 0.0), (-1.45, 3.40)),    # where the end block blends into the casting
+    chamfer_edges=(True, False, True),                   # deck, top (meets the cast roll-back), exhaust side
     full=0.60, depth=1.20, chamfer=0.08,
-    holes=((4.75, 0.50), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
-    mark=dict(text="345", at=(1.70, 1.95), h=1.35, line=0.035, depth=0.030),         # outline-cut lettering
-    small=dict(text="CNC\n2.30 - 1.88", at=(-1.05, 0.95), h=0.20, depth=0.020),     # solid-cut
+    roll0=20.0, roll_top=3.40, roll_exh=0.85,            # roll-back: leaves the face at 20 deg, meets the flange foot at the
+                                                         # shelf height; .85" in from the end beyond the rail's exhaust side
+    holes=((3.90, 0.35), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
+    mark=dict(text="345", at=(-0.90, 1.55), h=1.15, line=0.035, depth=0.030),        # outline-cut lettering
+    small=dict(text="CNC\n2.30 - 1.88", at=(-1.55, 0.90), h=0.20, depth=0.020),     # solid-cut
 )
 
 def end_axes(s):
@@ -524,6 +528,32 @@ def end_blocks(uf, ur, tmp):
         for d, poly in ((0.0, END["face"]), (END["full"], END["face"]), (END["depth"], END["inner"])):
             pts += [V(ue - s * d, v, max(z, H0)) for v, z in poly]
         obj("endb", hull3(pts), tmp)
+
+def end_sweep(uf, ur, tmp):
+    """Cutters for the cast roll-back above each end's machined triangle: in each slice across the bank (fixed v) the
+    surface leaves the triangle's top edge at roll0 and curves back, a quarter ellipse, to the foot of the cover flange
+    at roll_top, where the rail's rounded end (or, past its exhaust side, roll_exh) sets how far in that is."""
+    (bv, bz), (av, az), (cv, cz) = END["face"]
+    th0 = math.radians(END["roll0"]); zt_top = END["roll_top"]
+    e, R = K["rail_end"], K["rail_corner"]; v0, v1 = K["rail_v_exh"] + R, K["rail_v_int"] - R
+    def z_edge(v): return max(H0, az + (cz - az) * (min(v, av) - av) / (cv - av))
+    vstart = av + (zt_top - 0.08 - az) * (cv - av) / (cz - az)
+    vs = list(np.linspace(vstart, v0, 9)) + list(np.linspace(v0, v1, 6))[1:] + list(np.linspace(v1, av, 12))[1:] + [av + 0.45]
+    for ue, s in ((ur, 1), (uf, -1)):
+        rings = []
+        for v in vs:
+            d = min(R, max(0.0, v0 - v, v - v1))
+            inset = e + R - math.sqrt(R * R - d * d)
+            if v < v0: inset = min(inset, END["roll_exh"])
+            zt = z_edge(v); du, dz = inset + 0.004, zt_top - zt
+            ring = [V(ue + s * 0.5, v, zt)]
+            for k in range(13):
+                th = th0 + (math.pi / 2 - th0) * k / 12
+                ring.append(V(ue - s * du * (math.cos(th0) - math.cos(th)) / math.cos(th0), v,
+                              zt + dz * (math.sin(th) - math.sin(th0)) / (1 - math.sin(th0))))
+            ring += [V(ue - s * du, v, zt_top + 3.0), V(ue + s * 0.5, v, zt_top + 3.0)]
+            rings.append(ring)
+        obj("eroll", loft(rings), tmp)
 
 def text_obj(name, body, h, offset, extrude, ue, s, at, tmp):
     """Lettering as a closed mesh: cap height h, centred on at (v, z), spanning u from ue-s*extrude to ue+s*extrude."""
@@ -558,6 +588,7 @@ def end_finish(head, tmp, uf, ur):
     c, poly = END["chamfer"], [Vector((v, max(z, H0))) for v, z in END["face"]]
     for ue, s in ((ur, 1), (uf, -1)):
         for i in range(len(poly)):
+            if not END["chamfer_edges"][i]: continue
             a, b = poly[i], poly[(i + 1) % len(poly)]
             t = (b - a).normalized(); n = Vector((t.y, -t.x))          # outward: the face outline runs ccw in (v, z)
             pts = []
@@ -586,6 +617,8 @@ def build_left(root, tmp, info):
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     end_blocks(uf, ur, tmp)                            # the flat machined end faces (END)
     boolean(head, "UNION", tmp); clear(tmp)
+    end_sweep(uf, ur, tmp)                             # the cast roll-back above them, to the cover flange
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
     # the intake face: square to the deck on the deck/china-wall line, one plane from the deck to the cover-flange
     # top; machined up to int_face_top, cast band above (material pass)
     zt = K["rail"] + 2
