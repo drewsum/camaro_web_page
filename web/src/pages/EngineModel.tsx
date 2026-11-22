@@ -12,8 +12,20 @@ export const ENGINE_URL = "/models/engine.glb";
 // 720 crank degrees in 4 s, i.e. the crank turning at 30 rpm.
 const CLIP_RPM = 30;
 const RPM_MIN = 10;
-const RPM_MAX = 300;
+const RPM_MAX = 5000;
 const RPM_START = 60;
+
+// The slider runs on a log scale so the slow end (where the valve events are
+// easy to follow) keeps as much travel as the fast end. Speeds snap to round
+// numbers: 1 rpm below 100, 10 below 1000, 50 above.
+const SLIDER_STEPS = 1000;
+const LOG_SPAN = Math.log(RPM_MAX / RPM_MIN);
+const snapRpm = (r: number) => {
+  const q = r < 100 ? 1 : r < 1000 ? 10 : 50;
+  return Math.min(RPM_MAX, Math.max(RPM_MIN, Math.round(r / q) * q));
+};
+const rpmToSlider = (r: number) => Math.round((Math.log(r / RPM_MIN) / LOG_SPAN) * SLIDER_STEPS);
+const sliderToRpm = (s: number) => snapRpm(RPM_MIN * Math.exp((s / SLIDER_STEPS) * LOG_SPAN));
 
 // Tickbox labels for the .blend's collections, in the order they're listed.
 // A collection missing here still gets a tickbox, named after the collection.
@@ -176,12 +188,13 @@ export default function EngineModel() {
           <input
             type="range"
             aria-label="Crank speed"
-            min={RPM_MIN}
-            max={RPM_MAX}
-            step={10}
-            value={rpm}
+            min={0}
+            max={SLIDER_STEPS}
+            step={1}
+            value={rpmToSlider(rpm)}
+            aria-valuetext={`${rpm} rpm`}
             disabled={!running}
-            onChange={(e) => setRpm(Number(e.target.value))}
+            onChange={(e) => setRpm(sliderToRpm(Number(e.target.value)))}
           />
           <output>{rpm} rpm</output>
         </label>
