@@ -70,3 +70,5 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 ## Photos used (album numbers)
 
 153, 204, 248-250, 259, 265, 266, 269, 284, 332-337, 111, 133.
+
+- **Exhaust edge:** the block deck and the head follow the gasket outline except along the exhaust edge, which is straight from u = -0.82" to 15.31" (v about -3.22"). The gasket's two ears below it (u 1.7–3.0" and 11.5–12.8") are only its rivets and stay on the gasket alone (Drew); the small ripple in the traced outline at u 4.8–5.0" is gone too.

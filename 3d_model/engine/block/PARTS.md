@@ -121,3 +121,5 @@ All cuts use Blender's MANIFOLD boolean solver (Blender 4.5+). The EXACT solver 
 The rear (thrust) bulkhead is 1.20" thick [est], faced for the flanged #5 thrust bearing, and a 3.60" pocket [est] runs from the seal clearance (0.90" deep) to the bulkhead's rear face, around the crank's thrust collar. The crankshaft and main bearings are built by `../crank/build_crank.py`; see `../crank/PARTS.md`.
 
 Each crankcase bay also has a 4.30" clearance cut about the crank axis (`rod_sweep_r`, [derived]): the rod big ends sweep 4.21" (`../rods/PARTS.md`), past the 3.80" bay roof estimated before. The cut opens the bays into the cam tunnel, as on a real BBC.
+
+- **Exhaust edge:** the block deck and the head follow the gasket outline except along the exhaust edge, which is straight from u = -0.82" to 15.31" (v about -3.22"). The gasket's two ears below it (u 1.7–3.0" and 11.5–12.8") are only its rivets and stay on the gasket alone (Drew); the small ripple in the traced outline at u 4.8–5.0" is gone too.

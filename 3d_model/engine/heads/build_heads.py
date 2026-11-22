@@ -452,8 +452,17 @@ def line_at_h(a, b, h):
 
 
 # ---------- build ----------
+def flat_exhaust_edge(outline):
+    """The gasket outline with its exhaust edge made straight: the two ears that hang below it (u 1.7-3.0 and
+    11.5-12.8, to v -3.88) are only the gasket's rivets, and the head and block edge is flat there (Drew), as it
+    is through the small ripple at u 4.8-5.0. Keeps the end points of that run, drops everything between."""
+    o = [tuple(p) for p in outline]
+    a = next(i for i, (u, v) in enumerate(o) if abs(u + 0.819) < 0.01 and v < -3.0)
+    b = next(i for i, (u, v) in enumerate(o) if abs(u - 15.313) < 0.01 and v < -3.0)
+    return o[:a + 1] + o[b:]
+
 def head_outline():
-    o = [tuple(p) for p in GASK["outline"]]
+    o = flat_exhaust_edge(GASK["outline"])
     i0 = next(i for i in range(len(o)) if o[i][1] <= 0.3 and o[i - 1][1] > 0.3)
     run = []
     i = i0

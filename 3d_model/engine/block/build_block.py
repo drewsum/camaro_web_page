@@ -129,11 +129,20 @@ def deck_pt(bank, u, v, h=0.0):
     if bank == "R": u = 3 * P["bore_sp"] - u
     return Vector((0, b["y0"], 0)) + b["d"] * (P["deck"] + h) + b["t"] * v + Vector((0, -1, 0)) * u
 
+def flat_exhaust_edge(outline):
+    """The gasket outline with its exhaust edge made straight: the two ears that hang below it (u 1.7-3.0 and
+    11.5-12.8, to v -3.88) are only the gasket's rivets, and the head and block edge is flat there (Drew), as it
+    is through the small ripple at u 4.8-5.0. Keeps the end points of that run, drops everything between."""
+    o = [tuple(p) for p in outline]
+    a = next(i for i, (u, v) in enumerate(o) if abs(u + 0.819) < 0.01 and v < -3.0)
+    b = next(i for i, (u, v) in enumerate(o) if abs(u - 15.313) < 0.01 and v < -3.0)
+    return o[:a + 1] + o[b:]
+
 def deck_outline():
     """The machined deck in (u, v): the gasket outline on the exhaust side and
     the ends, the valley edge traced from the photo (refs/deck_block.json)."""
-    o = DECK["outline"]
-    keep = [tuple(p) for p in o[2:64]]           # front-valley corner, down the front, exhaust side, up the rear
+    o = flat_exhaust_edge(DECK["outline"])
+    keep = [tuple(p) for p in o[2:64 - (len(DECK["outline"]) - len(o))]]   # front-valley corner, down the front, exhaust side, up the rear
     assert keep[0][1] < 2.6 and keep[-1][1] < 2.6 and all(v < 2.6 for _, v in keep)
     edge = [tuple(p) for p in BLK["valley_edge"]]
     u_f, u_r = keep[0][0], keep[-1][0]
