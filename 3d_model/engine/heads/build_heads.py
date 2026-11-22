@@ -499,6 +499,84 @@ def tune(f, target, lo, hi, it=14):
         else: hi, vhi = mid, vm
     return 0.5 * (lo + hi)
 
+# Head ends [Drew's photo of the rear of his engine]: each end is one flat machined face from the deck to just under
+# the cover flange, square across from the exhaust-side lip to the intake face, its outer edge leaning in towards the
+# top and the top outer corner cut off; a small chamfer all round, three 3/8-16 accessory holes and an engraved mark.
+# One casting serves both banks (the right head is the left turned round), so both ends carry the face: the left head
+# shows its rear end at the bellhousing, the right head its front end. Sizes [est], scaled off the photo on the deck
+# edge. The engraving is our own: the photo's is the head maker's logo and part number.
+END = dict(
+    face=((-3.20, 0.0), (5.45, 0.0), (5.45, 3.75), (-0.95, 3.75), (-1.95, 3.40)),   # (v, z), z from the block deck
+    inner=((-1.55, 0.0), (5.45, 0.0), (5.45, 3.75), (-0.65, 3.75), (-0.65, 3.40), (-1.45, 3.40)),   # where it blends in
+    full=0.60, depth=1.20, chamfer=0.08,
+    holes=((4.75, 0.50), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
+    mark=dict(text="345", at=(1.70, 1.95), h=1.35, line=0.035, depth=0.030),         # outline-cut lettering
+    small=dict(text="CNC\n2.30 - 1.88", at=(-1.05, 0.95), h=0.20, depth=0.020),     # solid-cut
+)
+
+def end_axes(s):
+    """Lettering axes (baseline, up) in (v, z) on the end whose face points along s*u, level as installed."""
+    return Vector((0.7071 * s, -0.7071 * s)), Vector((0.7071, 0.7071))
+
+def end_blocks(uf, ur, tmp):
+    for ue, s in ((ur, 1), (uf, -1)):
+        pts = []
+        for d, poly in ((0.0, END["face"]), (END["full"], END["face"]), (END["depth"], END["inner"])):
+            pts += [V(ue - s * d, v, max(z, H0)) for v, z in poly]
+        obj("endb", hull3(pts), tmp)
+
+def text_obj(name, body, h, offset, extrude, ue, s, at, tmp):
+    """Lettering as a closed mesh: cap height h, centred on at (v, z), spanning u from ue-s*extrude to ue+s*extrude."""
+    cu = bpy.data.curves.new(name, "FONT"); cu.body = "8"; cu.size = 1.0
+    ob = bpy.data.objects.new(name, cu); tmp.objects.link(ob)
+    dg = bpy.context.evaluated_depsgraph_get(); me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    cap = max(v.co.y for v in me.vertices) - min(v.co.y for v in me.vertices); bpy.data.meshes.remove(me)
+    cu.body = body; cu.size = h / cap; cu.align_x = "CENTER"; cu.offset = offset; cu.extrude = 0.0
+    cu.resolution_u = 3; cu.fill_mode = "BOTH"
+    dg = bpy.context.evaluated_depsgraph_get(); flat = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    bpy.data.objects.remove(ob); bpy.data.curves.remove(cu)
+    bm = bmesh.new(); bm.from_mesh(flat); bpy.data.meshes.remove(flat)      # the flat fill, extruded here: closed letters
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    for v in bm.verts: v.co.z = -extrude
+    r = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
+    for v in r["geom"]:
+        if isinstance(v, bmesh.types.BMVert): v.co.z = extrude
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    xs = [v.co.x for v in me.vertices]; ys = [v.co.y for v in me.vertices]
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    b, up = end_axes(s)
+    for v in me.vertices:
+        x, y, z = v.co.x - cx, v.co.y - cy, v.co.z
+        w = Vector((at[0], at[1])) + b * x + up * y
+        v.co = Vector((ue + s * z, w.x, w.y)) * IN
+    o = bpy.data.objects.new(name, me); tmp.objects.link(o)
+    return o
+
+def end_finish(head, tmp, uf, ur):
+    """Chamfer round each end face, then the accessory holes and the engraving."""
+    c, poly = END["chamfer"], [Vector((v, max(z, H0))) for v, z in END["face"]]
+    for ue, s in ((ur, 1), (uf, -1)):
+        for i in range(len(poly)):
+            a, b = poly[i], poly[(i + 1) % len(poly)]
+            t = (b - a).normalized(); n = Vector((t.y, -t.x))          # outward: the face outline runs ccw in (v, z)
+            pts = []
+            for e in (a - t * 0.3, b + t * 0.3):
+                for q, du in ((e, -c), (e - n * c, 0.0), (e + n * 0.5, 0.5), (e + n * 0.5, -c), (e - n * c, 0.5)):
+                    pts.append(V(ue + s * du, q.x, q.y))
+            obj("ech", hull3(pts), tmp)
+        for v, z in END["holes"]:
+            obj("eh", cyl_axis(V(ue + s * 0.1, v, z), V(-s, 0, 0), END["hole_r"], END["hole_d"] + 0.1, 20), tmp)
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
+    for ue, s in ((ur, 1), (uf, -1)):
+        m = END["mark"]; e = 0.10
+        o = text_obj("eng_o", m["text"], m["h"], m["line"] / 2, e, ue + s * (e - m["depth"]), s, m["at"], tmp)
+        i = text_obj("eng_i", m["text"], m["h"], -m["line"] / 2, e + 0.05, ue + s * (e - m["depth"]), s, m["at"], tmp)
+        boolean(o, "DIFFERENCE", i); bpy.data.objects.remove(i, do_unlink=True)
+        m = END["small"]
+        text_obj("eng_s", m["text"], m["h"], 0.0, e, ue + s * (e - m["depth"]), s, m["at"], tmp)
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
+
 def build_left(root, tmp, info):
     outl, uf, ur = head_outline()
     core = ccw(hull(clip(outl, 0, -1, -K["v_exh"])))       # the casting below the shelf
@@ -506,6 +584,7 @@ def build_left(root, tmp, info):
     head = obj("CylinderHead_L", zprism(outl, H0, H0 + K["lip"]), root)
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
+    end_blocks(uf, ur, tmp)                            # the flat machined end faces (END)
     boolean(head, "UNION", tmp); clear(tmp)
     # the intake face: square to the deck on the deck/china-wall line, one plane from the deck to the cover-flange
     # top; machined up to int_face_top, cast band above (material pass)
@@ -662,6 +741,7 @@ def build_left(root, tmp, info):
     for u, v in cover_bolt_pts():
         obj("vcb", zprism(circ(u, v, K["cover_tap"], 16), K["rail"] - 0.65, K["rail"] + 0.1), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
+    end_finish(head, tmp, uf, ur)
     info["head_outline_u"] = (round(uf, 3), round(ur, 3))
     info["breaches"] = breaches(tmp, studs, low, lines, sI, sE)
     return head, studs, low, high, lines, (sI, sE, wall_h)
@@ -707,12 +787,14 @@ def breaches(tmp, studs, low, lines, sI, sE, gap=0.06):
 def assign_head_materials(head, cast, mach):
     head.data.materials.clear(); head.data.materials.append(cast); head.data.materials.append(mach)
     me = head.data; idx = []
+    _, uf, ur = head_outline()
     cyls = [V(u, 0, 0) for u in CYL_U]
     for p in me.polygons:
         c = p.center / IN; n = p.normal; m = 0
         if n.z < -0.99 and abs(c.z - H0) < 0.004: m = 1                       # deck
         elif n.dot(FACE_N) > 0.999 and abs(c.y - face_v(c.z)) < 0.004 and c.z < K["int_face_top"]: m = 1   # intake face
         elif n.y < -0.99 and abs(c.y - K["exh_face"]) < 0.004: m = 1          # exhaust pads
+        elif abs(n.x) > 0.999 and min(abs(c.x - ur), abs(c.x - uf)) < 0.004: m = 1   # end faces (END); the engraving stays cast
         elif n.z > 0.99 and abs(c.z - K["rail"]) < 0.004: m = 1               # cover rail
         elif n.z > 0.99 and abs(c.z - K["mid_seat"]) < 0.004: m = 1           # middle-row spot faces
         elif c.z < H0 + 1.25 and any(math.hypot(c.x - q.x, c.y) < K["chamber_r"] + 0.02 for q in cyls): m = 1   # CNC chambers and seats
