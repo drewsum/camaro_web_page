@@ -11,6 +11,13 @@ After editing the .blend, re-export (uses Blender 5.2; override the path with `$
 ./scripts/export_glb.ps1
 ```
 
+The same script exports the engine for the Engine Model page: `3d_model/engine/bbc_block_work.blend`
+-> `web/public/models/engine.glb` (`scripts/export_engine_glb.py`). Each top-level `BBC_*`
+collection in the .blend becomes a tickbox on the page; give new ones a label in
+`PART_LABELS` in `web/src/pages/EngineModel.tsx`.
+The .blend's timeline (one four-stroke cycle driven by the crank's `crank_deg`) is baked
+into the GLB as the animation the page plays.
+
 ## Local development
 
 ```powershell

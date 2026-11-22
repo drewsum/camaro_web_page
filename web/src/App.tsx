@@ -99,9 +99,16 @@ export default function App() {
     <>
       {/* The orbit never comes within 3 m of the car, so the near plane can sit
           well out from the eye; depth precision scales with it, and phone GPUs
-          often give WebGL only a 16-bit depth buffer. */}
-      <div className={page ? "viewer behind" : "viewer"} inert={!!page}>
-        <Canvas shadows dpr={dpr} camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}>
+          often give WebGL only a 16-bit depth buffer. A page with its own
+          viewer replaces this one, which then stops drawing but keeps the
+          scene loaded for when the page closes. */}
+      <div className={page?.viewer ? "viewer off" : page ? "viewer behind" : "viewer"} inert={!!page}>
+        <Canvas
+          shadows
+          dpr={dpr}
+          frameloop={page?.viewer ? "never" : "always"}
+          camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}
+        >
           {/* Full resolution while the frame rate holds; on a device that
               can't keep up, render fewer pixels (and back up when it can). */}
           <PerformanceMonitor
@@ -132,7 +139,8 @@ export default function App() {
           </a>
         ))}
       </nav>
-      {page && (
+      {page?.viewer && <page.Component />}
+      {page && !page.viewer && (
         <div className="page-backdrop" onClick={(e) => e.target === e.currentTarget && closePage()}>
           <article className="page" aria-label={page.label}>
             <button className="page-close" aria-label="Close" onClick={closePage}>

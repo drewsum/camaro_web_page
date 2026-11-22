@@ -820,3 +820,86 @@ canvas {
     0 0 48px rgba(255, 120, 20, 0.25),
     inset 0 0 12px rgba(255, 150, 40, 0.12);
 }
+
+/* ---- Engine Model page ------------------------------------------------------ */
+
+/* The car's viewer, kept loaded but out of sight behind the engine's own. */
+.viewer.off {
+  visibility: hidden;
+}
+
+/* The crank speed slider: wider than the tickbox-sized .controls input. */
+.controls .engine-speed input {
+  width: auto;
+  height: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.engine-speed output {
+  min-width: 4.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+
+.engine-parts-title {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e0a030;
+}
+
+.engine-parts-all {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.engine-parts-all button {
+  flex: 1;
+  font: inherit;
+  font-size: 0.8rem;
+  color: inherit;
+  background: #1e2128;
+  border: 1px solid #3a3e48;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.engine-parts-all button:hover:not(:disabled) {
+  border-color: #e0a030;
+}
+
+.engine-parts-all button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.engine-parts-all button:focus-visible {
+  outline: 2px solid #e0a030;
+  outline-offset: 1px;
+}
+
+/* On a phone the page list runs across the top, so the parts go along the
+   bottom, two to a row. */
+@media (max-width: 700px) {
+  .controls.engine-parts:not([hidden]) {
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .engine-speed,
+  .engine-parts-title,
+  .engine-parts-all {
+    grid-column: 1 / -1;
+  }
+}
