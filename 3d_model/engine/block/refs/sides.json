@@ -130,11 +130,12 @@
    "src": "[meas] photos 545/547: each cylinder's two lifters share one dog-bone boss with a machined top square to the lifter axes, rising out of the floor and blending into the wall; outer radius [est]. Top height [derived] from the lifters (../lifters): OE-style Gen VI hydraulic rollers, 2.66\" seat height [spec], sit on the cam's .585\" base circle with their tops about .10\" above the .09\" stainless guide plates (album photo 351), which puts the boss top 3.524\" along the lifter axis from the cam centre, z 7.92 at the bore (it was 8.10 [est] from the photo scale)"
   },
   "drain_slots": {
-   "len": 1.5,
+   "len": 2.4,
+   "front_end": 0.75,
    "w": 0.5,
    "z_top": 7.6,
    "z_bot": 5.6,
-   "src": "[meas] photo 545: 4 windows on the centreline, open onto the cam lobes, centred between each left/right boss pair"
+   "src": "[meas] photo 545: 4 windows on the centreline, open onto the cam lobes, centred between each left/right boss pair. Lengthened [Drew]: the front end stays at the spider boss, the slot runs 2.4\" back towards the next main web so more of the cam shows"
   },
   "spider_boss": {
    "dy": 1.05,

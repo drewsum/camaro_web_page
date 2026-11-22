@@ -219,7 +219,7 @@
    -2.74
   ],
   [
-   -2.03,
+   -2.41,
    -1.25
   ],
   [
@@ -319,10 +319,10 @@
    0.9281
   ],
   "E": [
-   1.0906,
-   1.0748,
-   1.0748,
-   1.0748
+   1.0043,
+   1.0043,
+   1.0043,
+   1.0043
   ]
  },
  "intake_cc": [
@@ -339,13 +339,13 @@
  ],
  "runner_len": {
   "I0": 6.55,
-  "E0": 2.81,
+  "E0": 3.32,
   "I1": 6.49,
-  "E1": 2.81,
+  "E1": 3.32,
   "I2": 6.55,
-  "E2": 2.81,
+  "E2": 3.32,
   "I3": 6.49,
-  "E3": 2.81
+  "E3": 3.32
  },
  "intake_min_csa": 3.269,
  "cutters_1": 12,
@@ -661,10 +661,8 @@
  "valvetrain": [
   "RockerStuds_L",
   "PolyLocks_L",
-  "GuidePlates_L",
   "RockerStuds_R",
-  "PolyLocks_R",
-  "GuidePlates_R"
+  "PolyLocks_R"
  ],
  "manifold": {
   "CylinderHead_L": 0,
@@ -674,17 +672,19 @@
   "CylinderHead_R": 0,
   "HeadGasket_R": 0,
   "HeadStuds_R": 0,
-  "HeadDowels_R": 0
+  "HeadDowels_R": 0,
+  "SparkPlugs": 0
  },
  "tris": {
-  "CylinderHead_L": 92978,
-  "HeadGasket_L": 5356,
+  "CylinderHead_L": 208626,
+  "HeadGasket_L": 5344,
   "HeadStuds_L": 4672,
   "HeadDowels_L": 448,
-  "CylinderHead_R": 92978,
-  "HeadGasket_R": 5356,
+  "CylinderHead_R": 208626,
+  "HeadGasket_R": 5344,
   "HeadStuds_R": 4672,
-  "HeadDowels_R": 448
+  "HeadDowels_R": 448,
+  "SparkPlugs": 52672
  },
  "pushrod_clash": [],
  "checks": {

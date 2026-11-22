@@ -68,7 +68,7 @@ BAL = dict(
     # White printed timing scale on the black OD (Drew's photos of the damper on the engine): a TDC stripe across the
     # whole width, then ticks every 2 deg out to 60 deg of advance (clockwise of TDC seen from the front, the way the
     # crank turns), longer every 10 deg, numbered 0-60 behind the long ticks. Everything else on the OD is bare.
-    marks=dict(to=60, every=2, w=0.018, l=(0.15, 0.30), zero_w=0.06, text_h=0.20, text_gap=0.06, thick=0.004),
+    marks=dict(zero_at=-45.0, to=60, every=2, w=0.018, l=(0.15, 0.30), zero_w=0.06, text_h=0.20, text_gap=0.06, thick=0.004),
     pulley_holes=dict(n=3, bc=2.50, d=0.3125, depth=0.60),            # 3/8-24 tapped, for a crank pulley
     key=dict(w=0.1875, top=0.96, y=(24.36, 26.95)),                  # its own key in the crank keyway
     washer=dict(r=1.10, t=0.25), bolt=dict(af=1.125, h=0.47, r=0.36, into=1.15),
@@ -194,7 +194,7 @@ def build():
 
 def timing_scale(b, tmp):
     """The printed scale as thin raised marks on the ring's OD. Angle a from the
-    top towards +x; advance lies at a = -deg. Numbers read front to rear, their
+    top towards +x; zero at a0 (cylinder 1, -45), advance at a0 - deg. Numbers read front to rear, their
     tops towards TDC."""
     mk = b["marks"]; ro = b["ring"][1]; c = b["chamfer"]
     y_f, y_r = b["ring_y"][1] - c, b["ring_y"][0] + c
@@ -204,9 +204,10 @@ def timing_scale(b, tmp):
         rd = Vector((math.sin(a), 0, math.cos(a))); tg = Vector((math.cos(a), 0, -math.sin(a)))
         pts = [rd * r + tg * t for r in (r0, r1) for t in (-half_w, half_w)]
         loft([[p + Vector((0, y, 0)) for p in (pts[0], pts[1], pts[3], pts[2])] for y in (ya, yb)], bm)
-    strip(0.0, mk["zero_w"] / 2, y_f, y_r)
+    a0 = math.radians(mk["zero_at"])   # the TDC stripe points up cylinder 1's bore axis at crank 0 [Drew]
+    strip(a0, mk["zero_w"] / 2, y_f, y_r)
     for deg in range(mk["every"], mk["to"] + 1, mk["every"]):
-        strip(-math.radians(deg), mk["w"] / 2, y_f, y_f - mk["l"][1 if deg % 10 == 0 else 0])
+        strip(a0 - math.radians(deg), mk["w"] / 2, y_f, y_f - mk["l"][1 if deg % 10 == 0 else 0])
     # Numbers: text meshes laid flat, then wrapped onto the OD.
     for deg in range(0, mk["to"] + 1, 10):
         cu = bpy.data.curves.new("num", "FONT"); cu.body = str(deg); cu.align_x = "LEFT"; cu.align_y = "CENTER"
@@ -222,7 +223,7 @@ def timing_scale(b, tmp):
         ext = bmesh.ops.extrude_face_region(tb, geom=list(tb.faces))
         for v in [e for e in ext["geom"] if isinstance(e, bmesh.types.BMVert)]: v.co.z = 1.0
         bmesh.ops.recalc_face_normals(tb, faces=tb.faces)
-        ac = -math.radians(deg); ys0 = y_f - mk["l"][1] - mk["text_gap"]
+        ac = a0 - math.radians(deg); ys0 = y_f - mk["l"][1] - mk["text_gap"]
         vmap = {}
         for v in tb.verts:
             a = ac + v.co.y / ro; r = r0 if v.co.z < 0.5 else r1

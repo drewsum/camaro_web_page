@@ -16,6 +16,7 @@ Axes: X to the passenger side (right bank, cylinders 2-4-6-8), Y forward
 (bellhousing) face. Built in inches, converted to metres once.
 """
 import bpy, bmesh, json, math, os, sys
+from mathutils.bvhtree import BVHTree
 from mathutils import Vector, Matrix
 
 HERE = (os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals()
@@ -391,8 +392,8 @@ def build():
         for dy_, h in mh["offsets"]:
             c, n = wall_pt(bank, yp + dy_, h)
             adds.append(cyl(c - n * 0.05, n, mh["pad_r"], mh["pad_h"] + 0.05, 20))
-    fpp = SIDE["fuel_pump"]
-    adds.append(cyl(Vector((5.8, fpp["y"], fpp["z"])), Vector((1, 0, 0)), fpp["r"], fpp["x_face"] - 5.8, 40))
+    # No fuel-pump boss: Drew's engine runs an electric pump, so the mechanical pump's boss, opening and
+    # bolt holes under cylinder 2 are left off (refs/sides.json "fuel_pump" kept for reference only).
     for k, bm_ in enumerate(adds):
         o = obj(f"Boss_{k}", bm_, parts); boolean(block, "UNION", o); bpy.data.objects.remove(o)
 
@@ -515,7 +516,7 @@ def build():
         C(f"StarterHole_{k}", cyl(Vector((x, y, -0.05)), up, sp["d"] / 2, sp["depth"] + 0.05, 20))
     pp = BOT["pump"]["port"]
     C("PumpPortBlock", cyl(Vector((pp["x"], pp["y"], -0.05)), up, pp["d"] / 2, pp["up_into_block"] + 0.05, 24))
-    # Sides: freeze-plug bores, motor-mount holes, the fuel-pump boss.
+    # Sides: freeze-plug bores, motor-mount holes (no fuel-pump boss).
     for bank in "LR":
         for k, y in enumerate(fz[bank]):
             c, n = wall_pt(bank, y, fz["h"])
@@ -524,10 +525,6 @@ def build():
         for k, (dy_, h) in enumerate(mh["offsets"]):
             c, n = wall_pt(bank, yp + dy_, h)
             C(f"MountHole_{bank}{k}", cyl(c + n * (mh["pad_h"] + 0.05), -n, mh["d"] / 2, mh["pad_h"] + mh["depth"] + 0.05, 16))
-    xf = Vector((-1, 0, 0))
-    C("FuelPumpOpening", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"], fpp["z"])), xf, fpp["open_d"] / 2, fpp["open_depth"] + 0.05, 32))
-    for k, (dy_, dz_) in enumerate(fpp["bolts"]):
-        C(f"FuelPumpBolt_{k}", cyl(Vector((fpp["x_face"] + 0.05, fpp["y"] + dy_, fpp["z"] + dz_)), xf, fpp["bolt_d"] / 2, fpp["bolt_depth"] + 0.05, 16))
     # Rear oil-gallery plug bores.
     for k, g in enumerate(SIDE["rear_plugs"]):
         for x in ((g["x"], -g["x"]) if g["mirror"] else (g["x"],)):
@@ -605,7 +602,8 @@ def build():
     dsl = V["drain_slots"]
     for k, y in enumerate(slot_y):
         r = dsl["w"] / 2; half = dsl["len"] / 2 - r
-        pts = stadium(Vector((0, y, dsl["z_bot"])), up, half, r)
+        yc = y + dsl.get("front_end", dsl["len"] / 2) - dsl["len"] / 2   # front end fixed at the spider boss
+        pts = stadium(Vector((0, yc, dsl["z_bot"])), up, half, r)
         VC(f"CamDrain_{k}", prism(pts, up, dsl["z_top"] - dsl["z_bot"]))
         VC(f"SpiderTap_{k}", cyl(Vector((0, y + sb["dy"], P["valley_floor_z"] + sb["h"] + 0.05)), Vector((0, 0, -1)),
                                  sb["tap_d"] / 2, sb["tap_depth"] + 0.05, 16))
@@ -718,6 +716,7 @@ def build():
         "iron": material("Block_MachinedIron", (0.62, 0.62, 0.63, 1), 0.6, 0.32),  # machined faces: decks, pan rail, ends (photos 27-29)
         "arp": material("ARP_BlackOxide", (0.03, 0.03, 0.03, 1), 0.8, 0.35),       # ARP studs and nuts
         "brass": material("Brass_FreezePlug", (0.80, 0.62, 0.22, 1), 1.0, 0.3),       # brass cups (photo 431)
+        "jacket": material("Block_WaterJacket", (0.012, 0.012, 0.012, 1), 0.0, 0.9),  # back of the water-pump inlets
     }
     for o in parts.objects:
         kind = ("brass" if o.name == "FreezePlugs" else "arp" if o.name.startswith("MainStuds") else
@@ -752,18 +751,58 @@ def build():
         if c.z > P["valley_floor_z"] - 0.5 and abs(c.x) < vh and n.z > -0.2: return True       # valley
         if c.z < P["cam_cd"] + 1.0 and abs(c.x) < P["case_half"] + 0.2 and n.z < 0.2: return True  # crankcase
         return False
+    blk.data.materials.append(mats["jacket"])
+    bvh = BVHTree.FromPolygons([v.co.copy() for v in blk.data.vertices], [list(p.vertices) for p in blk.data.polygons])
+    # Seen from outside: grids of parallel rays from 80 directions mark the first face each one reaches (pockets,
+    # faces beside bosses and under lips that a normal ray alone misses). The bores, valley, crankcase and chest stay iron.
+    bb = [Vector(c) for c in blk.bound_box]; cen = sum(bb, Vector()) / 8; R = (bb[6] - bb[0]).length / 2 + 0.01
+    seen = set(); ND, step = 80, 0.006
+    for i in range(ND):
+        z = 1 - 2 * (i + 0.5) / ND; rr = math.sqrt(1 - z * z); a = i * math.pi * (3 - math.sqrt(5))
+        d = Vector((rr * math.cos(a), rr * math.sin(a), z)); t1 = d.orthogonal().normalized(); t2 = d.cross(t1)
+        n_ = int(R / step)
+        for u in range(-n_, n_ + 1):
+            for w in range(-n_, n_ + 1):
+                hit = bvh.ray_cast(cen - d * R + (t1 * u + t2 * w) * step, d, 2 * R)
+                if hit[0] is not None: seen.add(hit[2])
+    def in_bore(c):
+        for b in BANKS.values():
+            for k in range(4):
+                q = c - Vector((0, b["y0"] - k * P["bore_sp"], 0)); t = q.dot(b["d"])
+                if t > 2.0 and (q - b["d"] * t).length < P["bore"] / 2 + 0.1: return True
+        return False
+    wi = [h for h in FRONT["holes"] if h["name"] == "WaterInlet"][0]
+    def jacket(c):            # the water-pump inlets past their mouths: the (unmodelled) jacket behind reads black
+        return (c.y < P["length"] - 0.15 and c.y > P["length"] - wi["depth"] - 0.05 and
+                any(math.hypot(c.x - x, c.z - wi["z"]) < wi["d"] / 2 + 0.02 for x in (wi["x"], -wi["x"])))
     for poly in blk.data.polygons:
         c, n = poly.center / IN, poly.normal
+        if jacket(c): poly.material_index = 3; continue
         if machined(c, n): poly.material_index = 1; continue
         if inside(c, n): continue
         # Floors of the water-port and bolt-hole pockets just under each deck:
         # bare iron (the jacket isn't modelled, so their rays would escape).
         if any(n.dot(d) > 0.99 and P["deck"] - P["port_depth"] - 0.1 < c.dot(d) < P["deck"] - 0.02 for d in (dl, dr)): continue
+        # and the bottoms of the blind stud holes (deeper than the ports), inside the deck's footprint
+        if any(n.dot(b["d"]) > 0.99 and P["deck"] - P["stud_depth"] - 0.15 < c.dot(b["d"]) < P["deck"] - 0.02 and
+               P["deck_v_exh"] + 0.25 < c.dot(b["t"]) < P["deck_v_valley"] - 0.1 for b in BANKS.values()): continue
         # Strips beside the decks on the valley side (under the intake gasket)
         # are bare cast iron, not painted (photos 27, 545).
         if c.z > P["valley_floor_z"] and abs(c.x) < P["deck_clip_v"] + 1.7 and (any(n.dot(d) > 0.99 for d in (dl, dr)) or n.x * c.x < 0): continue
-        hit, *_ = blk.ray_cast(poly.center + n * 0.0005, n)
-        if not hit: poly.material_index = 2
+        hit, hp, *_ = blk.ray_cast(poly.center + n * 0.0005, n)
+        if not hit: poly.material_index = 2; continue          # its normal leaves the block: outer
+        if abs(n.y) < 0.25 and (c.y > P["length"] - 2.5 or c.y < 2.5) and (hp - poly.center).length < 1.0 * IN: continue   # end-face holes
+        if poly.index not in seen or in_bore(c): continue
+        # seen from outside but facing more of the block: holes seen down their axis stay iron (deck holes, with
+        # walls square to the deck inside its footprint), and the crankcase and cam drains seen through the bores
+        if any(abs(n.dot(b["d"])) < 0.25 and c.dot(b["d"]) > P["deck"] - 2.5 and 0.3 < c.y < P["length"] - 0.3 and
+               P["deck_v_exh"] + 0.25 < c.dot(b["t"]) < P["deck_v_valley"] - 0.1 for b in BANKS.values()): continue
+        if abs(n.z) < 0.3 and c.z < 1.6 and abs(c.x) < P["case_half"] + 1.6 and 0.3 < c.y < P["length"] - 0.3: continue
+        if 0.3 < c.y < P["length"] - 1.2 and ((0.2 < c.z < P["cam_cd"] + 1.4 and abs(c.x) < P["case_half"] + 0.95)
+                                              or (abs(c.x) < 2.2 and 4.0 < c.z < P["valley_floor_z"] - 0.4)): continue
+        if math.hypot(c.x, c.z - P["cam_cd"]) < P["cam_bore"] / 2 + 0.35 and 0.3 < c.y < P["length"] - 0.3: continue
+        poly.material_index = 2
+    blk.data.update()
     setup_camera(parts)
     # The cutters stay in the hidden collection for inspection; the block is final.
     with open(os.path.join(HERE, "block_info.json"), "w") as f:

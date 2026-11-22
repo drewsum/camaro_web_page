@@ -260,13 +260,13 @@ def runner(ctrl, n0, prof, bm=None, segs=False, per=12):
         return bm, path, L[-1]
     return loft(rings, bm), path, L[-1]
 
-def smooth_solid(o, voxel=0.035, iters=12):
+def smooth_solid(o, voxel=0.035, iters=12, keep=0.15):
     """Voxel-remesh a swept solid (merges the overlapping section hulls; no folds on tight bends), then a
     volume-preserving Laplacian smooth, decimated, applied. The voxels leave ~3cc of fine-grained noise in the
     volume against port size (see size_int)."""
     m = o.modifiers.new("rm", "REMESH"); m.mode = "VOXEL"; m.voxel_size = voxel * IN; m.adaptivity = 0.0
     m = o.modifiers.new("sm", "LAPLACIANSMOOTH"); m.iterations = iters; m.lambda_factor = 0.6; m.use_volume_preserve = True
-    m = o.modifiers.new("dc", "DECIMATE"); m.ratio = 0.15
+    m = o.modifiers.new("dc", "DECIMATE"); m.ratio = keep
     sc = bpy.context.scene.collection; sc.objects.link(o)        # evaluated only where it is visible: link it to
     hid = o.hide_viewport; o.hide_viewport = False                # the scene for the moment
     bpy.context.view_layer.update()
@@ -370,37 +370,44 @@ def int_runner(k, scale, bm=None, face_ext=0.0, smooth=True):
         return w, h, min(r, w / 2, h / 2)
     return runner(ctrl, V(1, 0, 0), prof, bm, segs=smooth, per=24 if smooth else 12)
 
-def exh_runner(k, scale, bm=None, face_ext=0.0):
+def exh_runner(k, scale, bm=None, face_ext=0.0, smooth=True):
     cv, s, _ = valve(k, "E"); hc = K["exh_hc"]; up = K["exh_u"][k]; rt = K["vE"]["seat_id"] / 2
     f = K["exh_face"]                                 # short port: up off the seat, then back over to the exhaust side
     ctrl = [V(up, f - face_ext, hc), V(up, f + 0.35, hc), V(0.5 * (up + cv.x), -1.15, hc - 0.25),
-            cv + s * 0.95 + V(0, -0.35, 0), cv + s * 0.40]
+            cv + s * 0.95 + V(0, -0.35, 0), cv + s * 0.40, cv + s * 0.12, cv - s * 0.10]   # on down the stem axis past the
+                                                      # valve face (smoothed, then cut back to the seat, as the intake)
     w0, h0_, r0 = K["exh_w"], K["exh_h"], K["exh_r"]
     def prof(t):
         w = interp(t, [0, .2, .5, .8, 1], [w0, w0 - .03, 1.72 * scale, 1.62, 2 * rt])
         h = interp(t, [0, .2, .5, .8, 1], [h0_, h0_ - .02, 1.62 * scale, 1.58, 2 * rt])
         r = interp(t, [0, .2, .5, .8, 1], [r0, .5, .62, .72, rt])
         return w, h, min(r, w / 2, h / 2)
-    return runner(ctrl, V(1, 0, 0), prof, bm)
+    return runner(ctrl, V(1, 0, 0), prof, bm, segs=smooth, per=24 if smooth else 12)
 
 def port_solid(k, kind, scale, tmp, face_ext=0.0, smooth=True):
     """Runner + throat down to the valve face plane: the port volume (face_ext 0) or its cutter."""
     f = int_runner if kind == "I" else exh_runner
     if isinstance(scale, (list, tuple)): scale = scale[k]
-    bm, path, L = f(k, scale, None, face_ext, smooth) if kind == "I" else f(k, scale, None, face_ext)
+    ext = 0.3 if kind == "E" and smooth else 0.0      # the exhaust is swept .3 past its face and trimmed there (below),
+    bm, path, L = f(k, scale, None, face_ext + ext, smooth)   # so the smoothing never rounds the opening
     o = obj("port", bm, tmp)
-    if kind == "I" and smooth: smooth_solid(o)        # merge the section hulls and smooth
+    if smooth: smooth_solid(o, *((0.03, 24, 0.5) if kind == "E" else ()))   # merge the section hulls and smooth (a plain loft folded on the
+                                                       # exhaust's tight bend and left slivers in the bowl)
+    sc_link = kind == "E" and smooth and o.name not in bpy.context.scene.collection.objects
+    if sc_link: bpy.context.scene.collection.objects.link(o)   # a remeshed object in the hidden tmp collection takes no
+                                                       # booleans (they apply as no-ops); keep it in the scene while trimmed.
+                                                       # The intake still trims as before (see PARTS.md)
     _b = bmesh.new(); _b.from_mesh(o.data)             # a sweep that bends the other way comes out inside-out: turn it
     if _b.calc_volume(signed=True) < 0:
         bmesh.ops.reverse_faces(_b, faces=_b.faces[:]); _b.to_mesh(o.data)
     _b.free()
     cv, s, _ = valve(k, kind); rt = K["v" + kind]["seat_id"] / 2
     th = obj("th", cyl_axis(cv, s, rt * 1.012, 0.52, 44), tmp)   # overlaps the runner's end, off its ring, so the union is never degenerate
-    if kind == "E": boolean(o, "UNION", th)          # the intake runner reaches the valve face itself
+    if kind == "E" and not smooth: boolean(o, "UNION", th)   # a smoothed runner reaches the valve face itself
     bpy.data.objects.remove(th, do_unlink=True)
     bx = obj("bx", zprism(rrect(-9, 24, -9, 12, 0.1, 1), -3.0, 9.0), tmp)      # resolves the sweep's self-overlap on tight bends
     boolean(o, "INTERSECT", bx); bpy.data.objects.remove(bx, do_unlink=True)
-    if kind == "I":                                    # cut back to the valve face (the smoothed end is already round, seat ID)
+    if smooth:                                         # cut back to the valve face (the smoothed end is already round, seat ID)
         sc = obj("seatcut", cyl_axis(cv - s * 0.65, s, 2.0, 0.6, 44), tmp)             # .05 past the valve face, into the
                                                                                         # chamber bowl (no coplanar faces)
         boolean(o, "DIFFERENCE", sc); bpy.data.objects.remove(sc, do_unlink=True)
@@ -408,12 +415,17 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0, smooth=True):
         e = face_ext + 0.001
         hs = obj("hs", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((-9.0, -3.0), (-9.0, 9.0), (face_v(9.0) + e, 9.0), (face_v(-3.0) + e, -3.0))]), tmp)
         boolean(o, "INTERSECT", hs); bpy.data.objects.remove(hs, do_unlink=True)
+    if ext:                                            # trimmed square at the exhaust face (face_ext past it for a cutter)
+        fv = K["exh_face"] - face_ext - 0.001
+        hs = obj("hs", zprism(rrect(-9, 24, fv, 12, 0.1, 1), -3.0, 9.0), tmp)
+        boolean(o, "INTERSECT", hs); bpy.data.objects.remove(hs, do_unlink=True)
     if kind == "E":                                    # the front exhaust-side stud stands in the wall of port 1's bowl
         for h in STUDS:
             if -2.5 < h["v"] < 0 and abs(h["u"] - cv.x) < 1.4:
                 pl = obj("pil", zprism(circ(h["u"], h["v"], K["stud_hole"] + 0.10, 32), -0.5, 7.0), tmp)
                 boolean(o, "DIFFERENCE", pl); bpy.data.objects.remove(pl, do_unlink=True)
-    return o, path, L
+    if sc_link: bpy.context.scene.collection.objects.unlink(o)
+    return o, path, L - ext
 
 # ---------- pushrods (both banks' lifters, in left-head coordinates) ----------
 def lifter_cups():
@@ -649,14 +661,13 @@ def build_left(root, tmp, info):
     obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((face_v(-1.0), -1.0), (face_v(zt), zt), (12.0, zt), (12.0, -1.0))]), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
-    # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
+    # exhaust flanges, the cast fin above each middle-row bolt
     for k in range(4):
         up, hc = K["exh_u"][k], K["exh_hc"]; w, h = K["exh_w"], K["exh_h"]
         pts = rrect(up - w / 2 - .28, up + w / 2 + .28, hc - h / 2 - .28, hc + h / 2 + .28, .80, 8)
         for du, dh in K["hdr_bolts"]: pts += circ(up + du, hc + dh, 0.36, 20)
         obj("pad", vprism(ccw(hull(pts)), K["v_exh"] + 0.10, K["exh_face"]), tmp)
-        tip, dr, ex = plug_line(k)
-        obj("pb", seg_cyl(tip + dr * 1.45, ex + dr * 0.06, K["plug"]["boss_r"], 32), tmp)
+        # no plug boss: the plugs thread straight into the side wall between the ports [Drew]
     for h in MID:
         v0 = K["rail_v_exh"]
         obj("fin", hull3([V(h["u"] + du, v, z) for du in (-0.07, 0.07)
@@ -748,7 +759,7 @@ def build_left(root, tmp, info):
             obj("spf", cyl_axis(sp + s * K["spring_cbore"], s, K["spring_r"] + 0.06, 3.0, 48), tmp)
             obj("stem", cyl_axis(cv + s * 0.3, s, 0.172, K["spring_h"][kind] + 1.0, 16), tmp)
         tip, dr, ex = plug_line(k); P = K["plug"]
-        obj("pth", cyl_axis(tip - dr * 0.2, dr, P["thread_r"], P["reach"] + 0.2, 24), tmp)
+        obj("pth", cyl_axis(tip - dr * 0.2, dr, P["thread_r"], P["reach"] + 0.25, 32), tmp)   # into the seat bore: no coplanar end
         obj("pse", seg_cyl(tip + dr * P["reach"], ex + dr * 0.6, P["seat_r"], 32), tmp)
     lim = obj("lim", zprism(cav, 0.0, K["rail"] + 2.0), root)
     keep = bmesh.new()
@@ -1066,7 +1077,6 @@ def build_valvetrain(root, tmp, lines, info):
         RockerArms=material("VT_RockerOrangeAnodize", (0.85, 0.30, 0.03, 1), 1.0, 0.32),
         RockerRollers=material("VT_RollerSteel", (0.70, 0.70, 0.71, 1), 1.0, 0.22),
         PolyLocks=material("VT_PolyLock", (0.06, 0.06, 0.065, 1), 0.9, 0.35),
-        GuidePlates=material("VT_GuidePlate", (0.05, 0.05, 0.05, 1), 0.8, 0.45),
         Pushrods=material("VT_PushrodSteel", (0.10, 0.10, 0.105, 1), 1.0, 0.33))
     vt = coll("BBC_Valvetrain"); clear(vt)              # its own top-level collection, so the castings can be hidden on their own
     for a in [a for a in bpy.data.actions if a.name.startswith("VT_")]: bpy.data.actions.remove(a)
@@ -1087,7 +1097,7 @@ def build_valvetrain(root, tmp, lines, info):
         else: o.matrix_world = m
         return o
 
-    studs, locks, plates = bmesh.new(), bmesh.new(), bmesh.new()
+    studs, locks = bmesh.new(), bmesh.new()
     rig = []; plens = {}
     for (k, kind), g in G.items():
         cv, s, tr, side, a_ = g["cv"], g["s"], g["tr"], g["side"], g["a"]
@@ -1107,36 +1117,14 @@ def build_valvetrain(root, tmp, lines, info):
             va = mk(f"Valve_{tag}", ME["valve" + kind], m=Mb @ Fv); mk(f"Retainer_{tag}", ME["ret" + kind], va)
             sp = mk(f"ValveSpring_{tag}", ME["spring"], m=Mb @ Fs)
             rig.append(dict(bank=bank, k=k, kind=kind, cyl=cyl, g=g, a0=a0, L=L, Mb=Mb, Fr=Fr, Fv=Fv, pr=pr, rk=rk, va=va, sp=sp))
-    # guide plates: one per cylinder under the two stud hexes, slotted for the pushrods
-    SW = pushrod_sweep()
-    platesR = bmesh.new()
-    for j, k in [(j, k) for j in range(2) for k in range(4)]:   # each head's plates slotted for its own bank's pushrods
-        gi, ge = G[(k, "I")], G[(k, "E")]; z = floor_h(0) + 0.60
-        pts = []
-        for g in (gi, ge):
-            pts += circ(g["base"].x, g["base"].y, 0.46, 20)
-            c = line_at_h(g["lines"][j][0], g["lines"][j][1], z); pts += circ(c.x, c.y, 0.40, 16)
-        pl = obj("gp", zprism(ccw(hull(pts)), z + 0.001, z + 0.10), tmp)
-        for kind, g in (("I", gi), ("E", ge)):
-            pts = []
-            for a, top in (SW[(k, kind)][:len(SW[(k, kind)]) // 2], SW[(k, kind)][len(SW[(k, kind)]) // 2:])[j]:
-                for hh in (z - 0.5, z + 0.6): pts += ring_pts(line_at_h(a, top, hh), top - a, 0.225, 12)
-            c = obj("gps", hull3(pts), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-            c = obj("gph", zprism(circ(g["base"].x, g["base"].y, 0.26, 16), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        for g in (gi, ge):                               # and round the springs
-            sp = g["cv"] + g["s"] * (K["spring_h"]["I" if g is gi else "E"] - 0.3)
-            c = obj("gpsp", cyl_axis(sp, g["s"], K["vt"]["spring_od"] / 2 + 0.05, 2.5, 24), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        for h in HIGH:                                   # relieved round the head-stud nuts beside it
-            c = obj("gpn", zprism(circ(h["u"], h["v"], 0.52, 20), z - 0.5, z + 0.6), tmp); boolean(pl, "DIFFERENCE", c); bpy.data.objects.remove(c, do_unlink=True)
-        (plates, platesR)[j].from_mesh(pl.data); bpy.data.objects.remove(pl, do_unlink=True)
+    # no pushrod guide plates: outside this model's scope [Drew]
     info["pushrod_len"] = plens
     info["pushrod_spec"] = dict(I=8.650, E=7.650)
     info["rocker"] = dict(tip_arm=T["tip_arm"], cup_arm=T["cup_arm"], shared_mesh="RockerArm", users=ME["rocker"].users)
     left, right = [], []
-    for nm, bm_ in (("RockerStuds", studs), ("PolyLocks", locks), ("GuidePlates", plates)):
+    for nm, bm_ in (("RockerStuds", studs), ("PolyLocks", locks)):
         o = obj(nm + "_L", bm_, vt); o.data.materials.append(mats[nm]); left.append(o)
-        if nm == "GuidePlates": r = obj(nm + "_R", platesR, vt); r.data.materials.append(mats[nm])
-        else: r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; vt.objects.link(r)
+        r = o.copy(); r.data = o.data.copy(); r.name = nm + "_R"; r.data.name = r.name; vt.objects.link(r)
         right.append(r)
     for o in left + right:
         o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(35))
@@ -1204,6 +1192,64 @@ def place(o, m):
     o.data.transform(m); o.data.update()
 
 
+def build_spark_plugs(name, root):
+    """All eight plugs as one mesh in world space [est shapes; 14mm x .750 reach, gasket seat, 5/8 hex per K["plug"]]:
+    plated shell, white insulator, steel terminal. Each threads into its bore with .02 clearance (the faceted bore) and its gasket
+    stands .002 off the spot face, so it touches nothing. t runs out along the plug bore from the chamber end."""
+    P = K["plug"]; seg = 32
+    def lathe(prof, bm, tip, a):
+        a = a.normalized(); ref = V(0, 0, 1) if abs(a.z) < 0.9 else V(1, 0, 0)
+        e1 = a.cross(ref).normalized(); e2 = a.cross(e1)
+        rings = [[tip + a * t + (e1 * math.cos(2 * math.pi * j / seg) + e2 * math.sin(2 * math.pi * j / seg)) * r
+                  for j in range(seg)] for t, r in prof]
+        return loft(rings, bm), e1, e2
+    tr = P["thread_r"] - 0.02; pitch = 0.0492                      # 14 x 1.25; clear of the bore's facets
+    shell = [(0.0, 0.205), (0.0, 0.240)]
+    t = 0.02
+    while t < P["reach"] - 0.06:
+        shell += [(t, tr), (t + pitch * 0.35, tr), (t + pitch * 0.5, tr - 0.028), (t + pitch * 0.85, tr - 0.028)]
+        t += pitch
+    g0 = P["reach"] + 0.002
+    shell += [(P["reach"] - 0.04, tr - 0.02), (g0, tr - 0.02), (g0, 0.395), (g0 + 0.07, 0.395), (g0 + 0.07, 0.33),
+              (0.90, 0.33), (0.90, 0.29), (1.20, 0.29), (1.20, 0.325), (1.27, 0.325), (1.31, 0.27), (1.31, 0.235)]
+    ins = [(1.25, 0.255)]
+    for i in range(5):                                             # ribbed insulator
+        z = 1.40 + i * 0.17
+        ins += [(z, 0.255), (z + 0.09, 0.255), (z + 0.11, 0.238), (z + 0.15, 0.238)]
+    ins += [(2.30, 0.245), (2.40, 0.20), (2.44, 0.13)]
+    term = [(2.40, 0.10), (2.50, 0.10), (2.50, 0.150), (2.68, 0.150), (2.74, 0.12), (2.78, 0.09)]
+    hex_r = 0.625 / 2 / math.cos(math.radians(30))
+    out = bmesh.new(); me = bpy.data.meshes.new("_sp")
+    for bank, M in (("L", M_L), ("R", ROT_R @ M_L)):
+        for k in range(4):
+            tip, dr, _ = plug_line(k)
+            parts = []
+            b = bmesh.new(); _, e1, e2 = lathe(shell, b, tip, dr); parts.append((b, 0))
+            hx = [tip + dr * tt + (e1 * math.cos(math.radians(60 * j + 30)) + e2 * math.sin(math.radians(60 * j + 30))) * hex_r
+                  for tt in (0.92, 1.18) for j in range(6)]
+            b = bmesh.new(); hull3(hx, b); parts.append((b, 0))
+            strap = [tip + dr * tt + e1 * x + e2 * y for tt in (-0.005, -0.085) for x in (0.165, 0.225) for y in (-0.05, 0.05)]
+            b = bmesh.new(); hull3(strap, b); parts.append((b, 0))
+            strap = [tip + dr * tt + e1 * x + e2 * y for tt in (-0.085, -0.135) for x in (-0.02, 0.225) for y in (-0.05, 0.05)]
+            b = bmesh.new(); hull3(strap, b); parts.append((b, 0))
+            b = bmesh.new(); cyl_axis(tip + dr * 0.01, -dr, 0.040, 0.05, 16, b); parts.append((b, 2))   # centre electrode
+            b = bmesh.new(); cyl_axis(tip + dr * 0.08, -dr, 0.16, 0.075, 24, b); parts.append((b, 1))    # insulator nose
+            b = bmesh.new(); lathe(ins, b, tip, dr); parts.append((b, 1))
+            b = bmesh.new(); lathe(term, b, tip, dr); parts.append((b, 2))
+            for b, mi in parts:
+                for f in b.faces: f.material_index = mi
+                b.transform(M); b.to_mesh(me); b.free(); out.from_mesh(me)
+    bpy.data.meshes.remove(me)
+    bmesh.ops.recalc_face_normals(out, faces=out.faces)
+    o = obj(name, out, root)
+    for m in (material("SparkPlug_Shell", (0.74, 0.74, 0.72, 1), 1.0, 0.30),
+              material("SparkPlug_Insulator", (0.93, 0.92, 0.88, 1), 0.0, 0.22),
+              material("SparkPlug_Terminal", (0.55, 0.56, 0.57, 1), 1.0, 0.35)):
+        o.data.materials.append(m)
+    o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(40))
+    return o
+
+
 def build():
     root = coll("BBC_Heads"); clear(root)
     tmp = coll("Heads_tmp", root, hide=True)
@@ -1232,7 +1278,8 @@ def build():
     for r in rights + vtR: place(r, ROT_R @ M_L)
     info["lines"] = {f"{k}{kind}": [[round(c, 3) for c in p] for pair in ln for p in pair] for (k, kind), ln in lines.items()}
     info["valvetrain"] = [o.name for o in vtL + vtR]
-    return [head, gL, sL, dL] + rights, info
+    plugs = build_spark_plugs("SparkPlugs", root)
+    return [head, gL, sL, dL] + rights + [plugs], info
 
 
 def tree(o):
@@ -1264,7 +1311,7 @@ def checks(parts, step=15.0):
             if len(f) == 0: continue
             mt = BVHTree.FromPolygons([Vector(x) for x in v], f)
             for p in parts:
-                if p.name.startswith(("CylinderHead", "HeadGasket")) and PT[p.name].overlap(mt): hits.add((p.name, n))
+                if p.name.startswith(("CylinderHead", "HeadGasket", "SparkPlugs")) and PT[p.name].overlap(mt): hits.add((p.name, n))
     set_crank(0.0)
     allowed = set()
     for s in "LR":

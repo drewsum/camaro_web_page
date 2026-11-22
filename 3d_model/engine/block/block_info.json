@@ -71,7 +71,7 @@
  },
  "parts": {
   "Block": {
-   "tris": 27902,
+   "tris": 27522,
    "dims_in": [
     18.559,
     24.0,
@@ -183,7 +183,7 @@
    ]
   }
  },
- "cutters": 200,
+ "cutters": 197,
  "china_top_z": 10.782,
  "china_bend": {
   "x0": 0.8,

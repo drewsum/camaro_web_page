@@ -630,9 +630,10 @@
    "row": "exhaust edge"
   },
   {
-   "u": -2.03,
+   "u": -2.41,
    "v": -1.25,
-   "row": "exhaust side"
+   "row": "exhaust side",
+   "src": "[Drew] was -2.03, which broke .07 into bore 1; moved out to the gasket's front-end hole (u -2.41), in step with the between-bore studs (2.39 from each bore)"
   },
   {
    "u": 2.39,

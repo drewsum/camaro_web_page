@@ -74,6 +74,7 @@
   ],
   "chamfer": 0.06,
   "marks": {
+   "zero_at": -45.0,
    "to": 60,
    "every": 2,
    "w": 0.018,
@@ -232,10 +233,6 @@
    [
     "BalancerKey",
     "Crankshaft"
-   ],
-   [
-    "BalancerRing",
-    "BalancerMarks"
    ]
   ],
   "ring_to_lid_in": 0.2

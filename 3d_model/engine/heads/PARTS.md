@@ -1,10 +1,10 @@
 # Cylinder heads, head gaskets and head studs
 
-Drew's heads are **AFR 2110** (Magnum, 345cc rectangle port, 117cc partial-CNC chambers, assembled). `build_heads.py` builds the aluminium castings and the valvetrain on them (valves, springs, retainers, rocker studs, rockers, guide plates, pushrods). It runs after the block, crank, rods, cam and lifters, and writes `heads_info.json`.
+Drew's heads are **AFR 2110** (Magnum, 345cc rectangle port, 117cc partial-CNC chambers, assembled). `build_heads.py` builds the aluminium castings and the valvetrain on them (valves, springs, retainers, rocker studs, rockers, pushrods). It runs after the block, crank, rods, cam and lifters, and writes `heads_info.json`.
 
 Tags: **[spec]** published by AFR, Cometic or ARP; **[meas]** measured from Drew's photos or the gasket image; **[derived]** worked out from other numbers; **[est]** a placeholder until a reference turns up.
 
-## Parts (separate meshes: castings, gaskets, head studs and dowels in `BBC_Heads`; every valvetrain part, including rocker studs, poly locks and guide plates, in its own top-level collection `BBC_Valvetrain`, so either can be hidden alone)
+## Parts (separate meshes: castings, gaskets, head studs and dowels in `BBC_Heads`; every valvetrain part, including rocker studs and poly locks, in its own top-level collection `BBC_Valvetrain`, so either can be hidden alone)
 
 | Object | What it is |
 |---|---|
@@ -43,19 +43,18 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 | `ValveSpring_<cyl><I/E>` | COMP 26924 | 1.519" OD, 1.900" installed height [spec, build doc]; wire and turns [est]; scaled in z as the valve opens |
 | `RockerStuds_L/R`, `PolyLocks_L/R` | 7/16 studs, CSP-PL716K poly locks | each stud leans half as far as its valve, square to the rocker's trunnion [est]; poly lock 9/16 hex with its set screw standing .16" proud, the stud ending under it [est, photo] |
 | `Rocker_<cyl><I/E>` (+ `RockerRoller_`) | CSP-S2001NP 1.7 aluminium roller rockers | one shared mesh for all 16 [Drew]: trunnion to roller 1.55", to pushrod cup .91" [est]. Shaped after Drew's valve-cover-off photo: flat side plates .90" across, open .68" over the trunnion for the stud and poly lock, a fork closed over a .50" x .38" roller with its axle ends showing, trunnion caps proud of the sides, a narrower rounded nose over the ball socket with a relief for the pushrod's swing [est] |
-| `GuidePlates_L/R` | one per cylinder under the two rocker studs | shape [est] after photo 204 |
 | `Pushrod_<cyl><I/E>` | Trick Flow 21418650 (8.650") intake, 21417650 (7.650") exhaust, 3/8" | lengths in `heads_info.json`: exhaust ~7.6" (close), intake ~7.2" (1.4" short), see below |
 
 ## Checks (`heads_info.json`)
 
 - **Volumes:** chamber 117.0cc; intake 344.9-345.0cc; exhaust 132.0cc; minimum intake section 3.27 in^2. Each port is sized on its own.
 - **Walls:** no port comes within .06" of a stud hole, nut pocket, pushrod slot, plug bore, spring pocket or its lead-in.
-- **Fit:** no clash between the heads, gaskets, studs and dowels and the block, timing cover and freeze plugs, nor with the pistons, rods, cam or lifters over two crank turns. The valvetrain parts touch only where they should (stud through the trunnion, roller on tip, spring under retainer, pushrod ball in its socket); over two crank turns the rocker bodies clear the poly locks, studs, springs, retainers, guide plates and heads, and the pushrod shafts clear the rockers by .02" or more; pushrods clear both heads, the lifters and the block.
+- **Fit:** no clash between the heads, gaskets, studs and dowels and the block, timing cover and freeze plugs, nor with the pistons, rods, cam or lifters over two crank turns. The valvetrain parts touch only where they should (stud through the trunnion, roller on tip, spring under retainer, pushrod ball in its socket); over two crank turns the rocker bodies clear the poly locks, studs, springs, retainers and heads, and the pushrod shafts clear the rockers by .02" or more; pushrods clear both heads, the lifters and the block.
 - All head, gasket, stud and dowel meshes are manifold.
 
 ## What differs from the references
 
-- **Pushrod lengths:** the real intake pushrods are 8.65" and the exhausts 7.65". The model's exhausts are ~7.6" but the intakes ~7.2", so the real intake rockers sit higher than the model's. BBC intake and exhaust rockers sit at different heights; the model has them level. Rocker heights, stud angles and guide plates are estimates.
+- **Pushrod lengths:** the real intake pushrods are 8.65" and the exhausts 7.65". The model's exhausts are ~7.6" but the intakes ~7.2", so the real intake rockers sit higher than the model's. BBC intake and exhaust rockers sit at different heights; the model has them level. Rocker heights and stud angles are estimates. No pushrod guide plates (outside the model's scope).
 - **Heights:** rail, floor, shelf and spring-seat heights are scaled from oblique photos; a tape measurement of the head height (deck to cover rail) would fix them.
 - **Exhaust side:** the real casting is rounded and ribbed between the flanges (photo 265); the model has flat walls and plain flanges. No raised lettering.
 - **Rocker box:** the real floor is sculpted round each spring and stud; the model's is flat with round bosses.
@@ -72,3 +71,6 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 153, 204, 248-250, 259, 265, 266, 269, 284, 332-337, 111, 133.
 
 - **Exhaust edge:** the block deck and the head follow the gasket outline except along the exhaust edge, which is straight from u = -0.82" to 15.31" (v about -3.22"). The gasket's two ears below it (u 1.7–3.0" and 11.5–12.8") are only its rivets and stay on the gasket alone (Drew); the small ripple in the traced outline at u 4.8–5.0" is gone too.
+
+- **Spark plugs (`SparkPlugs`, one mesh, all eight):** 14mm x .750" reach, gasket seat, 5/8 hex [est shapes]: plated shell with threads and gasket, ribbed white insulator, terminal nut, side electrode. Each threads straight into the side wall between the exhaust ports with no cast boss round it [Drew], .02" clear of its bore's facets, the gasket .002" off the seat.
+- **Exhaust ports:** swept as overlapping section hulls, voxel-merged and smoothed like the intakes, then cut back to the valve face and trimmed square at the flange (the plain loft folded on the short turn and left slivers in the bowl). Still 132cc. Found on the way: a remeshed object in the hidden tmp collection takes no booleans (they apply as no-ops), so the exhaust is kept in the scene while it is trimmed. The intake still has this: its seat cut and face trim never applied, so the "345cc" it is sized to counts ~45cc past the face and the valve; its port shape in the head is right, only the sizing number is off. Not yet changed.

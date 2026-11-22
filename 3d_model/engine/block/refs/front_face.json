@@ -88,10 +88,10 @@
    "x": 4.91,
    "z": 7.04,
    "d": 1.8,
-   "depth": 1.2,
+   "depth": 1.0,
    "mirror": true,
    "src": "[meas] photo 30, A",
-   "depth_src": "[derived] stops .28\" short of the cylinder 1 bore wall (at 2.5\" the inlet pocket broke into bore 1); the water jacket behind it isn't modelled"
+   "depth_src": "[derived] stops .28\" short of the cylinder 1 bore wall (at 2.5\" the inlet pocket broke into bore 1); the water jacket behind it isn't modelled. 1.0 (was 1.2) so its floor stays .18 clear of the front head stud's tapped hole, which showed through it; the floor is drawn black (jacket)"
   },
   {
    "name": "WPBoltUpper",

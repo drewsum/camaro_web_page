@@ -66,6 +66,11 @@ K = dict(
                 foot_z=(-7.51, -6.96), inlet_inset=0.25, inlet_depth=0.30,
                 plate_t=0.10, hole=0.10, pitch=0.20, hole_inset=0.40, screw_inset=0.20),  # bolted perforated screen plate (Drew photo)
 )
+# Oil filter on the block's filter pad (bottom.json "filter_pad", driver-side rear corner, facing down) [Drew asked for one].
+# A compact 3.3" spin-on [est]: the pan bolt at x 5.40 y 2.15 stands 2.0" from the pad centre, so a 3.66" can would
+# sit on its head; the pan flange and gasket are notched round the can. Sizes and profile [est]; no brand.
+FP = BOT["filter_pad"]
+FILTER = dict(x=FP["x"], y=FP["y"], r=1.66, length=5.0, seam_h=0.20, gasket=(1.22, 1.44, 0.10), notch=0.06)
 CAP_Z = -3.10                      # main-cap bottoms (block)
 
 
@@ -164,6 +169,7 @@ def build_gasket(root, tmp):
     obj("gr", zprism(rrect(-ar - 0.001, ar + 0.001, -0.5, rb + 0.01, 0.01), -0.5, 0.5), tmp)
     for h in RAIL["holes"]:
         for s in (-1, 1): obj("gb", zcyl(0.17, -0.5, 0.5, s * h["x"], h["y"], 20), tmp)
+    F = FILTER; obj("gfn", zcyl(F["r"] + F["notch"], -0.5, 0.5, F["x"], F["y"], 64), tmp)   # notched round the filter
     boolean(gk, "DIFFERENCE", tmp); clear(tmp)
     zc = cover_bottom()
     xs = [x for x in XS if zc(x) < -0.0005]
@@ -224,6 +230,7 @@ def build_pan(root, tmp):
         for s in (-1, 1):
             obj("bh", zcyl(k["bolt_hole"] / 2, -0.6, 0.2, s * h["x"], h["y"], 20), tmp)
     obj("dt", xcyl(0.27, k["sump_x"] - 0.5, k["sump_x"] + 0.5, d["y"], d["z"] - g, 24), tmp)
+    F = FILTER; obj("fn", zcyl(F["r"] + F["notch"], -0.6, 0.2, F["x"], F["y"], 64), tmp)   # flange notched round the filter
     boolean(A, "DIFFERENCE", tmp); clear(tmp)
     # Seal lips: front, curved under the cover (y 24.00-24.29); rear, an arc under the cap (y .02-.25).
     xl = [x for x in xs if abs(x) <= 4.50]; Tl = [min(zc(x), 0.0) - g - 0.004 for x in xl]
@@ -336,6 +343,35 @@ def build_pump(root, tmp):
     return pump, hw, scr
 
 
+def build_filter(root):
+    """Spin-on filter hanging from the pad: gasket, rolled seam, can with a rounded bottom (one lathe each)."""
+    F = FILTER; x, y = F["x"], F["y"]; seg = 64
+    def lathe(prof, bm):
+        rings = [[Vector((x + r * math.cos(2 * math.pi * j / seg), y + r * math.sin(2 * math.pi * j / seg), z)) for j in range(seg)]
+                 for z, r in prof]
+        return loft(rings, bm)
+    gi, go, gt = F["gasket"]
+    ring = bmesh.new()                                     # gasket: annulus as a closed lathe (inner and outer walls)
+    ring_pr = [(-0.002, go), (-gt, go), (-gt, gi), (-0.002, gi)]
+    rings = [[Vector((x + r * math.cos(2 * math.pi * j / seg), y + r * math.sin(2 * math.pi * j / seg), z)) for j in range(seg)]
+             for z, r in ring_pr]
+    vs = [[ring.verts.new(p * IN) for p in rr] for rr in rings]
+    for a, b in zip(vs, vs[1:] + vs[:1]):
+        for j in range(seg): ring.faces.new((a[j], a[(j + 1) % seg], b[(j + 1) % seg], b[j]))
+    bmesh.ops.recalc_face_normals(ring, faces=ring.faces)
+    R, L, sh = F["r"], F["length"], F["seam_h"]; z0 = -gt - 0.001
+    can = bmesh.new()
+    prof = [(z0, 0.30), (z0, go + 0.02), (z0 - 0.03, R - 0.06), (z0 - 0.08, R), (z0 - sh, R), (z0 - sh - 0.04, R - 0.05),
+            (z0 - sh - 0.10, R - 0.04)]
+    for i in range(1, 7):                                   # rounded bottom edge, r .35
+        a = math.radians(90 * i / 6); rc = 0.35
+        prof.append((z0 - L + rc - rc * math.sin(a), R - 0.04 - rc + rc * math.cos(a)))
+    prof += [(z0 - L, 0.40)]
+    lathe(prof, can)
+    g = obj("OilFilterGasket", ring, root); c = obj("OilFilter", can, root)
+    return c, g
+
+
 def build():
     root = coll("BBC_Oiling"); clear(root)
     tmp = coll("Oiling_tmp", root, hide=True)
@@ -344,6 +380,7 @@ def build():
     tray, tray_hw = build_tray(root, tmp)
     pump, pump_hw, scr = build_pump(root, tmp)
     gasket = build_gasket(root, tmp)
+    filt, fgk = build_filter(root)
     bpy.data.collections.remove(tmp)
     black = material("Pan_GlossBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.22)
     grey = material("Tray_Grey", (0.33, 0.34, 0.35, 1), 0.5, 0.55)
@@ -352,12 +389,14 @@ def build():
     mesh = material("Pickup_Screen", (0.12, 0.12, 0.13, 1), 0.9, 0.55)
     oxide = material("Oiling_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
     blue = material("PanGasket_Blue", (0.04, 0.22, 0.75, 1), 0.0, 0.55)
+    can = material("OilFilter_Can", (0.02, 0.02, 0.022, 1), 0.5, 0.35)
+    rub = material("OilFilter_Gasket", (0.03, 0.03, 0.03, 1), 0.0, 0.8)
     for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, billet),
-                 (pump_hw, oxide), (scr, billet), (gasket, blue)):
+                 (pump_hw, oxide), (scr, billet), (gasket, blue), (filt, can), (fgk, rub)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
     for n in ("OilPumpCover", "OilPickupTube"):          # parts of the earlier three-piece pump
         if n in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
-    parts = [pan, bolts, plug, tray, tray_hw, pump, pump_hw, scr, gasket]
+    parts = [pan, bolts, plug, tray, tray_hw, pump, pump_hw, scr, gasket, filt, fgk]
     return parts
 
 

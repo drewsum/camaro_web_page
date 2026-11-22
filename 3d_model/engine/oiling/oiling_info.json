@@ -110,7 +110,7 @@
  "manifold": {
   "OilPan": [
    0,
-   53.2513182583414
+   53.20984205567164
   ],
   "OilPanBolts": [
    0,
@@ -142,7 +142,15 @@
   ],
   "OilPanGasket": [
    0,
-   3.4021679017631685
+   3.3820127134427915
+  ],
+  "OilFilter": [
+   0,
+   40.661426223146194
+  ],
+  "OilFilterGasket": [
+   0,
+   0.17987985427770822
   ]
  },
  "checks": {
@@ -173,7 +181,7 @@
   "sump_box_below_front_floor_qt": 4.8
  },
  "tris": {
-  "OilPan": 14474,
+  "OilPan": 14534,
   "OilPanBolts": 3096,
   "OilPanDrainPlug": 112,
   "WindageTray": 2828,
@@ -181,6 +189,8 @@
   "OilPump": 1104,
   "OilPumpHardware": 1120,
   "OilPickupScreen": 2612,
-  "OilPanGasket": 8384
+  "OilPanGasket": 8436,
+  "OilFilter": 1788,
+  "OilFilterGasket": 512
  }
 }
