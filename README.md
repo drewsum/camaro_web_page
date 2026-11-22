@@ -4,7 +4,7 @@ Interactive 3D viewer for a 1968 Camaro SS model (React Three Fiber, served by n
 
 ## Layout
 
-[![How the site works: authoring, build and hosting, the visitor's browser, and external CDNs](docs/architecture.png)](docs/architecture.html)
+[![How the site works: authoring, build and hosting, the visitor's browser, and external CDNs](docs/architecture.png)](https://drewsum.github.io/camaro_web_page/architecture.html)
 
 How a model gets from Blender to a visitor's screen, in six steps:
 
@@ -22,9 +22,8 @@ How a model gets from Blender to a visitor's screen, in six steps:
 6. **Pages:** Overview, Photos, Engine Build and Engine Model open over the viewer via the URL
    hash. Hovering Engine Model prefetches its 8 MB GLB.
 
-For the interactive version (drag cards, step through each flow with the arrow keys), open
-[`docs/architecture.html`](docs/architecture.html) in a browser. It loads its libraries from
-public CDNs, so it needs an internet connection.
+Click the image for the [interactive version](https://drewsum.github.io/camaro_web_page/architecture.html) (drag cards, step through each flow with
+the arrow keys), served by GitHub Pages from [`docs/architecture.html`](docs/architecture.html).
 
 ## Update the model
 
