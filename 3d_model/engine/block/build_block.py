@@ -765,6 +765,25 @@ def build():
             for w in range(-n_, n_ + 1):
                 hit = bvh.ray_cast(cen - d * R + (t1 * u + t2 * w) * step, d, 2 * R)
                 if hit[0] is not None: seen.add(hit[2])
+    # Every face a hole cutter made (it lies on the cutter's surface) is a hole wall or floor: bare iron. Pockets,
+    # reliefs and the crankcase bays are not holes.
+    not_holes = ("F_TimingRecess", "F_LegPocket", "F_CastRelief", "F_ValleyWindow", "Bay", "RodSweep", "Pad_",
+                 "RearPocket", "SealClear", "SealBore", "MainBore", "F_WaterInlet")
+    hv, hf = [], []
+    for o in list(cut.objects) + list(vcut.objects):
+        if o.type != "MESH" or o.name.startswith(not_holes): continue
+        k0 = len(hv); hv += [o.matrix_world @ v.co for v in o.data.vertices]; hf += [[k0 + i for i in p_.vertices] for p_ in o.data.polygons]
+    hole_bvh = BVHTree.FromPolygons(hv, hf)
+    def cut_hole(poly):
+        return hole_bvh.find_nearest(poly.center, 0.004 * IN)[0] is not None
+    def in_hole(poly):
+        """Inside a hole or bore: less than 30% of 25 rays over the face (its normal, rings at 35 and 65 deg) get
+        out of the block. Hole walls and bottoms see out only down the hole; open faces, faces beside a boss and
+        shallow pockets see far more."""
+        n = poly.normal; t1 = n.orthogonal().normalized(); t2 = n.cross(t1); o_ = poly.center + n * 0.0005
+        dirs = [n] + [(n * math.cos(math.radians(e)) + (t1 * math.cos(a) + t2 * math.sin(a)) * math.sin(math.radians(e))).normalized()
+                      for e in (35, 65) for a in [2 * math.pi * (k + 0.5 * (e == 65)) / 12 for k in range(12)]]
+        return sum(1 for d in dirs if bvh.ray_cast(o_, d)[0] is None) < 0.3 * len(dirs)
     def in_bore(c):
         for b in BANKS.values():
             for k in range(4):
@@ -789,6 +808,7 @@ def build():
         # Strips beside the decks on the valley side (under the intake gasket)
         # are bare cast iron, not painted (photos 27, 545).
         if c.z > P["valley_floor_z"] and abs(c.x) < P["deck_clip_v"] + 1.7 and (any(n.dot(d) > 0.99 for d in (dl, dr)) or n.x * c.x < 0): continue
+        if cut_hole(poly) or in_hole(poly): continue           # every hole and bore inside stays iron
         hit, hp, *_ = blk.ray_cast(poly.center + n * 0.0005, n)
         if not hit: poly.material_index = 2; continue          # its normal leaves the block: outer
         if abs(n.y) < 0.25 and (c.y > P["length"] - 2.5 or c.y < 2.5) and (hp - poly.center).length < 1.0 * IN: continue   # end-face holes
