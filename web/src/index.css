@@ -851,13 +851,9 @@ canvas {
   color: #e0a030;
 }
 
-.engine-flow-legend {
+.engine-flow-hint {
   margin: 2px 0 2px 22px;
   font-size: 0.72rem;
-}
-
-.engine-flow-hint {
-  grid-column: 1 / -1;
   color: #6b707c;
 }
 
@@ -909,7 +905,7 @@ canvas {
 
   .engine-speed,
   .engine-parts-title,
-  .engine-flow-legend,
+  .engine-flow-hint,
   .engine-parts-all {
     grid-column: 1 / -1;
   }

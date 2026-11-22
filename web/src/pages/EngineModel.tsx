@@ -4,6 +4,7 @@ import { Center, ContactShadows, Environment, Lightformer, OrbitControls, useGLT
 import { AnimationMixer, BackSide, Mesh, Vector2, type MeshStandardMaterial, type AnimationAction, type Object3D, type PerspectiveCamera } from "three";
 import { DRACO_URL, dropTransmission, fixTexturedBlending } from "../components/CamaroModel";
 import { Combustion, type FlowData } from "./combustion";
+import { EngineStandSound } from "../audio/EngineStandSound";
 
 // Exported from 3d_model/engine/bbc_block_work.blend by scripts/export_engine_glb.py,
 // which tags every object with its top-level collection (userData.engine_part).
@@ -45,13 +46,6 @@ const PART_LABELS: Record<string, string> = {
   [COMBUSTION]: "Four-stroke airflow & flame",
 };
 
-const LEGEND: [string, string][] = [
-  ["#3f8cff", "Air & fuel in"],
-  ["#a8b8ff", "Compressed"],
-  ["#eef4ff", "Spark, 20° BTDC"],
-  ["#ff8c1f", "Burning"],
-  ["#c0290a", "Exhaust out"],
-];
 const ORDER = Object.keys(PART_LABELS);
 
 function partLabel(id: string) {
@@ -196,6 +190,7 @@ function EngineScene(props: ModelProps) {
         <EngineParts {...props} />
         <ContactShadows key={shadowKey} frames={1} position={[0, 0, 0]} opacity={0.7} scale={2} blur={2} far={0.6} />
       </Suspense>
+      <EngineStandSound rpm={props.rpm} />
       <mesh rotation-x={-Math.PI / 2} position-y={-0.002}>
         <circleGeometry args={[4, 64]} />
         <meshStandardMaterial color="#1b1d22" roughness={0.9} />
@@ -266,15 +261,7 @@ export default function EngineModel() {
           </label>
         ))}
         {parts.includes(COMBUSTION) && !hidden.has(COMBUSTION) && (
-          <ul className="engine-legend engine-flow-legend" aria-label="Four-stroke colours">
-            {LEGEND.map(([colour, text]) => (
-              <li key={text}>
-                <span style={{ background: colour }} />
-                {text}
-              </li>
-            ))}
-            <li className="engine-flow-hint">Hide the heads and block to see inside the cylinders.</li>
-          </ul>
+          <p className="engine-flow-hint">Hide the heads and block to see inside the cylinders.</p>
         )}
         <div className="engine-parts-all">
           <button type="button" disabled={hidden.size === 0} onClick={() => setHidden(new Set())}>

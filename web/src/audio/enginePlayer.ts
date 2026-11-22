@@ -159,8 +159,9 @@ class EnginePlayer {
     this.voices.delete(key);
   }
 
-  // rpm: engine speed; throttle 0..1; distance: camera to car in metres.
-  update(rpm: number, throttle: number, distance: number) {
+  // rpm: engine speed; throttle 0..1; distance: camera to car in metres;
+  // level: overall volume 0..1 (the engine page fades out below firing speed).
+  update(rpm: number, throttle: number, distance: number, level = 1) {
     const ctx = this.ctx;
     if (!this.enabled || !ctx || !this.manifest) return;
     const t = ctx.currentTime;
@@ -200,7 +201,7 @@ class EnginePlayer {
 
     // Distance: quieter and duller further from the car.
     const near = Math.min(1, 7 / Math.max(distance, 1));
-    this.out!.gain.setTargetAtTime(0.9 * near ** 0.8, t, 0.1);
+    this.out!.gain.setTargetAtTime(0.9 * level * near ** 0.8, t, 0.1);
     this.tone!.frequency.setTargetAtTime(2500 + 15500 * near, t, 0.1);
 
     const rate = (v: Voice) => Math.max(rpm, 300) / v.base;

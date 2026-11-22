@@ -372,6 +372,50 @@ def build_filter(root):
     return c, g
 
 
+# Signatures: Drew and the crew signed the bottom of the sump box in white paint pen (photos 11, 12).
+# The lines run along the box (Y), stacked across it, the first line nearest the passenger-side wall;
+# read from below with the tops of the letters toward +X. Segoe Script stands in for the handwriting.
+SIGS = ["540 BBC - 2026", "Drew Maatman", "Nick Mussoline", "Ben Reesor",
+        "Ken Scidmore", "Ethan Loney", "Drew Koetting", "Justin Korf"]
+SIG_FONT = r"C:\Windows\Fonts\segoesc.ttf"
+
+def build_signatures(root):
+    """White paint-pen signatures as flat geometry 0.2 mm under the sump floor (separate mesh)."""
+    import random
+    rnd = random.Random(540)
+    old = bpy.data.objects.get("OilPanSignatures")
+    if old: bpy.data.objects.remove(old, do_unlink=True)
+    font = next((f for f in bpy.data.fonts if os.path.normcase(f.filepath) == os.path.normcase(SIG_FONT)), None) \
+        or bpy.data.fonts.load(SIG_FONT)
+    pan = bpy.data.objects["OilPan"]
+    zf = min((pan.matrix_world @ v.co).z for v in pan.data.vertices) - 0.0002
+    bm = bmesh.new()
+    pitch, x_first, y_start = 0.88, 3.02, 0.90            # inches: line pitch, first line's baseline x, line start y [est, photos 11/12]
+    for i, s in enumerate(SIGS):
+        cu = bpy.data.curves.new("sig_tmp", "FONT"); cu.body = s; cu.font = font
+        cu.size = (0.80 if i else 0.70) * (1 + rnd.uniform(-0.06, 0.06)) * IN
+        cu.shear = rnd.uniform(-0.06, 0.08); cu.resolution_u = 2; cu.fill_mode = "BOTH"
+        tob = bpy.data.objects.new("sig_tmp", cu); root.objects.link(tob)
+        bpy.context.view_layer.update()
+        ev = tob.evaluated_get(bpy.context.evaluated_depsgraph_get()); tm = ev.to_mesh()
+        # text x (reading) -> +Y, text y (up) -> +X, text normal -> -Z; a little hand-drawn tilt per line
+        a = math.radians(rnd.uniform(-2.5, 2.5))
+        base = Vector(((x_first - i * pitch + rnd.uniform(-0.05, 0.05)) * IN, (y_start + rnd.uniform(-0.15, 0.35)) * IN, zf))
+        R = Matrix(((0, 1, 0), (1, 0, 0), (0, 0, -1))) @ Matrix.Rotation(a, 3, "Z")
+        tmp = bmesh.new(); tmp.from_mesh(tm)
+        for v in tmp.verts: v.co = R @ v.co + base
+        m2 = bpy.data.meshes.new("sig_tmp_m"); tmp.to_mesh(m2); tmp.free(); bm.from_mesh(m2); bpy.data.meshes.remove(m2)
+        ev.to_mesh_clear(); bpy.data.objects.remove(tob, do_unlink=True); bpy.data.curves.remove(cu)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-7)
+    for f in bm.faces:
+        if f.normal.z > 0: f.normal_flip()
+    me = bpy.data.meshes.new("OilPanSignatures"); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new("OilPanSignatures", me); root.objects.link(o)
+    ymax = max(v.co.y for v in me.vertices) / IN; xs = [v.co.x / IN for v in me.vertices]
+    assert ymax < 11.0 and min(xs) > -3.85 and max(xs) < 3.85, ("signatures run off the sump floor", ymax, min(xs), max(xs))
+    return o
+
+
 def build():
     root = coll("BBC_Oiling"); clear(root)
     tmp = coll("Oiling_tmp", root, hide=True)
@@ -381,6 +425,7 @@ def build():
     pump, pump_hw, scr = build_pump(root, tmp)
     gasket = build_gasket(root, tmp)
     filt, fgk = build_filter(root)
+    sig = build_signatures(root)
     bpy.data.collections.remove(tmp)
     black = material("Pan_GlossBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.22)
     grey = material("Tray_Grey", (0.33, 0.34, 0.35, 1), 0.5, 0.55)
@@ -391,8 +436,9 @@ def build():
     blue = material("PanGasket_Blue", (0.04, 0.22, 0.75, 1), 0.0, 0.55)
     can = material("OilFilter_Can", (0.02, 0.02, 0.022, 1), 0.5, 0.35)
     rub = material("OilFilter_Gasket", (0.03, 0.03, 0.03, 1), 0.0, 0.8)
+    pen = material("Pan_PaintPen", (0.72, 0.72, 0.70, 1), 0.0, 0.55)
     for o, m in ((pan, black), (bolts, oxide), (plug, zinc), (tray, grey), (tray_hw, zinc), (pump, billet),
-                 (pump_hw, oxide), (scr, billet), (gasket, blue), (filt, can), (fgk, rub)):
+                 (pump_hw, oxide), (scr, billet), (gasket, blue), (filt, can), (fgk, rub), (sig, pen)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.polygons.foreach_set("material_index", [0] * len(o.data.polygons)); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
     for n in ("OilPumpCover", "OilPickupTube"):          # parts of the earlier three-piece pump
         if n in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
