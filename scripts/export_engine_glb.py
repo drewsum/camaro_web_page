@@ -101,11 +101,13 @@ def chain_links(chain):
 ENG_DIR = os.path.join(REPO_ROOT, "3d_model", "engine")
 
 # Parts the page groups under another tickbox than their collection's, to keep
-# the list short: the plugs and lifters go with the valvetrain, the flywheel
-# with the crank, and the main bearings and the oiling parts with the block.
+# the list short: the plugs and lifters go with the valvetrain; the main
+# bearings, the oiling parts and the timing cover with the block; and the
+# crank, flywheel, rods, pistons and the balancer make up the rotating assembly.
 PART_OVERRIDE = {"SparkPlugs": "BBC_Valvetrain"}
-PREFIX_OVERRIDE = {"MainBearing_": "BBC_Block"}
-COLL_OVERRIDE = {"BBC_Lifters": "BBC_Valvetrain", "BBC_Flywheel": "BBC_Crank", "BBC_Oiling": "BBC_Block"}
+PREFIX_OVERRIDE = {"MainBearing_": "BBC_Block", "Balancer": "BBC_Rotating"}
+COLL_OVERRIDE = {"BBC_Lifters": "BBC_Valvetrain", "BBC_Oiling": "BBC_Block", "BBC_FrontCover": "BBC_Block",
+                 "BBC_Crank": "BBC_Rotating", "BBC_Flywheel": "BBC_Rotating", "BBC_Rods_Pistons": "BBC_Rotating"}
 
 
 def part_of(o, top):
@@ -211,6 +213,12 @@ def flow_data():
     )
 
 
+# The surface textures are generated, not stored: make them (3d_model/engine/materials/finish_materials.py).
+_fm = os.path.join(ENG_DIR, "materials", "finish_materials.py")
+_FM = {"__file__": _fm, "__name__": "finish_lib"}
+exec(open(_fm).read(), _FM)
+_FM["run"](("materials", "label"))
+
 sc = bpy.context.scene
 # The timeline runs one four-stroke cycle, 0-720 crank degrees over frames
 # 1-97 (frame = 1 + crank_deg / 7.5). Frame 97 repeats frame 1, so the clip
@@ -256,6 +264,10 @@ bpy.ops.export_scene.gltf(
     export_anim_scene_split_object=False,
     export_force_sampling=True,
     export_anim_slide_to_zero=True,  # frame 1 at t = 0, so the clip ends where it starts
+    # Textures (3d_model/engine/materials/finish_materials.py) as WebP.
+    export_image_format="WEBP",
+    export_image_quality=88,
+    export_vertex_color="NONE",
     export_draco_mesh_compression_enable=True,
     export_draco_mesh_compression_level=6,
 )

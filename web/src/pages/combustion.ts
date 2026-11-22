@@ -45,16 +45,17 @@ export interface FlowData {
   cylinders: FlowCylinder[];
 }
 
-const CHARGE_N = 120; // in the cylinder
-const INTAKE_N = 48; // in the intake port
-const EXHAUST_N = 40; // in the exhaust port
-const FLAME_N = 56; // out of the port face
-const SPARK_N = 2; // core and halo
+const CHARGE_N = 170; // in the cylinder
+const INTAKE_N = 120; // in the intake port
+const EXHAUST_N = 90; // in the exhaust port
+const FLAME_N = 140; // out of the port face
+const SPARK_N = 9; // core, glow, halo and the bright streaks off the electrode
 const PER_CYL = CHARGE_N + INTAKE_N + EXHAUST_N + FLAME_N + SPARK_N;
 
 const FRESH = new Color(0.25, 0.55, 1.0); // air and fuel
 const SQUEEZED = new Color(0.62, 0.72, 1.0); // warmed by compression
 const SPARK = new Color(0.85, 0.92, 1.0);
+const SPARK_GLOW = new Color(0.45, 0.6, 1.0);
 const FLAME_FRONT = new Color(1.0, 0.95, 0.75);
 const BURNING = new Color(1.0, 0.55, 0.12);
 const BURNT = new Color(0.75, 0.16, 0.04);
@@ -91,6 +92,13 @@ class Path {
   /** Fraction of the way along at which point i sits. */
   fractionAt(i: number) {
     return this.cum[i] / this.length;
+  }
+  /** Unit direction of travel at fraction t. */
+  tangent(t: number, out: Vector3) {
+    const s = clamp01(t) * this.length;
+    let i = 1;
+    while (i < this.cum.length - 1 && this.cum[i] < s) i++;
+    return out.subVectors(this.pts[i], this.pts[i - 1]).normalize();
   }
   at(t: number, out: Vector3) {
     const s = clamp01(t) * this.length;
@@ -142,7 +150,12 @@ interface Cyl {
   sparkTime: number;
 }
 
-const SPARK_HOLD = 0.12;
+const SPARK_HOLD = 0.2;
+// Half-widths of the stream filling each port (the ports are about 2.4 x 1.8 in
+// intake and 2 in round exhaust), and of the flame at the port face.
+const INTAKE_HW: [number, number] = [0.026, 0.02];
+const EXHAUST_HW: [number, number] = [0.022, 0.02];
+const FLAME_R = 0.024;
 
 const VERT = /* glsl */ `
   attribute float alpha;
@@ -182,6 +195,19 @@ export class Combustion {
   private tmp = new Vector3();
   private tmp2 = new Vector3();
   private c = new Color();
+  private tan = new Vector3();
+  private n1 = new Vector3();
+  private n2 = new Vector3();
+
+  /** Offset p across a port at fraction t, by the jitter of particle j, filling a half-width hw ellipse. */
+  private across(path: Path, t: number, p: Vector3, axis: Vector3, j: number, jit: Float32Array, hw: [number, number], taper: number) {
+    path.tangent(t, this.tan);
+    this.n1.crossVectors(this.tan, axis);
+    if (this.n1.lengthSq() < 1e-6) this.n1.crossVectors(this.tan, this.tmp2.set(1, 0, 0));
+    this.n1.normalize();
+    this.n2.crossVectors(this.tan, this.n1);
+    return p.addScaledVector(this.n1, jit[j * 3] * hw[0] * taper).addScaledVector(this.n2, jit[j * 3 + 1] * hw[1] * taper);
+  }
 
   constructor(data: FlowData) {
     this.ev = data.events;
@@ -382,7 +408,7 @@ export class Combustion {
         c.copy(EXHAUST);
         a = 0.6;
       }
-      this.put(base + i, p, c, a, 0.0075);
+      this.put(base + i, p, c, a, 0.011);
     }
 
     // The intake port: air standing in it, flowing while the valve is open.
@@ -391,10 +417,11 @@ export class Combustion {
     for (let i = 0; i < INTAKE_N; i++) {
       const t = frac(cy.portT[i] + inFlow);
       cy.intake.at(t, p);
-      p.addScaledVector(e1, cy.jitter[i * 3] * 0.011).addScaledVector(e2, cy.jitter[i * 3 + 1] * 0.011);
-      let a = 0.35 + 0.65 * liftI;
+      // The full port section, narrowing to the valve throat at the end.
+      this.across(cy.intake, t, p, axis, i, cy.jitter, INTAKE_HW, 1 - 0.45 * smooth(cy.intakeValveT - 0.25, 1, t));
+      let a = 0.4 + 0.6 * liftI;
       if (t > cy.intakeValveT) a = liftI; // past the valve only while it's open
-      this.put(k + i, p, FRESH, a, 0.0065);
+      this.put(k + i, p, FRESH, a, 0.012);
     }
 
     // The exhaust port: hot gas while the exhaust valve is open.
@@ -405,29 +432,31 @@ export class Combustion {
       const j = INTAKE_N + i;
       const t = frac(cy.portT[j] + exFlow);
       cy.exhaust.at(t, p);
-      p.addScaledVector(e1, cy.jitter[j * 3] * 0.01).addScaledVector(e2, cy.jitter[j * 3 + 1] * 0.01);
+      this.across(cy.exhaust, t, p, axis, j, cy.jitter, EXHAUST_HW, 0.55 + 0.45 * smooth(0, cy.exhaustValveT + 0.25, t));
       c.copy(BURNING).lerp(BURNT, 1 - blowdown).lerp(EXHAUST, smooth(ev.eo + 120, ev.ec, theta));
-      this.put(k + i, p, c, exhausting ? Math.min(1, liftE * 1.6) : 0, 0.007);
+      this.put(k + i, p, c, exhausting ? Math.min(1, liftE * 1.6) : 0, 0.013);
     }
 
     // Flame out of the port face, strongest at blowdown.
     k += EXHAUST_N;
     const u = exhausting ? (theta - ev.eo) / (ev.ec - ev.eo) : 1;
     const flame = exhausting ? smooth(0, 0.04, u) * Math.pow(1 - u, 1.3) : 0;
-    const reach = 0.05 + 0.11 * flame;
+    const reach = 0.07 + 0.17 * flame;
     for (let i = 0; i < FLAME_N; i++) {
       const j = INTAKE_N + EXHAUST_N + i;
       const life = 0.14 + 0.08 * cy.portT[j];
       const age = frac(time / life + cy.portT[j]);
       const wob = Math.sin(time * 23 + j * 1.7) * 0.25;
       const along = age * reach;
+      // Leaves the whole port opening, then fans out.
+      const spread = FLAME_R + along * 0.32;
       p.copy(cy.face)
         .addScaledVector(cy.dir, along)
-        .addScaledVector(cy.f1, (cy.jitter[j * 3] + wob) * along * 0.28)
-        .addScaledVector(cy.f2, cy.jitter[j * 3 + 1] * along * 0.28);
+        .addScaledVector(cy.f1, (cy.jitter[j * 3] + wob * age) * spread)
+        .addScaledVector(cy.f2, cy.jitter[j * 3 + 1] * spread);
       c.copy(FLAME_FRONT).lerp(BURNING, smooth(0.05, 0.4, age)).lerp(BURNT, smooth(0.45, 1, age));
-      const a = flame > 0.01 ? flame * Math.pow(1 - age, 1.1) : 0;
-      this.put(k + i, p, c, a, 0.012 + 0.03 * age);
+      const a = flame > 0.01 ? Math.min(1, flame * 1.3) * Math.pow(1 - age, 1.1) : 0;
+      this.put(k + i, p, c, a, 0.022 + 0.05 * age);
     }
 
     // The spark: from 20 degrees before TDC, a few degrees long.
@@ -440,9 +469,23 @@ export class Combustion {
     if (moved < 360 && toSpark > 0 && toSpark <= moved) cy.sparkTime = time;
     cy.prevTheta = theta;
     const sparkOn = (phi >= ev.spark && phi < ev.spark + 7) || time - cy.sparkTime < SPARK_HOLD;
-    const flick = 0.75 + 0.25 * Math.sin(time * 90 + d.n);
-    this.put(k, cy.plug, SPARK, sparkOn ? flick : 0, 0.016);
-    this.tmp2.copy(cy.plug);
-    this.put(k + 1, this.tmp2, FRESH, sparkOn ? 0.6 * flick : 0, 0.05);
+    const flick = 0.8 + 0.2 * Math.sin(time * 90 + d.n);
+    const on = sparkOn ? 1 : 0;
+    // A white-hot core (drawn twice, so it saturates), a blue glow and a wide
+    // halo, and six short streaks flickering off the electrode.
+    this.put(k, cy.plug, SPARK, on * flick, 0.03);
+    this.put(k + 1, cy.plug, SPARK, on, 0.018);
+    this.put(k + 2, cy.plug, SPARK_GLOW, on * 0.8 * flick, 0.075);
+    this.put(k + 3, cy.plug, SPARK_GLOW, on * 0.35, 0.16);
+    for (let s = 0; s < 5; s++) {
+      const a = time * 37 + s * 1.2566 + d.n;
+      const r = 0.006 + 0.008 * frac(time * 13 + s * 0.37);
+      this.tmp2
+        .copy(cy.plug)
+        .addScaledVector(e1, Math.cos(a) * r)
+        .addScaledVector(e2, Math.sin(a) * r)
+        .addScaledVector(axis, -0.004 * frac(time * 7 + s * 0.21));
+      this.put(k + 4 + s, this.tmp2, SPARK, on * (0.5 + 0.5 * flick), 0.012);
+    }
   }
 }

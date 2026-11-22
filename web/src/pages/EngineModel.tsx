@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Center, ContactShadows, Environment, Lightformer, OrbitControls, useGLTF } from "@react-three/drei";
-import { AnimationMixer, Mesh, Vector2, type AnimationAction, type Object3D, type PerspectiveCamera } from "three";
+import { AnimationMixer, BackSide, Mesh, Vector2, type MeshStandardMaterial, type AnimationAction, type Object3D, type PerspectiveCamera } from "three";
 import { DRACO_URL, dropTransmission, fixTexturedBlending } from "../components/CamaroModel";
 import { Combustion, type FlowData } from "./combustion";
 
@@ -31,18 +31,17 @@ const sliderToRpm = (s: number) => snapRpm(RPM_MIN * Math.exp((s / SLIDER_STEPS)
 // Tickbox labels for the .blend's collections, in the order they're listed.
 // A collection missing here still gets a tickbox, named after the collection.
 // The export folds some collections together (scripts/export_engine_glb.py,
-// part_of): lifters and spark plugs into the valvetrain, the flywheel into
-// the crank, the main bearings and the oiling parts into the block.
+// part_of): lifters and spark plugs into the valvetrain; the main bearings,
+// oiling parts and timing cover into the block; and the crank, flywheel,
+// rods, pistons and balancer into the rotating assembly.
 // COMBUSTION isn't a part of the model: it's the four-stroke overlay.
 const COMBUSTION = "Combustion";
 const PART_LABELS: Record<string, string> = {
-  BBC_Block: "Block, mains, oil pan & pump",
-  BBC_Crank: "Crankshaft & flywheel",
-  BBC_Rods_Pistons: "Rods & pistons",
+  BBC_Block: "Block, timing cover, oil pan & pump",
+  BBC_Rotating: "Rotating assembly",
   BBC_Cam_Timing: "Cam & timing set",
   BBC_Heads: "Cylinder heads",
   BBC_Valvetrain: "Valvetrain, lifters & plugs",
-  BBC_FrontCover: "Timing cover & balancer",
   [COMBUSTION]: "Four-stroke airflow & flame",
 };
 
@@ -95,6 +94,10 @@ function EngineParts({ hidden, onParts, rpm }: ModelProps) {
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
       materials.forEach(fixTexturedBlending);
       materials.forEach(dropTransmission);
+      // The tiled surface textures are seen at every angle: filter them
+      // anisotropically, or the fine machining and casting detail shimmers.
+      for (const m of materials as MeshStandardMaterial[])
+        for (const t of [m.map, m.normalMap, m.roughnessMap, m.metalnessMap]) if (t) t.anisotropy = 8;
     });
     return groupParts(scene);
   }, [scene]);
@@ -169,8 +172,18 @@ function EngineScene(props: ModelProps) {
   return (
     <>
       <color attach="background" args={["#15171c"]} />
-      <Environment resolution={256}>
+      <Environment resolution={512}>
+        {/* A dim shop round the studio lights, so the bare metal (heads, ground
+            journals, machined faces) reflects a room rather than black. */}
+        <mesh scale={30}>
+          <sphereGeometry args={[1, 32, 16]} />
+          <meshBasicMaterial color="#3b3e45" side={BackSide} />
+        </mesh>
         <Lightformer form="rect" intensity={2} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[10, 4, 1]} />
+        {/* Strip lights overhead: the long highlights that run along machined faces. */}
+        <Lightformer form="rect" intensity={3} position={[-1.5, 4, -2]} rotation-x={Math.PI / 2} scale={[0.3, 6, 1]} />
+        <Lightformer form="rect" intensity={3} position={[1.5, 4, 2]} rotation-x={Math.PI / 2} scale={[0.3, 6, 1]} />
+        <Lightformer form="ring" intensity={1.5} position={[3, 3, -4]} scale={1.5} />
         <Lightformer form="rect" intensity={1.5} position={[-5, 2, 0]} rotation-y={Math.PI / 2} scale={[8, 2, 1]} />
         <Lightformer form="rect" intensity={1.5} position={[5, 2, 0]} rotation-y={-Math.PI / 2} scale={[8, 2, 1]} />
         <Lightformer form="rect" intensity={1} position={[0, 2, 6]} scale={[8, 2, 1]} />

@@ -1029,30 +1029,85 @@ def roller_mesh_rk():
     seg_cyl(V(0, -(W + 0.03), 0), V(0, W + 0.03, 0), T["trunnion_r"], 24, bm)                               # trunnion
     return bm
 
-def valve_mesh(kind):
-    """Valve in its own frame: origin at the seat centre on the face plane, z up the stem. Inches."""
-    T = K["vt"]; q = K["v" + kind]; R = q["d"] / 2; Z = V(0, 0, 1); bm = bmesh.new()
-    loft([ring_pts(-Z * 0.11, Z, R - 0.03, 48), ring_pts(-Z * 0.05, Z, R, 48), ring_pts(Z * 0.02, Z, R, 48),
-          ring_pts(Z * 0.12, Z, R - 0.12, 48), ring_pts(Z * 0.50, Z, 0.36, 48), ring_pts(Z * 0.95, Z, T["stem_r"], 48)], bm)
-    seg_cyl(Z * 0.90, Z * K["stem_l"][kind], T["stem_r"], 16, bm)
+def valve_profile(kind):
+    """(r, z) outline of a valve, face up to the stem tip: flat face, radiused into the margin, 45 deg seat,
+    30 deg back cut, then a tulip blended into the stem by a quarter ellipse; the stem has three bead-lock
+    grooves under the retainer and a chamfered tip [est shapes, COMP/Manley class]."""
+    T = K["vt"]; q = K["v" + kind]; R = q["d"] / 2; rs = T["stem_r"]; L = K["stem_l"][kind]
+    p = [(0.0, -0.11)]
+    p += [(R * f, -0.11) for f in (0.35, 0.7)] + [(R - 0.045, -0.11)]
+    p += [(R - 0.045 + 0.045 * math.sin(a), -0.11 + 0.045 * (1 - math.cos(a))) for a in (math.pi / 8 * i for i in range(1, 5))]   # face edge radius
+    p += [(R, 0.02), (R - 0.10, 0.12), (R - 0.145, 0.146)]                                       # margin, seat, back cut
+    r0, z0 = R - 0.145, 0.146; z1 = z0 + (r0 - rs) * (0.62 if kind == "I" else 0.70)
+    for i in range(1, 17):                                                                        # tulip
+        th = math.pi / 2 * i / 16
+        p.append((r0 - (r0 - rs) * math.sin(th), z1 - (z1 - z0) * math.cos(th)))
+    zg = L - 0.12
+    p += [(rs, zg - 0.30)]
+    for j in range(3):                                                                            # bead-lock grooves
+        zc = zg - 0.24 + 0.09 * j
+        p += [(rs, zc - 0.03), (rs - 0.018, zc - 0.012), (rs - 0.018, zc + 0.012), (rs, zc + 0.03)]
+    p += [(rs, L - 0.03), (rs - 0.03, L), (0.0, L)]
+    return p
+
+def revolve_z(prof, seg, bm):
+    """Solid of revolution about z of an open (r, z) profile (inches) whose ends lie on the axis."""
+    ang = [2 * math.pi * j / seg for j in range(seg)]
+    bot = bm.verts.new(V(0, 0, prof[0][1]) * IN); top = bm.verts.new(V(0, 0, prof[-1][1]) * IN)
+    rows = [[bm.verts.new(V(r * math.cos(a), r * math.sin(a), z) * IN) for a in ang] for r, z in prof[1:-1]]
+    for j in range(seg):
+        k = (j + 1) % seg
+        bm.faces.new((bot, rows[0][k], rows[0][j]))
+        for i in range(len(rows) - 1):
+            bm.faces.new((rows[i][j], rows[i][k], rows[i + 1][k], rows[i + 1][j]))
+        bm.faces.new((rows[-1][j], rows[-1][k], top))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return bm
 
+def valve_mesh(kind):
+    """Valve in its own frame: origin at the seat centre on the face plane, z up the stem. Inches."""
+    bm = bmesh.new(); revolve_z(valve_profile(kind), 64, bm); return bm
+
 def retainer_mesh(kind):
-    T = K["vt"]; Z = V(0, 0, 1); rt = Z * (K["spring_h"][kind] + T["installed"]); bm = bmesh.new()
-    loft([ring_pts(rt - Z * 0.22, Z, 0.36, 32), ring_pts(rt - Z * 0.02, Z, 0.50, 32), ring_pts(rt, Z, T["ret_r"], 32),
-          ring_pts(rt + Z * T["ret_t"], Z, T["ret_r"], 32), ring_pts(rt + Z * (T["ret_t"] + 0.08), Z, 0.42, 32)], bm)
+    """Retainer (COMP 749 class): stepped cup round the locks, flat top with a chamfered edge. Inches."""
+    T = K["vt"]; rt = K["spring_h"][kind] + T["installed"]; t = T["ret_t"]; R = T["ret_r"]
+    prof = [(0.0, rt - 0.22), (0.30, rt - 0.22), (0.36, rt - 0.20), (0.40, rt - 0.12), (0.47, rt - 0.03), (0.55, rt - 0.005),
+            (R - 0.02, rt), (R, rt + 0.02), (R, rt + t - 0.02), (R - 0.02, rt + t), (0.52, rt + t + 0.02),
+            (0.44, rt + t + 0.06), (0.40, rt + t + 0.08), (0.0, rt + t + 0.08)]
+    bm = bmesh.new(); revolve_z(prof, 48, bm); return bm
+
+def coil(bm, od, wire, turns, height, hand=1, dead=0.85, per=40, around=12):
+    """A closed-and-ground compression spring standing on z = 0: dead coils at each end wound at the wire
+    pitch and ground flat, the active coils between at an even pitch. hand=-1 winds it the other way."""
+    rw = wire / 2; Rm = od / 2 - rw; n = int(turns * per); Z = V(0, 0, 1)
+    act = turns - 2 * dead
+    zd = wire * 0.96                                             # dead coils: touching, the wire pitch
+    def zc(tt):                                                  # centre-line height after tt turns
+        if tt <= dead: return rw + zd * tt
+        if tt >= turns - dead: return height - rw - zd * (turns - tt)
+        return rw + zd * dead + (tt - dead) / act * (height - 2 * rw - 2 * zd * dead)
+    rings = []
+    for i in range(n + 1):
+        tt = turns * i / n; th = hand * 2 * math.pi * tt
+        rad = V(math.cos(th), math.sin(th), 0)
+        c = Z * zc(tt) + rad * Rm
+        ring = []
+        for j in range(around):
+            a = 2 * math.pi * j / around
+            q = c + (rad * math.cos(a) + Z * math.sin(a)) * rw
+            q.z = min(max(q.z, 0.0), height)                   # ground ends
+            ring.append(q)
+        rings.append(ring)
+    loft(rings, bm)
     return bm
 
 def spring_mesh():
-    """Wire helix on its seat (origin), z up, closed ends; the object is scaled in z as the valve opens."""
-    T = K["vt"]; rw = T["wire"] / 2; Rm = T["spring_od"] / 2 - rw; s = V(0, 0, 1); bm = bmesh.new()
-    n = int(T["turns"] * 16); rings = []
-    for i in range(n + 1):
-        f = i / n; th = 2 * math.pi * T["turns"] * f
-        z = rw + (T["installed"] - 2 * rw) * (3 * f * f - 2 * f ** 3) * 0.35 + (T["installed"] - 2 * rw) * f * 0.65
-        rad = V(math.cos(th), math.sin(th), 0); c = s * z + rad * Rm
-        rings.append([c + (rad * math.cos(a) + s * math.sin(a)) * rw for a in (2 * math.pi * j / 8 for j in range(8))])
-    loft(rings, bm); return bm
+    """Dual valve spring (COMP 26924 class, Drew's photos 265/267/332): the outer coil and an inner coil
+    wound the other way inside it, both on the seat (origin), z up; the object is scaled in z as the valve opens."""
+    T = K["vt"]; bm = bmesh.new()
+    coil(bm, T["spring_od"], T["wire"], 6.25, T["installed"], hand=1)
+    coil(bm, 1.085, 0.150, 7.75, T["installed"], hand=-1, per=36, around=10)
+    return bm
 
 def pushrod_mesh(L):
     T = K["vt"]; Z = V(0, 0, 1); bm = bmesh.new(); r = T["pushrod_r"]

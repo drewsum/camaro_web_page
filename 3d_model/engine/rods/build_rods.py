@@ -393,9 +393,32 @@ def ring_meshes(lib):
     root = R_PIST - K["oil_groove_d"]
     ring("OilRailLower", zs + 0.001, zs + 0.001 + rt, R_RING - K["rail_radial"], R_RING, K["gap_rail"], 0)       # Mahle sheet (photo 382): front, on the pin line
     ring("OilRailUpper", z1 - 0.001 - rt, z1 - 0.001, R_RING - K["rail_radial"], R_RING, K["gap_rail"], 180)     # [est]
-    ring("OilExpander", zs + 0.003 + rt, z1 - 0.003 - rt, root + 0.01, R_RING - 0.045, 0.06, 100)              # [est]
+    out["OilExpander"] = obj("PistonRing_OilExpander", oil_expander(zs + 0.003 + rt, z1 - 0.003 - rt, root + 0.01, R_RING - 0.045, 0.06, 100), lib)
     ring("SupportRail", z0 + 0.001, zs - 0.001, root + 0.01, R_PIST - 0.004, 0.05, 90)                          # [est] gap off the pin bores
     return out
+
+def oil_expander(z0, z1, ri, ro, gap, at_deg, waves=64, per=10):
+    """The corrugated expander-spacer between the oil rails: a thin strip pressed into a square-ish wave
+    that steps up to the upper rail and down to the lower one, round the groove (photo 382) [est pitch].
+    Its outer humps bear on the rails, so the strip also bows out a little at each step."""
+    bm = bmesh.new(); H = z1 - z0; h = 0.42 * H; A = (H - h) / 2; zm = (z0 + z1) / 2; t = 0.012
+    ga = gap / ro; a0 = math.radians(90 - at_deg) + ga / 2; span = 2 * math.pi - ga
+    n = waves * per; rings = []
+    for i in range(n + 1):
+        a = a0 + span * i / n; ph = 2 * math.pi * waves * i / n
+        w = math.tanh(2.2 * math.sin(ph)) / math.tanh(2.2)          # square-ish: flat tops joined by steep risers
+        zc = zm + A * w; bow = 0.010 * abs(math.cos(ph)) ** 3       # risers stand proud (the humps)
+        c, s_ = math.cos(a), math.sin(a)
+        prof = [(ri, -h / 2), (ro + bow, -h / 2), (ro + bow, h / 2), (ri, h / 2)]
+        if i in (0, n): prof = [(ri, -h / 2 + t), (ro, -h / 2 + t), (ro, h / 2 - t), (ri, h / 2 - t)]
+        rings.append([bm.verts.new(Vector((r * c, r * s_, zc + dz)) * IN) for r, dz in prof])
+    for i in range(n):
+        for j in range(4):
+            k = (j + 1) % 4
+            bm.faces.new((rings[i][j], rings[i][k], rings[i + 1][k], rings[i + 1][j]))
+    bm.faces.new(rings[0]); bm.faces.new(rings[-1][::-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
 
 def pin_meshes(lib):
     ro, ri, hl = K["pin_d"] / 2, K["pin_d"] / 2 - K["pin_wall"], K["pin_len"] / 2
