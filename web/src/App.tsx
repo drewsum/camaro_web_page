@@ -129,6 +129,10 @@ export default function App() {
             key={p.id}
             href={`#${p.id}`}
             aria-current={page?.id === p.id ? "page" : undefined}
+            // Start a page's big download as soon as the pointer or focus
+            // heads for its link, a few hundred ms before the click lands.
+            onPointerEnter={p.prefetch}
+            onFocus={p.prefetch}
             onClick={(e) => {
               e.preventDefault();
               if (page?.id === p.id) closePage();

@@ -10,6 +10,12 @@ import { EngineStandSound } from "../audio/EngineStandSound";
 // which tags every object with its top-level collection (userData.engine_part).
 export const ENGINE_URL = "/models/engine.glb";
 
+// Not preloaded with the app (it's 8 MB and most visits never open the page);
+// the nav link calls this on hover/focus instead. Repeat calls are cached.
+export function prefetchEngineModel() {
+  useGLTF.preload(ENGINE_URL, DRACO_URL);
+}
+
 // The GLB's one animation is the .blend's timeline: a full four-stroke cycle,
 // 720 crank degrees in 4 s, i.e. the crank turning at 30 rpm.
 const CLIP_RPM = 30;

@@ -12,7 +12,9 @@ After editing the .blend, re-export (uses Blender 5.2; override the path with `$
 ```
 
 The same script exports the engine for the Engine Model page: `3d_model/engine/bbc_block_work.blend`
--> `web/public/models/engine.glb` (`scripts/export_engine_glb.py`). Each top-level `BBC_*`
+-> `web/public/models/engine.glb` (`scripts/export_engine_glb.py`). The car GLBs are then
+passed through `web/scripts/optimize-glb.mjs`, which re-encodes their PNG textures as WebP
+(lossy only for colour maps; normal and data maps stay lossless). Each top-level `BBC_*`
 collection in the .blend becomes a tickbox on the page; give new ones a label in
 `PART_LABELS` in `web/src/pages/EngineModel.tsx`.
 The .blend's timeline (one four-stroke cycle driven by the crank's `crank_deg`) is baked
