@@ -150,6 +150,20 @@ def pits(rng, n, count, radius):
     a = blur(a, radius)
     return a / (a.max() + 1e-9)
 
+def highpass(a, lo):
+    """Remove features coarser than lo cycles per tile (soft cut), then rescale to std 1."""
+    fx, fy = _freqs(a.shape[0])
+    r = np.hypot(fx, fy)
+    b = np.real(np.fft.ifft2(np.fft.fft2(a) * (1 - np.exp(-(r / max(lo, 1e-3)) ** 2))))
+    return b / (b.std() + 1e-9)
+
+# Shortest blotch any field may keep, in metres. Coarser variation in colour, sheen or height, repeated
+# every few centimetres, is what read as a sponge (Drew): real cast, machined and painted surfaces vary
+# at grain scale or along tool marks, not in centimetre blobs. Roughness/colour: 2.5 mm, at
+# reduced contrast, so the grain that's left reads as surface, not speckle; height: 6 mm.
+HP_SHEEN = 0.0025
+HP_HEIGHT = 0.006
+
 def norm01(a):
     return (a - a.min()) / (a.max() - a.min() + 1e-9)
 
@@ -247,6 +261,10 @@ def make_textures(name, s):
     rng = np.random.default_rng(s["seed"] or sum(ord(ch) * (i + 1) for i, ch in enumerate(name)))   # stable across runs
     n = s["n"]
     h, rv, av = finish(s["f"], n, rng)
+    t = s["tile"]
+    rv = 0.6 * highpass(rv, t / HP_SHEEN)          # cycles per tile for a 2.5 mm wavelength
+    av = 0.6 * highpass(av, t / HP_SHEEN)
+    h = highpass(h, t / HP_HEIGHT)
     c = np.array(s["c"])
     alb = c[None, None, :] * (1 + s["av"] * np.clip(av, -2.5, 2.5)[..., None])
     base = lin_to_srgb(alb)
