@@ -37,7 +37,7 @@ _src = open(CAM_PY).read(); _src = _src[:_src.index('if __name__ == "__main__"')
 CAMNS = {"__file__": CAM_PY, "__name__": "cam_lib"}
 exec(_src, CAMNS)
 IN = CAMNS["IN"]
-coll, clear, obj, boolean, material, loft, ysec, ycyl = (CAMNS[k] for k in ("coll", "clear", "obj", "boolean", "material", "loft", "ysec", "ycyl"))
+coll, clear, obj, boolean, material, loft, ysec, ycyl, disc_pts = (CAMNS[k] for k in ("coll", "clear", "obj", "boolean", "material", "loft", "ysec", "ycyl", "disc_pts"))
 FF = json.load(open(os.path.join(HERE, "..", "block", "refs", "front_face.json")))
 HOLES = {h["name"]: h for h in FF["holes"]}
 CAMZ = CAMNS["CAMZ"]
@@ -54,6 +54,21 @@ K = dict(
     bolt_head=dict(af=0.4375, flange_r=0.30, h=0.20), bolt_r=0.125, bolt_hole=0.140,
     dowel_hole=0.135, screw=dict(n=8, head_r=0.21, h=0.14, r=0.095),
     centre=(0.0, 3.0), N=192,
+)
+
+# Harmonic balancer: 8" elastomer damper on the 1.600" nose (../crank), keyed,
+# held by a 3/4-16 bolt and washer. Generic SFI-style shape; sizes [est] except
+# the 8.00" OD (Drew) and the bore and hub, which follow the crank nose and seal.
+BAL = dict(
+    bore=1.600, y_back=24.32,            # against the crank sprocket's front face (24.30)
+    seal_r=1.122,                        # hub through the 2.25" seal (.003" clear of the rubber)
+    hub_r=1.60, hub_from=25.05, y_front=27.15,          # hub nose ahead of the lid; front face just past the crank nose (27.10)
+    web=(25.95, 26.45), rim=(2.95, 3.20),               # web plate and inner rim
+    elast=(3.20, 3.28), ring=(3.28, 4.00), ring_y=(25.10, 27.15), chamfer=0.06,   # rubber band, inertia ring (8.00" OD, 2.05" wide)
+    marks=dict(every=2, deep=0.02, w=0.016, l=(0.18, 0.32, 0.50)),   # degree marks on the OD from the front edge: 2 deg, every 10, TDC
+    pulley_holes=dict(n=3, bc=2.50, d=0.3125, depth=0.60),            # 3/8-24 tapped, for a crank pulley
+    key=dict(w=0.1875, top=0.96, y=(24.36, 26.95)),                  # its own key in the crank keyway
+    washer=dict(r=1.10, t=0.25), bolt=dict(af=1.125, h=0.47, r=0.36, into=1.15),
 )
 
 
@@ -174,6 +189,95 @@ def build():
                                        outline_half_w=round(max(p[0] for p in O), 3))
 
 
+def build_balancer(root):
+    """Balancer parts, parented to the crank so they turn with it; in the cover's
+    collection so hiding the cover hides them too."""
+    b = BAL; tmp = coll("Balancer_tmp", root, hide=True)
+    CAMNS["set_crank"](0.0); bpy.context.view_layer.update()
+    r0 = b["bore"] / 2; yf = b["y_front"]
+    # Hub: through the seal, then the nose, the web and the inner rim.
+    bm = bmesh.new()
+    loft([ysec(disc_pts(b["seal_r"], 96), b["y_back"]), ysec(disc_pts(b["seal_r"], 96), b["hub_from"]),
+          ysec(disc_pts(b["hub_r"], 96), b["hub_from"] + 0.04), ysec(disc_pts(b["hub_r"], 96), yf)], bm)
+    hub = obj("BalancerHub", bm, root)
+    # Rim and web as a disc, hollowed in front of and behind the web, then the nose put back.
+    obj("disc", ycyl(b["rim"][1], b["ring_y"][0] + 0.05, yf - 0.05, 128), tmp)
+    boolean(hub, "UNION", tmp); clear(tmp)
+    obj("in", ycyl(b["rim"][0], b["ring_y"][0], b["web"][0], 128), tmp)
+    obj("in", ycyl(b["rim"][0], b["web"][1], yf + 0.1, 128), tmp)
+    boolean(hub, "DIFFERENCE", tmp); clear(tmp)
+    obj("nose", ycyl(b["hub_r"], b["hub_from"] + 0.03, yf, 96), tmp)
+    boolean(hub, "UNION", tmp); clear(tmp)
+    obj("bore", ycyl(r0, b["y_back"] - 0.1, yf + 0.1, 96), tmp)
+    kw = b["key"]["w"] / 2
+    obj("kslot", loft([ysec([(-kw, 0.5), (kw, 0.5), (kw, b["key"]["top"] + 0.01), (-kw, b["key"]["top"] + 0.01)], y) for y in (b["y_back"] - 0.1, yf + 0.1)]), tmp)
+    ph = b["pulley_holes"]
+    for k in range(ph["n"]):
+        a = 2 * math.pi * (k + 0.5) / ph["n"]
+        obj("ph", ycyl(ph["d"] / 2, yf - ph["depth"], yf + 0.1, 20, ph["bc"] / 2 * math.sin(a), ph["bc"] / 2 * math.cos(a)), tmp)
+    boolean(hub, "DIFFERENCE", tmp); clear(tmp)
+    # Rubber band and the inertia ring, its OD edges chamfered and marked.
+    y0r, y1r = b["ring_y"]; e0, e1 = b["elast"]
+    rub = obj("BalancerElastomer", loft([ysec(disc_pts(e1, 128), y0r + 0.04), ysec(disc_pts(e1, 128), y1r - 0.04)]), root)
+    obj("ri", ycyl(e0 + 0.001, y0r, y1r, 128), tmp); boolean(rub, "DIFFERENCE", tmp); clear(tmp)
+    ri, ro = b["ring"]; c = b["chamfer"]
+    ring = obj("BalancerRing", loft([ysec(disc_pts(ro - c, 180), y0r), ysec(disc_pts(ro, 180), y0r + c),
+                                     ysec(disc_pts(ro, 180), y1r - c), ysec(disc_pts(ro - c, 180), y1r)]), root)
+    obj("ri", ycyl(ri + 0.001, y0r - 0.1, y1r + 0.1, 128), tmp)
+    mk = b["marks"]; bm = bmesh.new()
+    for deg in range(0, 360, mk["every"]):
+        L = mk["l"][2] if deg == 0 else mk["l"][1] if deg % 10 == 0 else mk["l"][0]
+        a = math.radians(deg); rd = Vector((math.sin(a), 0, math.cos(a))); tg = Vector((math.cos(a), 0, -math.sin(a)))
+        pts = [rd * r + tg * t for r in (ro - mk["deep"], ro + 0.1) for t in (-mk["w"] / 2, mk["w"] / 2)]
+        loft([[p + Vector((0, y, 0)) for p in (pts[0], pts[1], pts[3], pts[2])] for y in (y1r - c - L, y1r + 0.1)], bm)
+    obj("marks", bm, tmp)
+    boolean(ring, "DIFFERENCE", tmp); clear(tmp)
+    # Key, washer and bolt.
+    key = obj("BalancerKey", loft([ysec([(-kw + 0.002, 0.715), (kw - 0.002, 0.715), (kw - 0.002, b["key"]["top"]), (-kw + 0.002, b["key"]["top"])], y)
+                                   for y in b["key"]["y"]]), root)
+    w, bt = b["washer"], b["bolt"]; bm = bmesh.new()
+    ycyl(w["r"], yf + 0.001, yf + w["t"], 64, bm=bm)
+    hex_y(bt["af"], yf + w["t"] + 0.001, yf + w["t"] + bt["h"], 0, 0, bm)
+    ycyl(bt["r"], yf - bt["into"], yf + 0.002, 32, bm=bm)
+    bolt = obj("BalancerBolt", bm, root)
+    bpy.data.collections.remove(tmp)
+    steel = material("Balancer_SatinSteel", (0.55, 0.55, 0.57, 1), 1.0, 0.35)
+    rubber = material("Balancer_Elastomer", (0.025, 0.025, 0.025, 1), 0.0, 0.6)
+    oxide = material("FrontCover_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
+    parts = [hub, rub, ring, key, bolt]
+    for o, m in ((hub, steel), (rub, rubber), (ring, steel), (key, steel), (bolt, oxide)):
+        o.data.materials.clear(); o.data.materials.append(m); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
+        CAMNS["parent_keep"](o, bpy.data.objects["Crankshaft"])
+    return parts
+
+
+def balancer_checks(bal, step=15.0):
+    """Turn the crank: the balancer against the cover, block, pan and cam hardware."""
+    mesh_world, set_crank = CAMNS["mesh_world"], CAMNS["set_crank"]
+    def tree(o):
+        v, f = mesh_world(o); return BVHTree.FromPolygons([Vector(x) for x in v], f)
+    fixed = [n for n in ("Block", "OilPan", "OilPanBolts", "OilPanGasket", "TimingCoverFrame", "TimingCoverLid", "TimingCoverSeal",
+                         "TimingCoverBolts", "CamBolts", "CamSprocket", "TimingChain") if n in bpy.data.objects]
+    FT = {n: tree(bpy.data.objects[n]) for n in fixed if n not in ("CamBolts", "CamSprocket", "TimingChain")}
+    hits = set(); gap = 9.0
+    for d in np.arange(0, 360, step):
+        set_crank(float(d))
+        for n in ("CamBolts", "CamSprocket", "TimingChain"):
+            if n in fixed: FT[n] = tree(bpy.data.objects[n])
+        for o in bal:
+            t = tree(o)
+            for n, ft in FT.items():
+                if t.overlap(ft): hits.add((o.name, n))
+    set_crank(0.0)
+    lid_v, _ = mesh_world(bpy.data.objects["TimingCoverLid"]); ring_v, _ = mesh_world(bal[2])
+    gap = float(ring_v[:, 1].min() - lid_v[:, 1].max())
+    inner = set()
+    for i, a in enumerate(bal):
+        for b in bal[i + 1:] + [bpy.data.objects["Crankshaft"], bpy.data.objects["CrankSprocket"]]:
+            if tree(a).overlap(tree(b)): inner.add((a.name, b.name))
+    return dict(clash=sorted(hits), touching=sorted(inner), ring_to_lid_in=round(gap, 3))
+
+
 def checks(parts, step=10.0):
     mesh_world, set_crank = CAMNS["mesh_world"], CAMNS["set_crank"]
     def tree(o):
@@ -213,7 +317,10 @@ def manifold(o):
 if __name__ == "__main__" or "bpy" in globals():
     parts, geo = build()
     res = checks(parts)
-    info = dict(params=K, bolts=BOLTS, dowels=DOWELS, geometry=geo, manifold={o.name: manifold(o) for o in parts}, checks=res,
-                tris={o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in parts})
+    bal = build_balancer(bpy.data.collections["BBC_FrontCover"])
+    bres = balancer_checks(bal)
+    info = dict(params=K, balancer=BAL, bolts=BOLTS, dowels=DOWELS, geometry=geo, manifold={o.name: manifold(o) for o in parts + bal},
+                checks=res, balancer_checks=bres,
+                tris={o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in parts + bal})
     with open(os.path.join(HERE, "front_cover_info.json"), "w") as f: json.dump(info, f, indent=1, default=float)
-    print(json.dumps({k: info[k] for k in ("geometry", "manifold", "checks")}, default=float))
+    print(json.dumps({k: info[k] for k in ("geometry", "manifold", "checks", "balancer_checks", "tris")}, default=float))

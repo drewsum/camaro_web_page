@@ -45,6 +45,69 @@
   ],
   "N": 192
  },
+ "balancer": {
+  "bore": 1.6,
+  "y_back": 24.32,
+  "seal_r": 1.122,
+  "hub_r": 1.6,
+  "hub_from": 25.05,
+  "y_front": 27.15,
+  "web": [
+   25.95,
+   26.45
+  ],
+  "rim": [
+   2.95,
+   3.2
+  ],
+  "elast": [
+   3.2,
+   3.28
+  ],
+  "ring": [
+   3.28,
+   4.0
+  ],
+  "ring_y": [
+   25.1,
+   27.15
+  ],
+  "chamfer": 0.06,
+  "marks": {
+   "every": 2,
+   "deep": 0.02,
+   "w": 0.016,
+   "l": [
+    0.18,
+    0.32,
+    0.5
+   ]
+  },
+  "pulley_holes": {
+   "n": 3,
+   "bc": 2.5,
+   "d": 0.3125,
+   "depth": 0.6
+  },
+  "key": {
+   "w": 0.1875,
+   "top": 0.96,
+   "y": [
+    24.36,
+    26.95
+   ]
+  },
+  "washer": {
+   "r": 1.1,
+   "t": 0.25
+  },
+  "bolt": {
+   "af": 1.125,
+   "h": 0.47,
+   "r": 0.36,
+   "into": 1.15
+  }
+ },
  "bolts": [
   [
    -2.75,
@@ -126,7 +189,12 @@
   "TimingCoverFrame": 0,
   "TimingCoverLid": 0,
   "TimingCoverSeal": 0,
-  "TimingCoverBolts": 0
+  "TimingCoverBolts": 0,
+  "BalancerHub": 0,
+  "BalancerElastomer": 0,
+  "BalancerRing": 0,
+  "BalancerKey": 0,
+  "BalancerBolt": 0
  },
  "checks": {
   "clash": [],
@@ -150,10 +218,29 @@
   ],
   "lid_to_timing_set_in": 0.325
  },
+ "balancer_checks": {
+  "clash": [],
+  "touching": [
+   [
+    "BalancerHub",
+    "Crankshaft"
+   ],
+   [
+    "BalancerKey",
+    "Crankshaft"
+   ]
+  ],
+  "ring_to_lid_in": 0.2
+ },
  "tris": {
   "TimingCoverFrame": 2720,
   "TimingCoverLid": 4064,
   "TimingCoverSeal": 512,
-  "TimingCoverBolts": 1992
+  "TimingCoverBolts": 1992,
+  "BalancerHub": 3694,
+  "BalancerElastomer": 1024,
+  "BalancerRing": 5192,
+  "BalancerKey": 12,
+  "BalancerBolt": 396
  }
 }
