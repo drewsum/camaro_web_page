@@ -123,11 +123,11 @@ K = dict(
                                       # out to .35 past the pocket wall at .70 [est]; the ports run close beside the
                                       # seats (port roof within .1 of the seat plane 1.2" off the stem), so the floor
                                       # can't be cast down round the bosses
-    stud_pillar_r=0.40,               # the stud boss carried up through intake port 2 (BBC "hidden" head-bolt boss)
 )
 H0 = K["gasket_t"]
 # Head studs: 16 per head, as the block (refs/deck_block.json "studs": Drew's deck drawing and the 16-bolt
-# torque-sequence figure). The two at cylinders 3 and 7 on the valley side rise through intake ports 2 and 4 on bosses.
+# torque-sequence figure). The two at the valley-side ends pass through the hollow head dowels [Drew]; the gasket's
+# two holes over the valley (13 and 27) line up with nothing.
 STUDS = BDECK["studs"]
 assert len(STUDS) == 16, len(STUDS)
 LOW = [h for h in STUDS if h["v"] < -2.5]                 # below the exhaust ports, on the lip
@@ -365,11 +365,6 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0):
     bpy.data.objects.remove(th, do_unlink=True)
     bx = obj("bx", zprism(rrect(-9, 24, -9, 12, 0.1, 1), -3.0, 9.0), tmp)      # resolves the sweep's self-overlap on tight bends
     boolean(o, "INTERSECT", bx); bpy.data.objects.remove(bx, do_unlink=True)
-    if kind == "I":                                    # a stud boss standing up through the port
-        for h in STUDS:
-            if h["v"] > 3.2 and abs(h["u"] - INT_U[k]) < 1.2:
-                pl = obj("pil", zprism(circ(h["u"], h["v"], K["stud_pillar_r"], 32), -0.5, 7.0), tmp)
-                boolean(o, "DIFFERENCE", pl); bpy.data.objects.remove(pl, do_unlink=True)
     if kind == "E":                                    # the front exhaust-side stud stands in the wall of port 1's bowl
         for h in STUDS:
             if -2.5 < h["v"] < 0 and abs(h["u"] - cv.x) < 1.4:
@@ -533,7 +528,7 @@ def build_left(root, tmp, info):
                 o, _, _ = port_solid(k, kind, sc, tmp); vs.append(vol(o)); clear(tmp)
             return float(np.mean(vs)) / 0.0610237
         return f
-    def pk(k):                                      # one intake port: port 2 carries the stud boss, so each is sized alone
+    def pk(k):                                      # each intake port sized alone (the paired runners bend differently)
         def f(sc):
             o, _, _ = port_solid(k, "I", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
         return f
@@ -707,11 +702,16 @@ def build_studs(name, root, low, high):
     return obj(name, bm, root)
 
 
-def build_dowels(name, root):
+def build_dowels(name, root, tmp):
+    """Hollow head dowels: the valley-end head studs pass through them [Drew]."""
     bm = bmesh.new()
     for dw in BDECK["dowels"]:
         zprism(circ(dw["u"], dw["v"], BLK["dowel_d"] / 2 - 0.004, 32), -BLK["dowel_depth"] + 0.01, H0 + 0.28, bm)
-    return obj(name, bm, root)
+    o = obj(name, bm, root)
+    for dw in BDECK["dowels"]:
+        obj("dwi", zprism(circ(dw["u"], dw["v"], K["vt"]["stud_r"] + 0.012, 24), -BLK["dowel_depth"] - 0.1, H0 + 0.4), tmp)
+    boolean(o, "DIFFERENCE", tmp); clear(tmp)
+    return o
 
 
 # ---------- valvetrain ----------
@@ -1025,7 +1025,7 @@ def build():
     assign_head_materials(head, cast, mach)
     gL = build_gasket("HeadGasket_L", root, tmp)
     sL = build_studs("HeadStuds_L", root, low, high)
-    dL = build_dowels("HeadDowels_L", root)
+    dL = build_dowels("HeadDowels_L", root, tmp)
     vtL, vtR = build_valvetrain(root, tmp, lines, info)
     bpy.data.collections.remove(tmp)
     mls = material("HeadGasket_MLS", (0.05, 0.05, 0.055, 1), 0.4, 0.45)

@@ -26,7 +26,7 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 
 | Item | Model | Source |
 |---|---|---|
-| Head studs | 16 per head in three rows. Bottom row (4): below the exhaust ports, nuts on the .65" deck ledge outboard of the exhaust flanges. Middle row (5): above the exhaust ports on a shelf 3.40" up, **outside** the valve cover, with a cast fin above each. Top row (7): inside the rocker box; the two at cylinders 3 and 7 rise through intake ports 2 and 4 on bosses | [meas] deck drawing, torque-sequence figure, photos 265, 337, 204 |
+| Head studs | 16 per head in three rows. Bottom row (4): below the exhaust ports, nuts on the .65" deck ledge outboard of the exhaust flanges. Middle row (5): above the exhaust ports on a shelf 3.40" up, **outside** the valve cover, with a cast fin above each. Top row (7): inside the rocker box, between the intake runners; the two at the valley-side ends pass through the hollow head dowels [Drew]. No stud runs through a port | [meas] deck drawing, torque-sequence figure, photos 265, 337, 204 |
 | Valve-cover rail | a thin (.30") racetrack with rounded ends, 4.00" above the block deck; the exhaust side runs .6" inboard of the middle-row studs, the intake side sits over the intake face. The machined intake face stops 3.55" up (about .5" above the ports); above it the casting steps back .10" (45-degree edge) to an as-cast band that runs up to the rail [Drew's close-up photo]. Seven 1/4-20 cover bolts in small tabs: four on the exhaust side, three on the intake side | [meas] photos 267, 336, 337; height [est] from photo 336 |
 | Valves | intake .95" behind the bore centre and .55" towards the valley; exhaust 1.13" ahead and .15" towards the exhaust side. Both stems lean towards the valley (24 and 15 deg) and 4 deg apart along the bank | [meas] photo 334 (deck face scaled from the stud holes); angles [spec] |
 | Spring pockets | 1.75" machined pockets just below the box floor (3.50"), seats 2.82" (intake) and 2.86" (exhaust) up the stem; exhaust row against the exhaust-side rail | [meas] photos 267, 336, 337 layout; heights [est] |
@@ -63,7 +63,6 @@ Measured from the album copies in `../album/heads` (1913 x 1440) and Drew's deck
 - **Valve cover bolts** sit .30" in from the rail's outer edge [Drew].
 - **Open valves vs chamber wall:** not yet confirmed clear at full lift; closed valves touch only their seats.
 - **Front middle-row head stud** (block data, -2.03, -1.25) reaches ~.08" into bore 1 and touches pistons 1 and 8; the other middle-row studs sit at +/-2.39. Pre-existing, in `block/refs/deck_block.json`.
-- **Valley-side head studs at cylinders 3 and 7** (gasket holes 13 and 27, `block/refs/deck_block.json`) stand in the path of intake runners 2 and 4, which the bosses cut through. The real heads have no bolt in any runner [Drew]. No runner route clears both the stud boss and the intake pushrod (about .6" between them, against a ~1.5" runner), so the stud position, the port-2/4 face position or the intake pushrod position is off. Open.
 - **Chamber outline** is a convex hull round the seats and plug. No water jacket.
 
 ## Photos used (album numbers)

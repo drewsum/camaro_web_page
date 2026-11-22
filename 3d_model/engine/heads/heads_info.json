@@ -199,8 +199,7 @@
    0.12,
    0.4,
    0.14
-  ],
-  "stud_pillar_r": 0.4
+  ]
  },
  "studs": [
   [
@@ -256,16 +255,16 @@
    2.7
   ],
   [
-   4.926,
-   3.415
+   -2.24,
+   1.85
   ],
   [
    9.8,
    2.7
   ],
   [
-   14.579,
-   3.373
+   16.99,
+   1.85
   ]
  ],
  "rocker_pivots": {
@@ -315,9 +314,9 @@
  "port_scale": {
   "I": [
    0.9356,
-   1.0265,
+   0.9506,
    0.9349,
-   1.0265
+   0.95
   ],
   "E": [
    1.0906,
@@ -328,7 +327,7 @@
  },
  "intake_cc": [
   344.9,
-  344.9,
+  345.0,
   345.0,
   345.0
  ],
@@ -678,14 +677,14 @@
   "HeadDowels_R": 0
  },
  "tris": {
-  "CylinderHead_L": 53292,
+  "CylinderHead_L": 53084,
   "HeadGasket_L": 5356,
   "HeadStuds_L": 4672,
-  "HeadDowels_L": 248,
-  "CylinderHead_R": 53292,
+  "HeadDowels_L": 448,
+  "CylinderHead_R": 53084,
   "HeadGasket_R": 5356,
   "HeadStuds_R": 4672,
-  "HeadDowels_R": 248
+  "HeadDowels_R": 448
  },
  "pushrod_clash": [],
  "checks": {

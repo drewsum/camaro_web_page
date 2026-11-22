@@ -43,18 +43,6 @@
    3.27
   ],
   [
-   4.58,
-   3.62
-  ],
-  [
-   4.93,
-   3.8
-  ],
-  [
-   5.28,
-   3.62
-  ],
-  [
    5.4,
    3.35
   ],
@@ -101,18 +89,6 @@
   [
    14.15,
    3.4
-  ],
-  [
-   14.25,
-   3.58
-  ],
-  [
-   14.58,
-   3.76
-  ],
-  [
-   14.91,
-   3.58
   ],
   [
    15.0,
@@ -631,7 +607,7 @@
   31
  ],
  "drop_src": "13/27/30: stud holes, cut from 'studs'; 3/29: the dowel holes; 8/15/22: inside the exhaust-side triangle ports (no stud there in the drawing); 0/31: replaced by the traced ports; 29 also replaces the traced rear round port; 2: the gasket's small hole where the drawing has the front exhaust-side stud",
- "valley_edge_src": "bosses round the studs at gasket holes 13 and 27 (under intake ports 2 and 4), standing past the valley edge [est]",
+ "valley_edge_src": "traced from the photo; no bosses at the gasket's floating holes 13 and 27 (nothing under them in the valley) [Drew]",
  "studs": [
   {
    "u": -0.35,
@@ -699,10 +675,10 @@
    "row": "valley, at bores"
   },
   {
-   "u": 4.926,
-   "v": 3.415,
-   "row": "valley, at bores",
-   "src": "gasket hole 13: .7 above the drawing line, as in the torque-sequence figure"
+   "u": -2.24,
+   "v": 1.85,
+   "row": "valley, front end (through the front dowel)",
+   "src": "Drew: the stud threads into the dowel hole; the dowel is hollow"
   },
   {
    "u": 9.8,
@@ -710,12 +686,12 @@
    "row": "valley, at bores"
   },
   {
-   "u": 14.579,
-   "v": 3.373,
-   "row": "valley, at bores",
-   "src": "gasket hole 27: .7 above the drawing line, as in the torque-sequence figure"
+   "u": 16.99,
+   "v": 1.85,
+   "row": "valley, rear end (through the rear dowel)",
+   "src": "Drew: the stud threads into the dowel hole; the dowel is hollow"
   }
  ],
- "studs_src": "16 per deck, from Drew's deck drawing (dimensioned from the front dowel; 7/16 holes) and the 16-bolt torque-sequence figure: 4 along the exhaust edge, 5 on the exhaust side (ends and between the bores), 3 and 4 on the valley side. The two valley-side holes at cylinders 3 and 7 are taken from the gasket (.7 higher, through the intake ports), as the figure shows",
+ "studs_src": "16 per deck, from Drew's deck drawing (dimensioned from the front dowel; 7/16 holes) and the 16-bolt torque-sequence figure: 4 along the exhaust edge, 5 on the exhaust side (ends and between the bores), 3 between the bores and 2 at the bores on the valley side, and 2 through the hollow head dowels at the valley-side ends [Drew]. The gasket's two holes at v ~3.4 (13 and 27, in its triangular ears over the valley) line up with nothing on the block or the head [Drew, photo of the even bank with every stud in]",
  "dowels_src": "Drew's deck drawing: .641/.634 dowel holes at the two valley-side ends (the gasket's holes 3 and 29)"
 }

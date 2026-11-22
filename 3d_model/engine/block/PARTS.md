@@ -50,9 +50,9 @@ The deck started as the Cometic C5333 gasket (the .027" version is on Drew's eng
 
 Per deck:
 
-- **Valley edge:** traced from the photo, v = 3.0–3.5". It bulges out round the valley-side ports and dips beside the lifter bosses. It ends at v = 3.35–3.40" at the front and rear. The gasket's two triangular ears and the two bolt holes in them (v ≈ 3.4") are not on the block.
+- **Valley edge:** traced from the photo, v = 3.0–3.5". It bulges out round the valley-side ports and dips beside the lifter bosses; there is nothing under the gasket's two floating holes (13 and 27) [Drew]. It ends at v = 3.35–3.40" at the front and rear. The gasket's two triangular ears and the two bolt holes in them (v ≈ 3.4") are not on the block.
 - **Valley wall:** drops from the deck edge straight into the valley floor, parallel to the bores, with no ledge between the deck and the valley. The edge's bulges run down the wall as flutes (photo above, album 351/352). The wall itself sits at v = 3.0".
-- **16 head-stud holes, 7/16-14 blind-tapped**, from Drew's deck drawing (`refs/deck_block.json` "studs"): 4 along the exhaust edge (v -2.74"), 5 on the exhaust side at the ends and between the bores (v -1.25"), 3 between the bores on the valley side (v +2.04") and 4 at the bores on the valley side (v +2.70", with the two at cylinders 3 and 7 at the gasket's +3.4" on bosses past the valley edge). The dowels are at the two valley-side ends (drawing: .641/.634).
+- **16 head-stud holes, 7/16-14 blind-tapped**, from Drew's deck drawing (`refs/deck_block.json` "studs"): 4 along the exhaust edge (v -2.74"), 5 on the exhaust side at the ends and between the bores (v -1.25"), 3 between the bores on the valley side (v +2.04") and 2 at the bores on the valley side (v +2.70", cylinders 1 and 5), and 2 through the hollow head dowels at the two valley-side ends (drawing: .641/.634) [Drew]. The gasket's two holes over the valley at cylinders 3 and 7 (v ≈ 3.4") line up with nothing.
 - **Water ports, all larger than the gasket's holes, modelled as .70" pockets** (the water jacket isn't modelled):
   - 3 exhaust-side triangles between the bores, about 2.3 × .8". The gasket's round holes at v = −2.22" sit inside them, so those are not bolt holes.
   - 3 valley-side kidneys between the bores, about 1.6 × .9", and a rounded triangle behind cylinder 7.
