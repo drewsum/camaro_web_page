@@ -51,8 +51,9 @@ K = dict(
     rail_corner=1.10, rail_end=0.35,   # [meas] photos 336/337: racetrack rail with rounded ends, a little short of the head ends
     v_int=6.40,              # plan extent of the casting on the valley side, before the intake face is cut (face_v)
     rail=4.00,               # [meas] photo 336 (square-on, scaled from the 2.435" port): intake face ~3.6-4.0" tall, rail flush with it
-    int_face_top=3.55,       # [meas] Drew's close-up of the intake face: the machined manifold face stops ~.5" above the ports,
-    int_band_set=0.10,       # and an as-cast band, set back from it [est], carries on up to the cover rail (Drew)
+    int_face_top=3.55,       # [meas] Drew's close-up of the intake face: the machined manifold face stops ~.5" above the ports;
+    int_lip_t=0.15,          # above it the cover rail overhangs the face as a cast lip, its underside sloping out to the rail's
+                             # outer edge, .15" thick there [est] (Drew's photo of the intake face, gasket on)
     rail_v_int=6.10,         # [meas] photo 336: intake-side rail over the intake face (the cast band trims its outer edge)
     wall=0.30,               # [meas] photo 267: thin machined rail
     floor=(3.50, 3.50),      # [est] rocker-box floor: ~.6" below the rail (photos 267/337)
@@ -135,7 +136,7 @@ MID = [h for h in STUDS if -2.5 <= h["v"] < 0]            # above the exhaust po
 HIGH = [h for h in STUDS if h["v"] >= 0]                  # valley side, in the rocker box
 assert (len(LOW), len(MID), len(HIGH)) == (4, 5, 7)
 
-FACE_TAN = (K["rail_v_int"] - BLK["china_top_v"]) / K["rail"]     # the intake face: deck/china-wall line to the rail's outer edge
+FACE_TAN = 0.0      # the intake face: square to the deck, standing on the line where the deck meets the china-wall tops (Drew)
 FACE_N = Vector((0, 1, -FACE_TAN)).normalized()
 def face_v(z):
     """v of the intake face at height z above the block deck."""
@@ -237,10 +238,10 @@ def catmull(pts, per=12):
             out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     out.append(pts[-1]); return out
 
-def runner(ctrl, n0, prof, bm=None):
+def runner(ctrl, n0, prof, bm=None, segs=False, per=12):
     """Rounded-rectangle sections swept along a Catmull-Rom path from the port face inwards.
     prof(s) -> (w, h, r) at arc-length fraction s; n0 the width axis at the face."""
-    path = catmull(ctrl)
+    path = catmull(ctrl, per)
     L = [0.0]
     for a, b in zip(path, path[1:]): L.append(L[-1] + (b - a).length)
     rings = []; n = n0.normalized()
@@ -249,7 +250,29 @@ def runner(ctrl, n0, prof, bm=None):
         n = (n - t * n.dot(t)).normalized(); b = t.cross(n)
         w, h, r = prof(L[i] / L[-1])
         rings.append([p + n * x + b * y for x, y in rrect(-w / 2, w / 2, -h / 2, h / 2, r, 6)])
+    if segs:                                         # overlapping hulls of neighbouring sections (no folds on tight
+        bm = bm or bmesh.new()                       # bends); the caller merges them with a voxel remesh
+        me = bpy.data.meshes.new("seg")
+        for r0, r1 in zip(rings, rings[1:]):
+            hb = hull3(r0 + r1); hb.to_mesh(me); hb.free(); bm.from_mesh(me)
+        bpy.data.meshes.remove(me)
+        return bm, path, L[-1]
     return loft(rings, bm), path, L[-1]
+
+def smooth_solid(o, voxel=0.035, iters=12):
+    """Voxel-remesh a swept solid (merges the overlapping section hulls; no folds on tight bends), then a
+    volume-preserving Laplacian smooth, decimated, applied. The voxels leave ~3cc of fine-grained noise in the
+    volume against port size (see size_int)."""
+    m = o.modifiers.new("rm", "REMESH"); m.mode = "VOXEL"; m.voxel_size = voxel * IN; m.adaptivity = 0.0
+    m = o.modifiers.new("sm", "LAPLACIANSMOOTH"); m.iterations = iters; m.lambda_factor = 0.6; m.use_volume_preserve = True
+    m = o.modifiers.new("dc", "DECIMATE"); m.ratio = 0.15
+    sc = bpy.context.scene.collection; sc.objects.link(o)        # evaluated only where it is visible: link it to
+    hid = o.hide_viewport; o.hide_viewport = False                # the scene for the moment
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get(); me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+    sc.objects.unlink(o); o.hide_viewport = hid
+    assert len(me.polygons) and len(me.vertices) != len(o.data.vertices), "remesh did not run"
+    o.modifiers.clear(); old = o.data; o.data = me; bpy.data.meshes.remove(old)
 
 def interp(s, xs, ys):
     return float(np.interp(s, xs, ys))
@@ -329,22 +352,22 @@ INT_U = tuple(c + s * K["int_pair"] for c in K["int_pairs"] for s in (-1, 1))
 # intake pushrods (outside each pair, v ~4.4) and the exhaust pushrods (inside each pair, v ~3.5)
 INT_PATH = ((2.10, 1.85, 1.40), (4.85, 5.22, 5.45), (11.75, 11.50, 11.10), (14.50, 14.85, 15.10))
 
-SC_MID = 0.936   # the runner past the pinch keeps the size it had with the face square at 6.10, clear of the spring
-                 # pockets; the volume the leaning face trims off goes back into the entry
+SC_MID = 0.936   # the short-turn roof (t .71) keeps the height it had with the face at 6.10, clear of the spring pockets;
+                 # the entry never grows past the face opening; scale widens the short-turn and the bowl
 
-def int_runner(k, scale, bm=None, face_ext=0.0):
+def int_runner(k, scale, bm=None, face_ext=0.0, smooth=True):
     cv, s, _ = valve(k, "I"); hc = K["int_hc"]; up = INT_U[k]; rt = K["vI"]["seat_id"] / 2
     a, b, c = INT_PATH[k]
     v0 = K["rail_v_int"]                              # the runner is laid out from 6.10 and trimmed at the leaning face (port_solid)
     ctrl = [V(up, v0 + face_ext, hc), V(up, v0 - 0.4, hc), V(a, 4.4, hc), V(b, 3.6, hc),
-            V(c, 2.3, hc + 0.02), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.35, cv - s * 0.02]   # the runner itself ends on the valve face
+            V(c, 2.3, hc + 0.02), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.35, cv - s * 0.10]   # runs just past the valve face (smoothed, then cut back to the seat)
     w0, h0_, r0 = K["int_w"], K["int_h"], K["int_r"]
     def prof(t):    # pinch (t .45) held at the published minimum CSA; scale sizes the rest
-        w = interp(t, [0, .15, .43, .71, .85, .94, 1], [w0, (w0 - .04) * scale, 1.515, max(1.68 * min(scale, SC_MID), 1.72), 1.95 * min(scale, SC_MID), 2 * rt, 2 * rt])
-        h = interp(t, [0, .15, .43, .71, .85, .94, 1], [h0_, (h0_ - .05) * scale, 2.30, max(2.05 * min(scale, SC_MID), 2.08), 1.70, 2 * rt, 2 * rt])
+        w = interp(t, [0, .15, .43, .71, .85, .94, 1], [w0, (w0 - .04) * min(scale, 1.0), 1.515, max(1.68 * scale, 1.72), 1.95 * scale, 2 * rt, 2 * rt])
+        h = interp(t, [0, .15, .43, .71, .85, .94, 1], [h0_, (h0_ - .05) * min(scale, 1.0), 2.30, max(2.05 * min(scale, SC_MID), 2.08), 1.70, 2 * rt, 2 * rt])
         r = interp(t, [0, .15, .43, .71, .85, .94, 1], [r0, .45, .50, .60, .85, rt, rt])
         return w, h, min(r, w / 2, h / 2)
-    return runner(ctrl, V(1, 0, 0), prof, bm)
+    return runner(ctrl, V(1, 0, 0), prof, bm, segs=smooth, per=24 if smooth else 12)
 
 def exh_runner(k, scale, bm=None, face_ext=0.0):
     cv, s, _ = valve(k, "E"); hc = K["exh_hc"]; up = K["exh_u"][k]; rt = K["vE"]["seat_id"] / 2
@@ -359,12 +382,13 @@ def exh_runner(k, scale, bm=None, face_ext=0.0):
         return w, h, min(r, w / 2, h / 2)
     return runner(ctrl, V(1, 0, 0), prof, bm)
 
-def port_solid(k, kind, scale, tmp, face_ext=0.0):
+def port_solid(k, kind, scale, tmp, face_ext=0.0, smooth=True):
     """Runner + throat down to the valve face plane: the port volume (face_ext 0) or its cutter."""
     f = int_runner if kind == "I" else exh_runner
     if isinstance(scale, (list, tuple)): scale = scale[k]
-    bm, path, L = f(k, scale, None, face_ext)
+    bm, path, L = f(k, scale, None, face_ext, smooth) if kind == "I" else f(k, scale, None, face_ext)
     o = obj("port", bm, tmp)
+    if kind == "I" and smooth: smooth_solid(o)        # merge the section hulls and smooth
     _b = bmesh.new(); _b.from_mesh(o.data)             # a sweep that bends the other way comes out inside-out: turn it
     if _b.calc_volume(signed=True) < 0:
         bmesh.ops.reverse_faces(_b, faces=_b.faces[:]); _b.to_mesh(o.data)
@@ -375,6 +399,10 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0):
     bpy.data.objects.remove(th, do_unlink=True)
     bx = obj("bx", zprism(rrect(-9, 24, -9, 12, 0.1, 1), -3.0, 9.0), tmp)      # resolves the sweep's self-overlap on tight bends
     boolean(o, "INTERSECT", bx); bpy.data.objects.remove(bx, do_unlink=True)
+    if kind == "I":                                    # cut back to the valve face (the smoothed end is already round, seat ID)
+        sc = obj("seatcut", cyl_axis(cv - s * 0.65, s, 2.0, 0.6, 44), tmp)             # .05 past the valve face, into the
+                                                                                        # chamber bowl (no coplanar faces)
+        boolean(o, "DIFFERENCE", sc); bpy.data.objects.remove(sc, do_unlink=True)
     if kind == "I":                                    # trimmed at the intake face (face_ext past it for a cutter)
         e = face_ext + 0.001
         hs = obj("hs", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((-9.0, -3.0), (-9.0, 9.0), (face_v(9.0) + e, 9.0), (face_v(-3.0) + e, -3.0))]), tmp)
@@ -478,16 +506,12 @@ def build_left(root, tmp, info):
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     boolean(head, "UNION", tmp); clear(tmp)
-    # the intake face: it starts on the line where the block deck meets the china-wall tops (Drew) and leans out to
-    # the cover rail's outer edge, ~9 degrees off square to the deck (Chevy intake faces are ~10)
-    obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0)
-                        for v, z in ((face_v(-1.0), -1.0), (face_v(K["rail"] + 2), K["rail"] + 2), (12.0, K["rail"] + 2), (12.0, -1.0))]), tmp)
-    boolean(head, "DIFFERENCE", tmp); clear(tmp)
-    # the machined intake face stops at int_face_top; above it the casting steps back (a 45-degree edge) to an
-    # as-cast band that runs on up to the cover rail
-    ft, sb = K["int_face_top"], K["int_band_set"]; zt = K["rail"] + 2
-    obj("band", hull3([V(u, v, z) for u in (-9.0, 24.0)
-                       for v, z in ((face_v(ft + sb) - sb, ft + sb), (face_v(ft), ft), (12.0, ft), (12.0, zt), (face_v(zt) - sb, zt))]), tmp)
+    # the intake face: square to the deck on the deck/china-wall line, machined up to int_face_top; above it the
+    # cover rail overhangs it as a cast lip whose underside slopes out to the rail's outer edge
+    ft, zt, vr = K["int_face_top"], K["rail"] + 2, K["rail_v_int"]
+    obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((face_v(-1.0), -1.0), (face_v(ft), ft), (12.0, ft), (12.0, -1.0))]), tmp)
+    obj("lip", hull3([V(u, v, z) for u in (-9.0, 24.0)
+                      for v, z in ((face_v(ft), ft - 0.001), (vr, K["rail"] - K["int_lip_t"]), (vr, zt), (12.0, zt), (12.0, ft - 0.001))]), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
@@ -547,15 +571,23 @@ def build_left(root, tmp, info):
                 o, _, _ = port_solid(k, kind, sc, tmp); vs.append(vol(o)); clear(tmp)
             return float(np.mean(vs)) / 0.0610237
         return f
-    def pk(k):                                      # each intake port sized alone (the paired runners bend differently)
+    def pk(k, smooth=False):                        # each intake port sized alone (the paired runners bend differently)
         def f(sc):
-            o, _, _ = port_solid(k, "I", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
+            o, _, _ = port_solid(k, "I", sc, tmp, smooth=smooth); v = vol(o); clear(tmp); return v / 0.0610237
         return f
+    def size_int(k):
+        """Bisect on the remeshed, smoothed port, then the closest of a few sizes nearby: the voxels leave
+        ~3cc of fine-grained noise in its volume."""
+        sm, T = pk(k, True), K["int_cc"]
+        c = tune(sm, T, 0.70, 1.45, 10); best = (abs(sm(c) - T), c)
+        for d in (-0.006, -0.004, -0.002, 0.002, 0.004, 0.006):
+            best = min(best, (abs(sm(c + d) - T), c + d))
+        return best[1]
     def pe(k):
         def f(sc):
             o, _, _ = port_solid(k, "E", sc, tmp); v = vol(o); clear(tmp); return v / 0.0610237
         return f
-    sI = [tune(pk(k), K["int_cc"], 0.75, 1.45, 10) for k in range(4)]
+    sI = [size_int(k) for k in range(4)]
     sE = [tune(pe(k), K["exh_cc"], 0.45, 1.40, 10) for k in range(4)]
     info["port_scale"] = dict(I=[round(x, 4) for x in sI], E=[round(x, 4) for x in sE])
     iv, ev, lens = [], [], {}
