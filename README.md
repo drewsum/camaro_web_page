@@ -2,6 +2,30 @@
 
 Interactive 3D viewer for a 1968 Camaro SS model (React Three Fiber, served by nginx in Docker).
 
+## Layout
+
+[![How the site works: authoring, build and hosting, the visitor's browser, and external CDNs](docs/architecture.png)](docs/architecture.html)
+
+How a model gets from Blender to a visitor's screen, in six steps:
+
+1. **Author:** `3d_model/*.blend` files are exported to Draco-compressed GLBs (car textures
+   re-encoded as WebP), and `tools/engine-sim` renders the engine-sound MP3 loops. Both are
+   committed under `web/public/`.
+2. **Deploy:** a push to `main` runs GitHub Actions, which builds the Vite app into an nginx
+   image on ghcr.io. The server only pulls that image with `docker compose`.
+3. **Load:** the browser fetches the page and JS bundle; `index.html` preloads `camaro.glb`
+   and the Draco decoder at the same time.
+4. **Scene:** the app shell (`web/src/App.tsx`) mounts the chosen scene. The showroom ships in
+   the main bundle; the other 12 scenes are lazy-loaded along with any extra car GLBs.
+5. **CDNs:** outdoor scenes fetch HDRI skies, ground textures and props from Poly Haven, and
+   some classic cars from GitHub, at runtime.
+6. **Pages:** Overview, Photos, Engine Build and Engine Model open over the viewer via the URL
+   hash. Hovering Engine Model prefetches its 8 MB GLB.
+
+For the interactive version (drag cards, step through each flow with the arrow keys), open
+[`docs/architecture.html`](docs/architecture.html) in a browser. It loads its libraries from
+public CDNs, so it needs an internet connection.
+
 ## Update the model
 
 The site serves `web/public/models/camaro.glb`, exported from `3d_model/camaro.blend`.
