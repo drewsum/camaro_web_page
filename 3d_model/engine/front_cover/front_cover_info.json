@@ -74,14 +74,17 @@
   ],
   "chamfer": 0.06,
   "marks": {
+   "to": 60,
    "every": 2,
-   "deep": 0.02,
-   "w": 0.016,
+   "w": 0.018,
    "l": [
-    0.18,
-    0.32,
-    0.5
-   ]
+    0.15,
+    0.3
+   ],
+   "zero_w": 0.06,
+   "text_h": 0.2,
+   "text_gap": 0.06,
+   "thick": 0.004
   },
   "pulley_holes": {
    "n": 3,
@@ -194,7 +197,8 @@
   "BalancerElastomer": 0,
   "BalancerRing": 0,
   "BalancerKey": 0,
-  "BalancerBolt": 0
+  "BalancerBolt": 0,
+  "BalancerMarks": 0
  },
  "checks": {
   "clash": [],
@@ -228,6 +232,10 @@
    [
     "BalancerKey",
     "Crankshaft"
+   ],
+   [
+    "BalancerRing",
+    "BalancerMarks"
    ]
   ],
   "ring_to_lid_in": 0.2
@@ -239,8 +247,9 @@
   "TimingCoverBolts": 1992,
   "BalancerHub": 3694,
   "BalancerElastomer": 1024,
-  "BalancerRing": 5192,
+  "BalancerRing": 1952,
   "BalancerKey": 12,
-  "BalancerBolt": 396
+  "BalancerBolt": 396,
+  "BalancerMarks": 4860
  }
 }

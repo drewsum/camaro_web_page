@@ -65,7 +65,10 @@ BAL = dict(
     hub_r=1.60, hub_from=25.05, y_front=27.15,          # hub nose ahead of the lid; front face just past the crank nose (27.10)
     web=(25.95, 26.45), rim=(2.95, 3.20),               # web plate and inner rim
     elast=(3.20, 3.28), ring=(3.28, 4.00), ring_y=(25.10, 27.15), chamfer=0.06,   # rubber band, inertia ring (8.00" OD, 2.05" wide)
-    marks=dict(every=2, deep=0.02, w=0.016, l=(0.18, 0.32, 0.50)),   # degree marks on the OD from the front edge: 2 deg, every 10, TDC
+    # White printed timing scale on the black OD (Drew's photos of the damper on the engine): a TDC stripe across the
+    # whole width, then ticks every 2 deg out to 60 deg of advance (clockwise of TDC seen from the front, the way the
+    # crank turns), longer every 10 deg, numbered 0-60 behind the long ticks. Everything else on the OD is bare.
+    marks=dict(to=60, every=2, w=0.018, l=(0.15, 0.30), zero_w=0.06, text_h=0.20, text_gap=0.06, thick=0.004),
     pulley_holes=dict(n=3, bc=2.50, d=0.3125, depth=0.60),            # 3/8-24 tapped, for a crank pulley
     key=dict(w=0.1875, top=0.96, y=(24.36, 26.95)),                  # its own key in the crank keyway
     washer=dict(r=1.10, t=0.25), bolt=dict(af=1.125, h=0.47, r=0.36, into=1.15),
@@ -189,6 +192,47 @@ def build():
                                        outline_half_w=round(max(p[0] for p in O), 3))
 
 
+def timing_scale(b, tmp):
+    """The printed scale as thin raised marks on the ring's OD. Angle a from the
+    top towards +x; advance lies at a = -deg. Numbers read front to rear, their
+    tops towards TDC."""
+    mk = b["marks"]; ro = b["ring"][1]; c = b["chamfer"]
+    y_f, y_r = b["ring_y"][1] - c, b["ring_y"][0] + c
+    r0, r1 = ro + 0.0006, ro + mk["thick"]
+    bm = bmesh.new()
+    def strip(a, half_w, ya, yb):      # a flat mark centred on angle a, from ya back to yb
+        rd = Vector((math.sin(a), 0, math.cos(a))); tg = Vector((math.cos(a), 0, -math.sin(a)))
+        pts = [rd * r + tg * t for r in (r0, r1) for t in (-half_w, half_w)]
+        loft([[p + Vector((0, y, 0)) for p in (pts[0], pts[1], pts[3], pts[2])] for y in (ya, yb)], bm)
+    strip(0.0, mk["zero_w"] / 2, y_f, y_r)
+    for deg in range(mk["every"], mk["to"] + 1, mk["every"]):
+        strip(-math.radians(deg), mk["w"] / 2, y_f, y_f - mk["l"][1 if deg % 10 == 0 else 0])
+    # Numbers: text meshes laid flat, then wrapped onto the OD.
+    for deg in range(0, mk["to"] + 1, 10):
+        cu = bpy.data.curves.new("num", "FONT"); cu.body = str(deg); cu.align_x = "LEFT"; cu.align_y = "CENTER"
+        cu.size = 1.0; to = bpy.data.objects.new("num", cu); tmp.objects.link(to)
+        dg = bpy.context.evaluated_depsgraph_get(); me = to.evaluated_get(dg).to_mesh()
+        tb = bmesh.new(); tb.from_mesh(me); to.evaluated_get(dg).to_mesh_clear()
+        bpy.data.objects.remove(to); bpy.data.curves.remove(cu)
+        bmesh.ops.remove_doubles(tb, verts=tb.verts, dist=1e-5)
+        # scale so the digit height is text_h
+        ys = [v.co.y for v in tb.verts]; k = mk["text_h"] / (max(ys) - min(ys)); yc = (max(ys) + min(ys)) / 2
+        for v in tb.verts: v.co = Vector((v.co.x * k, (v.co.y - yc) * k, 0))
+        x0 = min(v.co.x for v in tb.verts)
+        ext = bmesh.ops.extrude_face_region(tb, geom=list(tb.faces))
+        for v in [e for e in ext["geom"] if isinstance(e, bmesh.types.BMVert)]: v.co.z = 1.0
+        bmesh.ops.recalc_face_normals(tb, faces=tb.faces)
+        ac = -math.radians(deg); ys0 = y_f - mk["l"][1] - mk["text_gap"]
+        vmap = {}
+        for v in tb.verts:
+            a = ac + v.co.y / ro; r = r0 if v.co.z < 0.5 else r1
+            vmap[v] = bm.verts.new(Vector((r * math.sin(a), ys0 - (v.co.x - x0), r * math.cos(a))) * IN)
+        for f in tb.faces: bm.faces.new([vmap[v] for v in f.verts])
+        tb.free()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
+
+
 def build_balancer(root):
     """Balancer parts, parented to the crank so they turn with it; in the cover's
     collection so hiding the cover hides them too."""
@@ -224,14 +268,8 @@ def build_balancer(root):
     ring = obj("BalancerRing", loft([ysec(disc_pts(ro - c, 180), y0r), ysec(disc_pts(ro, 180), y0r + c),
                                      ysec(disc_pts(ro, 180), y1r - c), ysec(disc_pts(ro - c, 180), y1r)]), root)
     obj("ri", ycyl(ri + 0.001, y0r - 0.1, y1r + 0.1, 128), tmp)
-    mk = b["marks"]; bm = bmesh.new()
-    for deg in range(0, 360, mk["every"]):
-        L = mk["l"][2] if deg == 0 else mk["l"][1] if deg % 10 == 0 else mk["l"][0]
-        a = math.radians(deg); rd = Vector((math.sin(a), 0, math.cos(a))); tg = Vector((math.cos(a), 0, -math.sin(a)))
-        pts = [rd * r + tg * t for r in (ro - mk["deep"], ro + 0.1) for t in (-mk["w"] / 2, mk["w"] / 2)]
-        loft([[p + Vector((0, y, 0)) for p in (pts[0], pts[1], pts[3], pts[2])] for y in (y1r - c - L, y1r + 0.1)], bm)
-    obj("marks", bm, tmp)
     boolean(ring, "DIFFERENCE", tmp); clear(tmp)
+    marks = obj("BalancerMarks", timing_scale(b, tmp), root)
     # Key, washer and bolt.
     key = obj("BalancerKey", loft([ysec([(-kw + 0.002, 0.715), (kw - 0.002, 0.715), (kw - 0.002, b["key"]["top"]), (-kw + 0.002, b["key"]["top"])], y)
                                    for y in b["key"]["y"]]), root)
@@ -241,11 +279,13 @@ def build_balancer(root):
     ycyl(bt["r"], yf - bt["into"], yf + 0.002, 32, bm=bm)
     bolt = obj("BalancerBolt", bm, root)
     bpy.data.collections.remove(tmp)
+    black = material("Balancer_SatinBlack", (0.015, 0.015, 0.016, 1), 0.3, 0.35)
+    white = material("Balancer_ScaleWhite", (0.85, 0.85, 0.83, 1), 0.0, 0.5)
     steel = material("Balancer_SatinSteel", (0.55, 0.55, 0.57, 1), 1.0, 0.35)
     rubber = material("Balancer_Elastomer", (0.025, 0.025, 0.025, 1), 0.0, 0.6)
     oxide = material("FrontCover_BoltOxide", (0.05, 0.05, 0.05, 1), 0.8, 0.40)
-    parts = [hub, rub, ring, key, bolt]
-    for o, m in ((hub, steel), (rub, rubber), (ring, steel), (key, steel), (bolt, oxide)):
+    parts = [hub, rub, ring, key, bolt, marks]
+    for o, m in ((hub, black), (rub, rubber), (ring, black), (key, steel), (bolt, oxide), (marks, white)):
         o.data.materials.clear(); o.data.materials.append(m); o.data.shade_smooth(); o.data.set_sharp_from_angle(angle=math.radians(30))
         CAMNS["parent_keep"](o, bpy.data.objects["Crankshaft"])
     return parts
