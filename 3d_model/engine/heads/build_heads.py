@@ -507,15 +507,17 @@ def tune(f, target, lo, hi, it=14):
 # One casting serves both banks (the right head is the left turned round), so both ends carry it. Sizes [est],
 # scaled off the photos on the deck edge. The engraving is our own: the photo's is the maker's logo and part number.
 END = dict(
-    face=((-3.20, 0.0), (5.45, 0.0), (-1.90, 3.40)),     # (v, z), z from the block deck: exhaust-deck, intake-deck, apex
-    inner=((-1.55, 0.0), (5.45, 0.0), (-1.45, 3.40)),    # where the end block blends into the casting
-    chamfer_edges=(True, False, True),                   # deck, top (meets the cast roll-back), exhaust side
+    face=((-3.20, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.90, 3.40)),   # (v, z), z from the block deck: exhaust-deck,
+                                                         # intake-deck, the short edge up off the china wall [Drew's 3rd
+                                                         # photo: it leans back from the intake face], apex
+    inner=((-1.55, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.45, 3.40)),    # where the end block blends into the casting
+    chamfer_edges=(True, False, False, True),            # deck, the two top edges (meet the cast roll-back), exhaust side
     full=0.60, depth=1.20, chamfer=0.08,
     roll0=20.0, roll_top=3.40, roll_exh=0.85,            # roll-back: leaves the face at 20 deg, meets the flange foot at the
                                                          # shelf height; .85" in from the end beyond the rail's exhaust side
-    holes=((3.90, 0.35), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
-    mark=dict(text="345", at=(-0.90, 1.55), h=1.15, line=0.035, depth=0.030),        # outline-cut lettering
-    small=dict(text="CNC\n2.30 - 1.88", at=(-1.55, 0.90), h=0.20, depth=0.020),     # solid-cut
+    holes=((4.60, 0.45), (-2.55, 0.45), (-1.65, 2.85)), hole_r=0.156, hole_d=0.55,
+    mark=dict(text="345", at=(-0.75, 1.55), h=1.25, line=0.035, depth=0.030),        # outline-cut lettering
+    small=dict(text="CNC\n2.30 - 1.88", at=(-1.45, 0.85), h=0.20, depth=0.020),     # solid-cut
 )
 
 def end_axes(s):
@@ -533,12 +535,15 @@ def end_sweep(uf, ur, tmp):
     """Cutters for the cast roll-back above each end's machined triangle: in each slice across the bank (fixed v) the
     surface leaves the triangle's top edge at roll0 and curves back, a quarter ellipse, to the foot of the cover flange
     at roll_top, where the rail's rounded end (or, past its exhaust side, roll_exh) sets how far in that is."""
-    (bv, bz), (av, az), (cv, cz) = END["face"]
+    (bv, bz), (av, az), (kv, kz), (cv, cz) = END["face"]
     th0 = math.radians(END["roll0"]); zt_top = END["roll_top"]
     e, R = K["rail_end"], K["rail_corner"]; v0, v1 = K["rail_v_exh"] + R, K["rail_v_int"] - R
-    def z_edge(v): return max(H0, az + (cz - az) * (min(v, av) - av) / (cv - av))
-    vstart = av + (zt_top - 0.08 - az) * (cv - av) / (cz - az)
-    vs = list(np.linspace(vstart, v0, 9)) + list(np.linspace(v0, v1, 6))[1:] + list(np.linspace(v1, av, 12))[1:] + [av + 0.45]
+    def z_edge(v):                                     # the face's top edge: up off the china wall, then on to the apex
+        v = min(v, av)
+        z = az + (kz - az) * (v - av) / (kv - av) if v >= kv else kz + (cz - kz) * (v - kv) / (cv - kv)
+        return max(H0, z)
+    vstart = kv + (zt_top - 0.08 - kz) * (cv - kv) / (cz - kz)
+    vs = list(np.linspace(vstart, v0, 9)) + list(np.linspace(v0, v1, 6))[1:] + list(np.linspace(v1, kv, 8))[1:] + list(np.linspace(kv, av, 6))[1:] + [av + 0.45]
     for ue, s in ((ur, 1), (uf, -1)):
         rings = []
         for v in vs:
