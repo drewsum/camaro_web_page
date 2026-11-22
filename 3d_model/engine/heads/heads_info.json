@@ -8,7 +8,7 @@
   "rail_v_exh": -0.65,
   "rail_corner": 1.1,
   "rail_end": 0.35,
-  "v_int": 6.1,
+  "v_int": 6.4,
   "rail": 4.0,
   "int_face_top": 3.55,
   "int_band_set": 0.1,
@@ -201,7 +201,6 @@
    0.14
   ]
  },
- "intake_face_bottom": -0.61,
  "studs": [
   [
    -0.35,
@@ -314,10 +313,10 @@
  "chamber_cc": 117.0,
  "port_scale": {
   "I": [
-   0.9356,
-   0.9506,
-   0.9349,
-   0.95
+   1.0703,
+   1.086,
+   1.0696,
+   1.0853
   ],
   "E": [
    1.0906,
@@ -327,7 +326,7 @@
   ]
  },
  "intake_cc": [
-  344.9,
+  345.1,
   345.0,
   345.0,
   345.0
@@ -348,7 +347,7 @@
   "I3": 6.41,
   "E3": 2.81
  },
- "intake_min_csa": 3.269,
+ "intake_min_csa": 3.27,
  "cutters_1": 12,
  "head_outline_u": [
   -3.664,
@@ -678,11 +677,11 @@
   "HeadDowels_R": 0
  },
  "tris": {
-  "CylinderHead_L": 53170,
+  "CylinderHead_L": 51588,
   "HeadGasket_L": 5356,
   "HeadStuds_L": 4672,
   "HeadDowels_L": 448,
-  "CylinderHead_R": 53170,
+  "CylinderHead_R": 51588,
   "HeadGasket_R": 5356,
   "HeadStuds_R": 4672,
   "HeadDowels_R": 448

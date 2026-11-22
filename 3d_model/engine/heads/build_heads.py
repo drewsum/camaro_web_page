@@ -49,7 +49,7 @@ K = dict(
     shelf=3.40,              # [meas] photos 265/337: shelf above the exhaust ports, outside the valve cover, carrying the middle-row bolts; height [est]
     rail_v_exh=-0.65,        # [meas] photo 267: the cover rail runs ~.6" inboard of the middle-row bolts
     rail_corner=1.10, rail_end=0.35,   # [meas] photos 336/337: racetrack rail with rounded ends, a little short of the head ends
-    v_int=6.10,              # [meas] photo 334 (deck face, scaled from the stud holes): the intake face, perpendicular to the deck
+    v_int=6.40,              # plan extent of the casting on the valley side, before the intake face is cut (face_v)
     rail=4.00,               # [meas] photo 336 (square-on, scaled from the 2.435" port): intake face ~3.6-4.0" tall, rail flush with it
     int_face_top=3.55,       # [meas] Drew's close-up of the intake face: the machined manifold face stops ~.5" above the ports,
     int_band_set=0.10,       # and an as-cast band, set back from it [est], carries on up to the cover rail (Drew)
@@ -134,6 +134,12 @@ LOW = [h for h in STUDS if h["v"] < -2.5]                 # below the exhaust po
 MID = [h for h in STUDS if -2.5 <= h["v"] < 0]            # above the exhaust ports, outside the cover
 HIGH = [h for h in STUDS if h["v"] >= 0]                  # valley side, in the rocker box
 assert (len(LOW), len(MID), len(HIGH)) == (4, 5, 7)
+
+FACE_TAN = (K["rail_v_int"] - BLK["china_top_v"]) / K["rail"]     # the intake face: deck/china-wall line to the rail's outer edge
+FACE_N = Vector((0, 1, -FACE_TAN)).normalized()
+def face_v(z):
+    """v of the intake face at height z above the block deck."""
+    return BLK["china_top_v"] + z * FACE_TAN
 
 def stud_top(h):
     """Top of a stud's clearance hole in the head: the lip, the middle-row spot face, or the rocker box."""
@@ -323,15 +329,19 @@ INT_U = tuple(c + s * K["int_pair"] for c in K["int_pairs"] for s in (-1, 1))
 # intake pushrods (outside each pair, v ~4.4) and the exhaust pushrods (inside each pair, v ~3.5)
 INT_PATH = ((2.10, 1.85, 1.40), (4.85, 5.22, 5.45), (11.75, 11.50, 11.10), (14.50, 14.85, 15.10))
 
+SC_MID = 0.936   # the runner past the pinch keeps the size it had with the face square at 6.10, clear of the spring
+                 # pockets; the volume the leaning face trims off goes back into the entry
+
 def int_runner(k, scale, bm=None, face_ext=0.0):
     cv, s, _ = valve(k, "I"); hc = K["int_hc"]; up = INT_U[k]; rt = K["vI"]["seat_id"] / 2
     a, b, c = INT_PATH[k]
-    ctrl = [V(up, K["v_int"] + face_ext, hc), V(up, K["v_int"] - 0.4, hc), V(a, 4.4, hc), V(b, 3.6, hc),
+    v0 = K["rail_v_int"]                              # the runner is laid out from 6.10 and trimmed at the leaning face (port_solid)
+    ctrl = [V(up, v0 + face_ext, hc), V(up, v0 - 0.4, hc), V(a, 4.4, hc), V(b, 3.6, hc),
             V(c, 2.3, hc + 0.02), cv + s * 1.15 + V(0, 0.30, 0.05), cv + s * 0.70, cv + s * 0.35, cv - s * 0.02]   # the runner itself ends on the valve face
     w0, h0_, r0 = K["int_w"], K["int_h"], K["int_r"]
     def prof(t):    # pinch (t .45) held at the published minimum CSA; scale sizes the rest
-        w = interp(t, [0, .15, .43, .71, .85, .94, 1], [w0, (w0 - .04) * scale, 1.515, max(1.68 * scale, 1.72), 1.95 * scale, 2 * rt, 2 * rt])
-        h = interp(t, [0, .15, .43, .71, .85, .94, 1], [h0_, (h0_ - .05) * scale, 2.30, max(2.05 * scale, 2.08), 1.70, 2 * rt, 2 * rt])
+        w = interp(t, [0, .15, .43, .71, .85, .94, 1], [w0, (w0 - .04) * scale, 1.515, max(1.68 * min(scale, SC_MID), 1.72), 1.95 * min(scale, SC_MID), 2 * rt, 2 * rt])
+        h = interp(t, [0, .15, .43, .71, .85, .94, 1], [h0_, (h0_ - .05) * scale, 2.30, max(2.05 * min(scale, SC_MID), 2.08), 1.70, 2 * rt, 2 * rt])
         r = interp(t, [0, .15, .43, .71, .85, .94, 1], [r0, .45, .50, .60, .85, rt, rt])
         return w, h, min(r, w / 2, h / 2)
     return runner(ctrl, V(1, 0, 0), prof, bm)
@@ -365,6 +375,10 @@ def port_solid(k, kind, scale, tmp, face_ext=0.0):
     bpy.data.objects.remove(th, do_unlink=True)
     bx = obj("bx", zprism(rrect(-9, 24, -9, 12, 0.1, 1), -3.0, 9.0), tmp)      # resolves the sweep's self-overlap on tight bends
     boolean(o, "INTERSECT", bx); bpy.data.objects.remove(bx, do_unlink=True)
+    if kind == "I":                                    # trimmed at the intake face (face_ext past it for a cutter)
+        e = face_ext + 0.001
+        hs = obj("hs", hull3([V(u, v, z) for u in (-9.0, 24.0) for v, z in ((-9.0, -3.0), (-9.0, 9.0), (face_v(9.0) + e, 9.0), (face_v(-3.0) + e, -3.0))]), tmp)
+        boolean(o, "INTERSECT", hs); bpy.data.objects.remove(hs, do_unlink=True)
     if kind == "E":                                    # the front exhaust-side stud stands in the wall of port 1's bowl
         for h in STUDS:
             if -2.5 < h["v"] < 0 and abs(h["u"] - cv.x) < 1.4:
@@ -464,18 +478,16 @@ def build_left(root, tmp, info):
     obj("core", zprism(core, H0, K["shelf"]), tmp)
     obj("upper", zprism(rail_ol, K["shelf"] - 0.5, K["rail"]), tmp)   # the rocker box, inboard of the middle-row bolts
     boolean(head, "UNION", tmp); clear(tmp)
-    # the valley-side bottom: the casting runs on down the intake face, past the deck plane, to just above the
-    # china-wall tops, so the intake face meets the china walls (Drew); the cut follows the china-top plane
-    tz, dz = M_L[2][1], M_L[2][2]; vc = BLK["china_top_v"] + 0.04   # .03" above the china tops, clear of the gasket edge (v 5.454)
-    zb = tz * (vc - K["v_int"]) / dz
-    obj("skirt", hull3([V(u, v, z) for u in (uf, ur) for v, z in ((vc - H0 * dz / tz, H0), (K["v_int"], H0), (K["v_int"], zb))]), tmp)
-    boolean(head, "UNION", tmp); clear(tmp)
-    info["intake_face_bottom"] = round(zb, 3)
+    # the intake face: it starts on the line where the block deck meets the china-wall tops (Drew) and leans out to
+    # the cover rail's outer edge, ~9 degrees off square to the deck (Chevy intake faces are ~10)
+    obj("iface", hull3([V(u, v, z) for u in (-9.0, 24.0)
+                        for v, z in ((face_v(-1.0), -1.0), (face_v(K["rail"] + 2), K["rail"] + 2), (12.0, K["rail"] + 2), (12.0, -1.0))]), tmp)
+    boolean(head, "DIFFERENCE", tmp); clear(tmp)
     # the machined intake face stops at int_face_top; above it the casting steps back (a 45-degree edge) to an
     # as-cast band that runs on up to the cover rail
-    ft, sb, vi = K["int_face_top"], K["int_band_set"], K["v_int"]
+    ft, sb = K["int_face_top"], K["int_band_set"]; zt = K["rail"] + 2
     obj("band", hull3([V(u, v, z) for u in (-9.0, 24.0)
-                       for v, z in ((vi - sb, ft + sb), (vi, ft), (vi + 1.5, ft), (vi + 1.5, K["rail"] + 2), (vi - sb, K["rail"] + 2))]), tmp)
+                       for v, z in ((face_v(ft + sb) - sb, ft + sb), (face_v(ft), ft), (12.0, ft), (12.0, zt), (face_v(zt) - sb, zt))]), tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
 
     # exhaust flanges, plug bosses, the cast fin above each middle-row bolt
@@ -605,11 +617,11 @@ def build_left(root, tmp, info):
             obj("hb", loft([ring_pts(V(K["exh_u"][k] + du, K["exh_face"] - 0.1, K["exh_hc"] + dh), V(0, 1, 0), 0.156, 16),
                             ring_pts(V(K["exh_u"][k] + du, K["exh_face"] + 0.75, K["exh_hc"] + dh), V(0, 1, 0), 0.156, 16)]), tmp)
     for u, h in K["int_bolts"]:
-        obj("ib", loft([ring_pts(V(u, K["v_int"] + 0.1, h), V(0, -1, 0), 0.156, 16), ring_pts(V(u, K["v_int"] - 0.9, h), V(0, -1, 0), 0.156, 16)]), tmp)
+        obj("ib", loft([ring_pts(V(u, face_v(h) + 0.1, h), -FACE_N, 0.156, 16), ring_pts(V(u, face_v(h), h) - FACE_N * 0.9, -FACE_N, 0.156, 16)]), tmp)
     ep = K["end_ports"]
     for u in ep["u"]:
         obj("ewp", vprism(rrect(u - ep["w"] / 2, u + ep["w"] / 2, ep["h"] - ep["ht"] / 2, ep["h"] + ep["ht"] / 2, 0.15, 4),
-                          K["v_int"] + 0.1, K["v_int"] - ep["depth"]), tmp)
+                          face_v(ep["h"]) + 0.1, face_v(ep["h"]) - ep["depth"]), tmp)
     for i, h in enumerate(GASK["holes"]):
         if h["kind"] in ("coolant",) and i not in (2, 3, 29, 30):   # 3/29 are the dowels, 2/30 studs (deck drawing)
             if "contour" in h and len(h["contour"]) > 5:
@@ -668,7 +680,7 @@ def assign_head_materials(head, cast, mach):
     for p in me.polygons:
         c = p.center / IN; n = p.normal; m = 0
         if n.z < -0.99 and abs(c.z - H0) < 0.004: m = 1                       # deck
-        elif n.y > 0.99 and abs(c.y - K["v_int"]) < 0.004: m = 1              # intake face
+        elif n.dot(FACE_N) > 0.999 and abs(c.y - face_v(c.z)) < 0.004: m = 1   # intake face
         elif n.y < -0.99 and abs(c.y - K["exh_face"]) < 0.004: m = 1          # exhaust pads
         elif n.z > 0.99 and abs(c.z - K["rail"]) < 0.004: m = 1               # cover rail
         elif n.z > 0.99 and abs(c.z - K["mid_seat"]) < 0.004: m = 1           # middle-row spot faces
