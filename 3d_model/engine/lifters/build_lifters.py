@@ -52,8 +52,7 @@ K = dict(
     guide_clear=0.006,  # [est] hole over the flats
     top_above_guide=0.10,   # [meas] photo 351: lifter tops stand about .10" above the guides on the base circle
 )
-TILT = math.radians(SIDE["lifters"]["tilt_deg"])
-BOSS_T = (SIDE["valley"]["boss"]["top_z"] - CAMZ) / math.cos(TILT)    # boss top, along the lifter axis
+BOSS_T = SIDE["valley"]["boss"]["top_t"]    # boss top, along each lifter axis (the block's top_t)
 
 
 def frame3(r):
@@ -148,8 +147,13 @@ def roller_mesh(name, root, tmp):
 
 def guide_mesh(name, root, ra, rb_, frame_inv, t0):
     """Dog-bone guide plate square to the lifter axes, on the boss top.
-    ra, rb_ are the two lifters' rows; outline and holes in the guide frame."""
-    pa = frame_inv @ centre(ra, 0.0); pb = frame_inv @ centre(rb_, 0.0)
+    ra, rb_ are the two lifters' rows; outline and holes in the guide frame. Each
+    hole is centred where its lifter's axis crosses the plate and cut along that axis."""
+    tc = {}
+    for r in (ra, rb_):                               # distance along the lifter axis to the plate's mid-plane
+        a = frame_inv.to_3x3() @ Vector((r["ax"][0], 0, r["ax"][1])); o_ = frame_inv @ centre(r, 0.0)
+        tc[id(r)] = (t0 + K["guide_t"] / 2 - o_.z) / a.z
+    pa = frame_inv @ centre(ra, tc[id(ra)]); pb = frame_inv @ centre(rb_, tc[id(rb_)])
     pa, pb = (pa.x, pa.y), (pb.x, pb.y)
     R = K["guide_r"]
     d = Vector((pb[0] - pa[0], pb[1] - pa[1])); L = d.length; u = d / L; n = Vector((-u.y, u.x))
@@ -164,8 +168,11 @@ def guide_mesh(name, root, ra, rb_, frame_inv, t0):
     o = obj(name, bm, root)
     tmp = coll("Lifter_tmp", root, hide=True)
     hole = flatted_circle(K["body_d"] / 2 + 0.01, K["flat_x"] + K["guide_clear"], 96)
-    for p in (pa, pb):
-        obj("hole", prism2([(x + p[0], y + p[1]) for x, y in hole], t0 - 0.1, t0 + K["guide_t"] + 0.1), tmp)
+    for r in (ra, rb_):
+        bm = prism2(hole, -0.3, 0.3)
+        M = frame_inv @ Matrix.Translation(centre(r, tc[id(r)])) @ frame3(r).to_4x4()
+        bmesh.ops.transform(bm, matrix=Matrix.Scale(IN, 4) @ M @ Matrix.Scale(1 / IN, 4), verts=bm.verts)
+        obj("hole", bm, tmp)
     boolean(o, "DIFFERENCE", tmp); clear(tmp); bpy.data.collections.remove(tmp)
     return o
 
@@ -215,11 +222,14 @@ def build():
     for r in rows: by_cyl.setdefault(r["cyl"], []).append(r)
     guides = []
     for c, (ra, rb_) in sorted(by_cyl.items()):
-        F = frame3(ra); Fi = F.inverted()
+        # The pair's two bores are 6.25 deg apart (38.75 / 45): the plate is square to their bisector, on the boss top.
+        am = (Vector((ra["ax"][0], 0, ra["ax"][1])) + Vector((rb_["ax"][0], 0, rb_["ax"][1]))).normalized()
+        half = Vector((ra["ax"][0], 0, ra["ax"][1])).angle(Vector((rb_["ax"][0], 0, rb_["ax"][1]))) / 2
+        F = frame3(dict(ax=(am.x, am.z)))
         # Guide frame origin on the cam axis at the pair's mid y: lifter centres project onto (x, y), height = t.
         mid = (ra["y"] + rb_["y"]) / 2
         Fi4 = (Matrix.Translation(Vector((0, mid, CAMZ))) @ F.to_4x4()).inverted()
-        g = guide_mesh(f"LifterGuide_{c}", root, ra, rb_, Fi4, BOSS_T + 0.002)
+        g = guide_mesh(f"LifterGuide_{c}", root, ra, rb_, Fi4, BOSS_T * math.cos(half) + 0.002)
         g.matrix_world = Matrix.Translation(Vector((0, mid, CAMZ)) * IN) @ F.to_4x4()
         g.data.materials.append(guide_m); g.data.shade_smooth(); g.data.set_sharp_from_angle(angle=math.radians(35))
         guides.append(g)

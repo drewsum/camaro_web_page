@@ -553,8 +553,14 @@ def build():
     # bores, the cam drain windows, the retainer taps, the distributor bore
     # and the oil galleries.
     V, lf = SIDE["valley"], SIDE["lifters"]
-    camc = Vector((0, 0, P["cam_cd"])); th = math.radians(lf["tilt_deg"])
-    def lifter_axis(b): return Vector((math.copysign(math.sin(th), b["d"].x), 0, math.cos(th)))
+    camc = Vector((0, 0, P["cam_cd"]))
+    def lifter_axis(b, valve):
+        """GM's big-block bore angles: intakes 38.75, exhausts 45 deg from vertical, through the cam centre."""
+        th = math.radians(lf["tilt_deg_" + valve])
+        return Vector((math.copysign(math.sin(th), b["d"].x), 0, math.cos(th)))
+    def pair_valves(bank):
+        """(rear, front) valve of each pair: E-I-E-I front to rear on the left head, I-E-I-E on the right."""
+        return ("I", "E") if bank == "L" else ("E", "I")
     def stadium(c, ax, half, r, seg=12, e1=Vector((0, 1, 0))):
         e1 = e1.normalized(); e2 = ax.cross(e1).normalized()
         pts = []
@@ -569,20 +575,22 @@ def build():
     def bore_c(yp, ax, sgn, t):
         """Centre of a lifter bore at distance t along its axis from the cam
         centre. yp is the pair's (front, rear) lifter y from sides.json, the
-        same y as the cam lobe under it; the forward bore (sgn +1) sits
-        outboard of the rear one (photos 545/27)."""
+        same y as the cam lobe under it. ax is that bore's own axis."""
         return camc + Vector((0, yp[0] if sgn > 0 else yp[1], 0)) + ax * t + out_dir(ax) * (sgn * lf["pair_offset"] / 2)
     pairs = []
     for bank, b in BANKS.items():
-        ax = lifter_axis(b)
+        vr, vf = pair_valves(bank)
+        axs = (lifter_axis(b, vr), lifter_axis(b, vf))           # (rear, front) bore axes
         for k in range(4):
             yc = lf["y"][bank][k]
-            pairs.append((bank, k, yc, ax))
+            pairs.append((bank, k, yc, axs))
     bo = V["boss"]
-    for bank, k, yc, ax in pairs:
-        t_top = (bo["top_z"] - P["cam_cd"]) / ax.z
-        c1, c2 = bore_c(yc, ax, -1, t_top - bo["height"]), bore_c(yc, ax, 1, t_top - bo["height"])
-        o = obj(f"LifterBoss_{bank}{k}", prism(stadium((c1 + c2) / 2, ax, (c2 - c1).length / 2, bo["r"], e1=c2 - c1), ax, bo["height"]), parts)
+    for bank, k, yc, axs in pairs:
+        # One dog-bone boss per pair, its top square to the bisector of the two bore axes, top_t from the cam centre.
+        am = (axs[0] + axs[1]).normalized(); half = axs[0].angle(axs[1]) / 2
+        t_b = bo["top_t"] * math.cos(half) - bo["height"]          # boss bottom, along the bisector
+        c1, c2 = bore_c(yc, axs[0], -1, t_b / math.cos(half)), bore_c(yc, axs[1], 1, t_b / math.cos(half))
+        o = obj(f"LifterBoss_{bank}{k}", prism(stadium((c1 + c2) / 2, am, (c2 - c1).length / 2, bo["r"], e1=c2 - c1), am, bo["height"]), parts)
         boolean(block, "UNION", o); bpy.data.objects.remove(o)
     ds, db, sb = SIDE["distributor"], V["dist_boss"], V["spider_boss"]
     slot_y = [P["y_cyl1"] - P["stagger"] / 2 - P["bore_sp"] * k for k in range(4)]
@@ -595,10 +603,12 @@ def build():
     vcut = coll("Block_Cutters_Valley", root, hide=True)
     def VC(name, bm_):
         info["cutters"] += 1; return obj(name, bm_, vcut)
-    for bank, k, yc, ax in pairs:
+    for bank, k, yc, axs in pairs:
         for j, sgn in enumerate((-1, 1)):
+            ax = axs[j]
             VC(f"Lifter_{bank}{k}{j}", cyl(bore_c(yc, ax, sgn, lf["from_cam"]), ax, lf["d"] / 2,
-                                          (bo["top_z"] - P["cam_cd"]) / ax.z - lf["from_cam"] + 0.3, 32))
+                                          bo["top_t"] - lf["from_cam"] + 0.7, 32))   # runs .7" past the boss top: at 45 deg the exhaust
+                                          # lifters (2E, 7E) rise along the valley wall at full lift, so their bores clear a notch in it
     dsl = V["drain_slots"]
     for k, y in enumerate(slot_y):
         r = dsl["w"] / 2; half = dsl["len"] / 2 - r

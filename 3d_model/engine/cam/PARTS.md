@@ -33,7 +33,7 @@ Nothing is typed in by hand. Each lobe is worked out as follows:
 
 - **Firing TDC:** each cylinder's firing TDC comes from 1-8-4-3-6-5-7-2 at 90° steps (0 = cylinder 1 firing).
 - **Peak lift:** at firing TDC + 360 + 106 for the intake, and firing TDC + 360 − 113.8 for the exhaust.
-- **Profile:** ground by kinematic inversion for its own lifter. The lifter axis is the block's: 38° from vertical through the cam centre, with the .11" pair offset (front bore outboard, rear inboard). So the offset follower is accounted for (about 12 crank degrees at this offset).
+- **Profile:** ground by kinematic inversion for its own lifter. The lifter axis is the block's: GM's big-block bore angles through the cam centre, 38.75° from vertical for the intakes and 45° for the exhausts, with no parallel offset. So each lobe sits on the shaft where it would on a real big-block core.
 - **Lobe order front to rear:** 1E 2I 1I 2E 3E 4I 3I 4E 5E 6I 5I 6E 7E 8I 7I 8E. Each lifter sits under its own valve, and big-block heads alternate: E-I-E-I front to rear on the left bank, I-E-I-E on the right (the same casting turned round; Drew's photo 334 of the AFR deck, see ../heads/PARTS.md). It was the small-block order (1E 2E 1I 2I ..., from E-I-I-E heads) until the heads were modelled. The script asserts it.
 
 | Lobe | y | Peak (crank deg) | Nose angle at crank 0 (cam deg, from top toward passenger) | Cam deg after #1 intake |
@@ -55,7 +55,7 @@ Nothing is typed in by hand. Each lobe is worked out as follows:
 | 7E | 5.22 | 66.2 | 359.9 | 199.9 |
 | 8E | 4.32 | 336.2 | 201.3 | 358.4 |
 
-The absolute nose angles depend on the lifter bank angle. A real core is ground for the real block's angle, which is not measured here (the model's 38° is [derived] from photo 545). The valve events at the crank are what the card fixes, and those match.
+The absolute nose angles depend on the lifter bank angles. They use GM's blueprint angles (38.75° intake, 45° exhaust; until Nov 2026 every bore was at 38° with a .11" offset, which put some lobes up to 14 cam degrees from a real core). The valve events at the crank are what the card fixes, and those match on all 16 lobes.
 
 ## Check against the card
 

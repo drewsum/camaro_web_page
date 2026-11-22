@@ -17,7 +17,7 @@ The lifter tops stand .10" above the guides on the base circle (photo 351) [meas
 
 ## Motion
 
-Each lifter only slides along its bore axis (38° bank tilt, .11" pair offset, as the block and cam). The lift is read off the finished cam mesh, not from a formula: `event_check` in `../cam/build_cam.py` pushes a .375" roller against the lobe vertices on every lifter axis every 0.5 crank degree. That lift is keyed as the lifter's location (linear, cyclic), on the crank's timeline: frame = 1 + crank_deg / 7.5, so frames 1-97 are 0-720°. The roller is parented to its lifter.
+Each lifter only slides along its bore axis (38.75° intake, 45° exhaust from vertical through the cam centre, as the block and cam; each guide plate is square to the bisector of its pair, and each hole is cut along its own lifter). The lift is read off the finished cam mesh, not from a formula: `event_check` in `../cam/build_cam.py` pushes a .375" roller against the lobe vertices on every lifter axis every 0.5 crank degree. That lift is keyed as the lifter's location (linear, cyclic), on the crank's timeline: frame = 1 + crank_deg / 7.5, so frames 1-97 are 0-720°. The roller is parented to its lifter.
 
 The keys follow the timeline, not `crank_deg` directly. If the crank's animation is changed, re-run the script.
 

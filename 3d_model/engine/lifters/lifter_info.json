@@ -23,172 +23,172 @@
   "guide_clear": 0.006,
   "top_above_guide": 0.1
  },
- "boss_top_t": 3.518987510396261,
+ "boss_top_t": 3.524,
  "lifters": [
   {
    "lifter": "Lifter_1E",
    "cyl": 1,
    "valve": "E",
    "y": 21.25,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_2I",
    "cyl": 2,
    "valve": "I",
    "y": 20.25,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_1I",
    "cyl": 1,
    "valve": "I",
    "y": 19.45,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_2E",
    "cyl": 2,
    "valve": "E",
    "y": 18.45,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_3E",
    "cyl": 3,
    "valve": "E",
    "y": 16.41,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_4I",
    "cyl": 4,
    "valve": "I",
    "y": 15.41,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_3I",
    "cyl": 3,
    "valve": "I",
    "y": 14.61,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_4E",
    "cyl": 4,
    "valve": "E",
    "y": 13.61,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_5E",
    "cyl": 5,
    "valve": "E",
    "y": 11.57,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_6I",
    "cyl": 6,
    "valve": "I",
    "y": 10.57,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_5I",
    "cyl": 5,
    "valve": "I",
    "y": 9.77,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_6E",
    "cyl": 6,
    "valve": "E",
    "y": 8.77,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_7E",
    "cyl": 7,
    "valve": "E",
    "y": 7.01,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_8I",
    "cyl": 8,
    "valve": "I",
    "y": 6.12,
-   "e": 0.11,
-   "t_base": 0.9537,
+   "e": 0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_7I",
    "cyl": 7,
    "valve": "I",
    "y": 5.22,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.366,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   },
   {
    "lifter": "Lifter_8E",
    "cyl": 8,
    "valve": "E",
    "y": 4.32,
-   "e": -0.11,
-   "t_base": 0.9537,
+   "e": -0.0,
+   "t_base": 0.96,
    "lift_max": 0.364,
-   "top_t_base": 3.7137
+   "top_t_base": 3.72
   }
  ],
  "checks": {
   "clash": [],
-  "roller_max_gap_to_lobe_in": 0.0008,
-  "max_rollers_in_contact_with_lobes": 2
+  "roller_max_gap_to_lobe_in": 0.003,
+  "max_rollers_in_contact_with_lobes": 11
  }
 }

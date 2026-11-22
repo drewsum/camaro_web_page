@@ -141,18 +141,19 @@ LIFT = {v: lift_curve(CARD[v]) for v in ("I", "E")}
 
 def lifter_axes():
     """Lifter axis, offset and y for every lobe, from the block's own rules
-    (sides.json: tilt through the cam centre, forward bore of each pair .11"
-    outboard, rear .11" inboard)."""
-    th = math.radians(LF["tilt_deg"]); po = LF["pair_offset"] / 2
+    (sides.json: GM's big-block bore angles through the cam centre, intakes
+    38.75 deg and exhausts 45 deg from vertical; no parallel offset)."""
+    po = LF["pair_offset"] / 2
     out = []
     for bank, sg, cyls in (("L", -1, (1, 3, 5, 7)), ("R", 1, (2, 4, 6, 8))):
-        ax = (sg * math.sin(th), math.cos(th))                     # (x, z)
-        w = (sg * math.cos(th), -math.sin(th))                     # out_dir: across the bank, outboard
         for k, cyl in enumerate(cyls):
             yF, yR = LF["y"][bank][k]
             front_is_exh = bank == "L"                             # BBC heads alternate E-I-E-I; the right head is the same casting turned round, so I-E-I-E (../heads)
             for yy, sgn in ((yF, 1), (yR, -1)):
                 valve = ("E" if front_is_exh else "I") if sgn > 0 else ("I" if front_is_exh else "E")
+                th = math.radians(LF["tilt_deg_" + valve])
+                ax = (sg * math.sin(th), math.cos(th))             # (x, z)
+                w = (sg * math.cos(th), -math.sin(th))             # out_dir: across the bank, outboard
                 out.append(dict(cyl=cyl, bank=bank, valve=valve, y=yy, ax=ax, w=w, e=sgn * po))
     out.sort(key=lambda d: -d["y"])
     return out
