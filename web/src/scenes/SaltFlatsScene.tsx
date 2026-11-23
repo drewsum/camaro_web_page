@@ -32,7 +32,7 @@ import Dust from "./saltflats/Dust";
 // the horizon, cracked into polygons, a mirage shimmering where it meets the
 // sky, and mountains that seem to float above it.
 
-const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
+const SKY = polyHavenHdri("mpumalanga_veld_puresky"); // hard clear sun 9° up
 const EXPOSURE = 0.7;
 const FOG_NEAR = 600;
 const FOG_FAR = 6000;

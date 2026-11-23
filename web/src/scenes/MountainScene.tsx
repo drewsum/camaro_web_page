@@ -38,7 +38,7 @@ import { MOUNTAIN_LENGTH as L, mountainTrack as track } from "./mountain/mountai
 // Two hairpins fold the road back across the ravine, and snow-capped peaks
 // stand on the horizon.
 
-const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
+const SKY = polyHavenHdri("hilly_terrain_01_puresky"); // evening sun 11° up through broken cloud
 const EXPOSURE = 0.85;
 const FOG_NEAR = 180;
 const FOG_FAR = 2000;

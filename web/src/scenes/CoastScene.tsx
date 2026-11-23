@@ -75,7 +75,7 @@ import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 // The car stays at the origin facing +Z; each frame the world (and the sky
 // with it) is moved so the car's spot on the road lands there.
 
-const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
+const SKY = polyHavenHdri("syferfontein_6d_clear_puresky"); // late sun, 6° up: low over the sea
 const EXPOSURE = 0.9;
 const SEA = 0;
 const FOG_NEAR = 250;

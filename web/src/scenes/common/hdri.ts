@@ -17,6 +17,7 @@ export interface HdriSky {
   sun: Vector3; // unit direction toward the sun, in world space
   sunIntensity: number; // for the scene's directional sun light
   sunColor: Color;
+  sunPeak: number; // the sun's brightest pixel over the sky's average: thousands for a hard sun, tens for a hazy one
   envIntensity: number; // for the environment the clipped sky lights the car with
   horizon: Color; // linear HDR colour just above the horizon (for custom shaders' haze)
   fog: Color; // the same colour as it appears on screen, for three's built-in fog
@@ -144,7 +145,7 @@ function analyse(texture: DataTexture) {
   const phi = ((bestPx + 0.5) / width - 0.5) * Math.PI * 2;
   const theta = (1 - (bestPy + 0.5) / height - 0.5) * Math.PI;
   const sun = new Vector3(Math.cos(theta) * Math.cos(phi), Math.sin(theta), Math.cos(theta) * Math.sin(phi));
-  return { sun, horizon, sunIntensity, sunColor, skyMean };
+  return { sun, horizon, sunIntensity, sunColor, skyMean, sunPeak: best / Math.max(1e-6, skyMean) };
 }
 
 // Textures are cached and shared, and clipping is one-way: analyse each once.
@@ -158,7 +159,7 @@ export function useHdriSky(url: string, sunAzimuth: number | null, exposure: num
   return useMemo(() => {
     let a = analysed.get(texture);
     if (!a) analysed.set(texture, (a = analyse(texture)));
-    const { sun, horizon, sunIntensity, sunColor, skyMean } = a;
+    const { sun, horizon, sunIntensity, sunColor, skyMean, sunPeak } = a;
     const current = Math.atan2(sun.x, sun.z);
     // Environment rotation turns the sky the same way as rotating an object.
     const rotation = new Euler(0, sunAzimuth === null ? 0 : sunAzimuth - current, 0);
@@ -168,6 +169,7 @@ export function useHdriSky(url: string, sunAzimuth: number | null, exposure: num
       sun: sun.clone().applyEuler(rotation),
       sunIntensity: sunIntensity * SUN_SHARE,
       sunColor,
+      sunPeak,
       envIntensity: Math.min(SKY_FILL_MAX, Math.max(1, SKY_TARGET / skyMean)),
       horizon,
       fog: displayColour(horizon, exposure),
