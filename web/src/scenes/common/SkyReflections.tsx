@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Environment, EnvironmentPortal } from "@react-three/drei";
 import { DoubleSide, type ColorRepresentation } from "three";
 import type { HdriSky } from "./hdri";
@@ -11,7 +12,11 @@ import SunGlare from "./SunGlare";
 // the car's flanks. Given a `ground` colour, the sky is rendered into a cube
 // map once with a flat ground under it, the way a car in the open sees bright
 // sky over dark ground. Skies photographed with their ground leave it out.
-export default function SkyReflections({
+//
+// Memoised: drei's EnvironmentPortal redraws its cube map and resets the
+// scene's environment whenever it re-renders, so a scene re-rendering for an
+// unrelated prop (the Lights or Dome light tickbox) redrew it for nothing.
+export default memo(function SkyReflections({
   sky,
   ground,
   groundY = -0.6,
@@ -26,7 +31,7 @@ export default function SkyReflections({
   // The sun is clipped out of the sky, so draw it (and its glare) back in by
   // day; a hazy sky's weak sun gets less glare, and the moon none.
   const day = sky.backgroundIntensity === undefined;
-  const glare = background && day && <SunGlare sun={sky.sun} color={sky.sunColor} horizon={sky.horizon} strength={sunGlare(sky.sunPeak)} />;
+  const glare = background && day && <SunGlare sun={sky.sun} skyYaw={sky.rotation.y} color={sky.sunColor} horizon={sky.horizon} strength={sunGlare(sky.sunPeak)} />;
   if (ground === undefined) {
     return (
       <>
@@ -48,7 +53,7 @@ export default function SkyReflections({
       </EnvironmentPortal>
     </>
   );
-}
+});
 
 // Glare strength from how far the sun outshines the sky: a hard midday sun
 // (~10⁵) gets the full flare, a hazy or setting one (~10–50) under half.

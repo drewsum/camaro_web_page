@@ -24,6 +24,12 @@ interface Options {
 
 // A tiled material for a mesh whose 0-1 UVs span `size` metres. Textures
 // are shared from drei's cache; each material clones them to set its own repeat.
+//
+// drei's useTexture hands back a new { map, normalMap, arm } object on every
+// render (the textures in it are the cached ones), so the memos key on the
+// textures themselves: keyed on the object, every re-render of a scene (the
+// Lights or Dome light tickbox) built new materials, re-uploaded every surface
+// texture and leaked the old copies.
 export function usePbrMaterial(name: string, { res = "2k", tile, size, normalScale = 1, tint = "#ffffff", brightness = 1, roughness = 1 }: Options) {
   const tex = useTexture(urls(name, res));
   return useMemo(() => {
@@ -50,7 +56,7 @@ export function usePbrMaterial(name: string, { res = "2k", tile, size, normalSca
     });
     material.color.multiplyScalar(brightness);
     return material;
-  }, [tex, tile, size[0], size[1], normalScale, tint, brightness, roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tex.map, tex.normalMap, tex.arm, tile, size[0], size[1], normalScale, tint, brightness, roughness]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 // The raw textures, wrapping and at full anisotropy, for custom shaders that
@@ -65,7 +71,7 @@ export function usePbrTextures(name: string, res: PbrRes = "2k") {
     }
     tex.map.colorSpace = SRGBColorSpace;
     return tex;
-  }, [tex]);
+  }, [tex.map, tex.normalMap, tex.arm]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 export function preloadPbr(name: string, res: PbrRes = "2k") {
