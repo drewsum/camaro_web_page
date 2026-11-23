@@ -7,7 +7,9 @@ import { Box3, Color, Matrix4, Vector3 } from "three";
 // every frame.
 
 export interface FxSun {
-  dir: Vector3; // unit direction toward the sun, world space
+  dir: Vector3; // unit direction toward the sun, world space, with the sky turned by skyYaw
+  skyYaw: number; // the sky's turn about the vertical that dir is for; driving scenes turn the sky further
+                  // as the road bends (scene.backgroundRotation), and the sun has to turn with it
   color: Color; // the sunlight's colour (normalised)
   horizon: Color; // linear sky colour just above the horizon
   strength: number; // 0..1, how hard the sun is

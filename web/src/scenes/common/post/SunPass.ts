@@ -225,6 +225,7 @@ function smoothstep(a: number, b: number, x: number) {
 const view = new Vector3();
 
 export class SunPass extends Pass {
+  dir = new Vector3(0, 1, 0); // toward the sun in world space, set each frame by PostFX
   private camera3: PerspectiveCamera;
   private depth: Texture | null = null;
   private rays = new WebGLRenderTarget(1, 1, { depthBuffer: false, type: HalfFloatType });
@@ -302,7 +303,7 @@ export class SunPass extends Pass {
     if (!sun || sun.strength <= 0 || !this.depth) return;
 
     // Where the sun is relative to the frame, and how far outside it.
-    view.copy(sun.dir).transformDirection(camera.matrixWorldInverse);
+    view.copy(this.dir).transformDirection(camera.matrixWorldInverse);
     if (view.z > -0.05) return; // beside or behind the camera
     const ty = Math.tan((camera.fov * Math.PI) / 360) / camera.zoom;
     const tx = ty * camera.aspect;

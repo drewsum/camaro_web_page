@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Color, HalfFloatType, type PerspectiveCamera, type Scene, type WebGLRenderer } from "three";
+import { Color, HalfFloatType, Vector3, type PerspectiveCamera, type Scene, type WebGLRenderer } from "three";
 import { BloomEffect, EffectComposer, EffectPass, RenderPass, ToneMappingEffect, ToneMappingMode } from "postprocessing";
 import { N8AOPostPass } from "n8ao";
 import { AtmosphereEffect, MotionBlurEffect } from "./effects";
@@ -21,6 +21,8 @@ import { fitSunShadows, softenShadows } from "./sunShadows";
 // sun's shadows to the view and softens their edges (sunShadows.ts).
 
 const SHUTTER = 1 / 60; // s
+const UP = new Vector3(0, 1, 0);
+const sunDir = new Vector3();
 
 function build(gl: WebGLRenderer, scene: Scene, camera: PerspectiveCamera) {
   // Multisampling resolves into the half-float buffer; on a dense display
@@ -45,7 +47,7 @@ function build(gl: WebGLRenderer, scene: Scene, camera: PerspectiveCamera) {
   composer.addPass(motionPass);
   composer.addPass(sun);
   composer.addPass(new EffectPass(camera, bloom, tone));
-  return { composer, atmosphere, motion, motionPass, glow: new Color(), frame: 0 };
+  return { composer, atmosphere, motion, motionPass, sun, glow: new Color(), frame: 0 };
 }
 
 export default function PostFX({ settings }: { settings: PostSettings }) {
@@ -85,10 +87,13 @@ export default function PostFX({ settings }: { settings: PostSettings }) {
     // Atmosphere: only by day, tinted by the sun.
     const sun = fx.sun;
     if (sun) {
+      // Where the sun is now: driving scenes turn the sky as the road bends.
+      sunDir.copy(sun.dir).applyAxisAngle(UP, scene.backgroundRotation.y - sun.skyYaw);
+      p.sun.dir.copy(sunDir);
       const sky = 0.2126 * sun.horizon.r + 0.7152 * sun.horizon.g + 0.0722 * sun.horizon.b;
       p.glow.copy(sun.color).multiplyScalar(sky * 0.5 * sun.strength);
     }
-    p.atmosphere.set(s.haze ?? 1, s.hazeDistance ?? 900, s.heatHaze ?? 0, sun?.dir ?? null, sun ? p.glow : null);
+    p.atmosphere.set(s.haze ?? 1, s.hazeDistance ?? 900, s.heatHaze ?? 0, sun ? sunDir : null, sun ? p.glow : null);
 
     // Motion blur: only while something is moving.
     const car = fx.car;
