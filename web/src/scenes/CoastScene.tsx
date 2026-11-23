@@ -985,7 +985,10 @@ const beamVertex = /* glsl */ `
 const beamFragment = /* glsl */ `
   varying float vAlong;
   void main() {
-    float a = 0.45 * pow(vAlong, 1.8);
+    // clamped: multisampling can carry a varying a little past its triangle's
+    // edge, and pow() of a negative number is NaN, which bloom then spreads
+    // over the whole frame
+    float a = 0.45 * pow(clamp(vAlong, 0.0, 1.0), 1.8);
     gl_FragColor = vec4(vec3(1.0, 0.93, 0.78) * a, 1.0);
   }
 `;

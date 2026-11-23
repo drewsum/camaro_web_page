@@ -320,7 +320,9 @@ const beamFragment = /* glsl */ `
   void main() {
     // Thickest through the middle of the cone, brightest near the lens.
     float edge = mix(0.45, 1.0, abs(dot(vNormalV, vViewDir)));
-    float a = edge * (0.015 + 0.2 * pow(vAlong, 3.0)) * (0.45 + uBrightness);
+    // vAlong clamped: past a triangle's edge (multisampling) it can go
+    // negative, and pow() of a negative is NaN, which bloom spreads
+    float a = edge * (0.015 + 0.2 * pow(clamp(vAlong, 0.0, 1.0), 3.0)) * (0.45 + uBrightness);
     gl_FragColor = vec4(vec3(0.82, 0.86, 1.0) * a, 1.0);
   }
 `;
