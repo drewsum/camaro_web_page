@@ -12,7 +12,7 @@ How a model gets from Blender to a visitor's screen, in six steps:
    re-encoded as WebP), and `tools/engine-sim` renders the engine-sound MP3 loops. Both are
    committed under `web/public/`.
 2. **Deploy:** a push to `main` runs GitHub Actions, which builds the Vite app into an nginx
-   image on ghcr.io. The server only pulls that image with `docker compose`.
+   image on ghcr.io and points the `deploy` branch at it; Portainer redeploys from that branch.
 3. **Load:** the browser fetches the page and JS bundle; `index.html` preloads `camaro.glb`
    and the Draco decoder at the same time.
 4. **Scene:** the app shell (`web/src/App.tsx`) mounts the chosen scene. The showroom ships in
@@ -53,11 +53,33 @@ npm run dev
 
 ## Deploy
 
-Every push to `main` builds the image and publishes it to `ghcr.io/drewsum/camaro-web`
-(`.github/workflows/docker-publish.yml`). `docker-compose.yml` only pulls that image, so the
-server never builds (log in to ghcr.io with a token that has `read:packages`).
+The server runs a Portainer **Git-repository stack** from `deploy/portainer-compose.yml` with
+**GitOps updates**; nothing is built on the server and no Watchtower is needed.
 
-To build and run locally instead (`docker-compose.override.yml` adds the build):
+```
+push to main ──► Actions (.github/workflows/release.yml): build + push ghcr.io/drewsum/camaro-web:sha-<short>
+                   └─► commit "deploy: sha-<short> [skip ci]" (rewrites the image: line in
+                       deploy/portainer-compose.yml) to main, and move the deploy branch to it
+Portainer polls the deploy branch ──► sees the new commit ──► pulls the image, redeploys
+```
+
+Portainer tracks `deploy`, which only ever points at a tag-bump commit, so it never redeploys
+before the image it names exists. Don't commit to `deploy` by hand; the workflow moves it.
+
+**Setting up the stack** (Portainer → Stacks → Add stack → Repository):
+
+- Repository URL `https://github.com/drewsum/camaro_web_page`, reference `refs/heads/deploy`,
+  authentication off (the repo and the GHCR package are public).
+- Compose path `deploy/portainer-compose.yml`.
+- GitOps updates on: mechanism *Polling*, interval `5m`; **Re-pull image** on, **Force
+  redeployment** off.
+- Environment variables (optional): `PORT` for the host port (default 8080).
+
+**Rolling back:** revert the commit on `main` (a new image is built and deployed), or set
+`CAMARO_IMAGE=ghcr.io/drewsum/camaro-web:sha-<older>` in the stack's environment and update
+it. Every `sha-` tag stays in GHCR.
+
+To build and run locally instead:
 
 ```sh
 docker compose up -d --build

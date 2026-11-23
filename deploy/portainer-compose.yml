@@ -1,0 +1,15 @@
+# Server stack. Deployed by Portainer as a Git-repository stack with GitOps updates, tracking
+# the `deploy` branch (see "Deploy" in the README).
+#
+# On every push to main, GitHub Actions (.github/workflows/release.yml) builds the image, pushes
+# it to GHCR, rewrites the image tag below in a "[skip ci]" commit and moves `deploy` to it.
+# Portainer polls `deploy`, sees the commit and redeploys, so it only ever redeploys onto an
+# image that already exists.
+#
+# CAMARO_IMAGE overrides the image, e.g. to pin an older sha- tag to roll back.
+services:
+  camaro-web:
+    image: ${CAMARO_IMAGE:-ghcr.io/drewsum/camaro-web:sha-78ceb04}
+    ports:
+      - "${PORT:-8080}:80"
+    restart: unless-stopped

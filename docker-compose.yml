@@ -1,19 +1,8 @@
+# Local build: `docker compose up -d --build`. The server runs deploy/portainer-compose.yml,
+# which pulls the published image instead.
 services:
   camaro-web:
-    image: ghcr.io/drewsum/camaro-web:latest
-    pull_policy: always
+    build: ./web
     ports:
       - "${PORT:-8080}:80"
     restart: unless-stopped
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-
-  # Polls GHCR and recreates camaro-web when a new :latest is pushed.
-  # --label-enable limits it to containers labelled above, so it won't
-  # touch anything else on the host.
-  watchtower:
-    image: nickfedor/watchtower:latest
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --label-enable --cleanup --interval ${WATCHTOWER_INTERVAL:-300}
