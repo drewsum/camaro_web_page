@@ -101,7 +101,7 @@ function Traffic({ night }: { night: boolean }) {
 }
 
 function GoldenGateWorld({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, SUN_AZIMUTH, EXPOSURE, night);
+  const sky = useSceneSky(SKY, SUN_AZIMUTH, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={DRIVE}>

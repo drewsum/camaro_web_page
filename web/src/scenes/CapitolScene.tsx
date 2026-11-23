@@ -53,7 +53,7 @@ function City({ sky, sunLight, children }: { sky: HdriSky; sunLight: RefObject<D
 }
 
 function Square({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, SUN_AZIMUTH, EXPOSURE, night);
+  const sky = useSceneSky(SKY, SUN_AZIMUTH, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track} roughness={0.7}>

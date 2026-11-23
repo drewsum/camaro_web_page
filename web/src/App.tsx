@@ -4,6 +4,7 @@ import { PerformanceMonitor, useProgress } from "@react-three/drei";
 import { SCENES } from "./scenes";
 import { PAGES } from "./pages";
 import { enginePlayer } from "./audio/enginePlayer";
+import PostFX from "./scenes/common/post/PostFX";
 
 const SCENE_KEY = "camaro.scene";
 // Phones report 3 or more; past 2 the extra pixels cost far more than they show.
@@ -104,7 +105,7 @@ export default function App() {
           scene loaded for when the page closes. */}
       <div className={page?.viewer ? "viewer off" : page ? "viewer behind" : "viewer"} inert={!!page}>
         <Canvas
-          shadows
+          shadows="percentage"
           dpr={dpr}
           frameloop={page?.viewer ? "never" : "always"}
           camera={{ position: [5, 2, 6], fov: 40, near: 0.4 }}
@@ -120,6 +121,7 @@ export default function App() {
           <Suspense fallback={null}>
             <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} night={night} />
           </Suspense>
+          {scene.post !== false && <PostFX settings={scene.post ?? {}} />}
         </Canvas>
       </div>
       <Loader />

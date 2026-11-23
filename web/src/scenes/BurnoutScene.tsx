@@ -34,7 +34,6 @@ import TireMarks, { type Tyre } from "./burnout/TireMarks";
 const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
 const EXPOSURE = 0.85;
 const FIELD = 8000;
-const HAZE = "#9ea3b6";
 const ASPHALT = "asphalt_04";
 preloadPbr(ASPHALT);
 
@@ -310,7 +309,7 @@ function DonutCar({ lightsOn, domeOn, routine, tyres, smoke }: SceneProps & { ro
 // ---- Scene ------------------------------------------------------------------
 
 function Burnout({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, 2.6, EXPOSURE, night);
+  const sky = useSceneSky(SKY, 2.6, night);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(70), [sky]);
   const routine = useMemo(() => makeRoutine(1968), []);
   const tyres = useRef<Tyre[]>([]);
@@ -318,7 +317,7 @@ function Burnout({ lightsOn, domeOn, night = false }: SceneProps) {
   const crowd = useCrowd();
   return (
     <>
-      <fogExp2 attach="fog" args={[night ? sky.fog : HAZE, 0.0018]} />
+      <fogExp2 attach="fog" args={[sky.fog, 0.0018]} />
       <SkyReflections sky={sky} ground="#34342f" />
       <GrassField size={FIELD} mown={false} behind />
       <Countryside config={COUNTRYSIDE} />

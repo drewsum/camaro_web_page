@@ -26,7 +26,7 @@ export default function SkyReflections({
   // The sun is clipped out of the sky, so draw it (and its glare) back in by
   // day; a hazy sky's weak sun gets less glare, and the moon none.
   const day = sky.backgroundIntensity === undefined;
-  const glare = background && day && <SunGlare sun={sky.sun} color={sky.sunColor} strength={sunGlare(sky.sunPeak)} />;
+  const glare = background && day && <SunGlare sun={sky.sun} color={sky.sunColor} horizon={sky.horizon} strength={sunGlare(sky.sunPeak)} />;
   if (ground === undefined) {
     return (
       <>

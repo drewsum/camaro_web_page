@@ -26,8 +26,8 @@ import { polyHavenHdri, useHdriSky, type HdriSky } from "./hdri";
 const NIGHT_SKY = polyHavenHdri("kloppenheim_02_puresky"); // clear, with a bright moon
 const MOONLIGHT = new Color("#9db2e8");
 
-export function useSceneSky(day: string, sunAzimuth: number | null, exposure: number, night: boolean): HdriSky {
-  const sky = useHdriSky(night ? NIGHT_SKY : day, sunAzimuth, exposure);
+export function useSceneSky(day: string, sunAzimuth: number | null, night: boolean): HdriSky {
+  const sky = useHdriSky(night ? NIGHT_SKY : day, sunAzimuth);
   return useMemo(() => {
     if (!night) return sky;
     // The moon, clipped out of the sky like the sun, becomes a faint blue key
@@ -40,7 +40,7 @@ export function useSceneSky(day: string, sunAzimuth: number | null, exposure: nu
       backgroundIntensity: 0.14,
       // The haze far things fade into, dimmed to match the darker sky behind it.
       horizon: sky.horizon.clone().multiplyScalar(0.15),
-      fog: sky.fog.clone().multiplyScalar(0.28),
+      fog: sky.horizon.clone().multiplyScalar(0.12),
     };
   }, [sky, night]);
 }

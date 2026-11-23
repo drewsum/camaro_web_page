@@ -558,7 +558,7 @@ function Motel({ night }: { night: boolean }) {
 
 function DesertWorld({ lightsOn, domeOn, night = false }: SceneProps) {
   // The sun low and nearly dead ahead along the road.
-  const sky = useSceneSky(SKY, 0.25, EXPOSURE, night);
+  const sky = useSceneSky(SKY, 0.25, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track}>

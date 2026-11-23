@@ -75,9 +75,6 @@ export function findCarRig(scene: Object3D, rootName = "Camaro"): CarRig {
   for (const m of lamps) {
     m.emissive = new Color(...(m.userData.lamp_color as [number, number, number]));
     m.emissiveIntensity = 0;
-    // ACES tone mapping skews a bright saturated red toward orange, so lit
-    // tail and brake lamps read amber in daylight. Keep the red lamps out of it.
-    if (m.userData.lamp_role === "tail" || m.userData.lamp_role === "marker_rear") m.toneMapped = false;
   }
   const byId = (prefix: string) =>
     Object.fromEntries(WHEELS.map((w) => [w, need(scene, prefix + w)])) as Record<WheelId, Object3D>;

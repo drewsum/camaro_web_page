@@ -501,7 +501,7 @@ const NEIGHBOURS = { mustang: spotAt(-SPOT_W, 0), charger: spotAt(2 * SPOT_W, -7
 TAKEN.add(CAMARO).add(NEIGHBOURS.mustang).add(NEIGHBOURS.charger).add(NEIGHBOURS.challenger);
 
 function DriveIn({ lightsOn, domeOn }: SceneProps) {
-  const sky = useSceneSky(SKY, 2.2, EXPOSURE, true);
+  const sky = useSceneSky(SKY, 2.2, true);
   const moon = useMemo(() => sky.sun.clone().multiplyScalar(60), [sky]);
   const film = useMemo(() => makeFilm(), []);
   const signs = useSigns();

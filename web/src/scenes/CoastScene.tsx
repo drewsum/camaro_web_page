@@ -64,6 +64,7 @@ import { mulberry32 } from "./common/periodic";
 import SkyReflections from "./common/SkyReflections";
 import Optional from "./common/Optional";
 import { preloadPbr, usePbrMaterial } from "./common/pbr";
+import WetGround from "./common/WetGround";
 import { GROUND_PERIOD, useSlopeGround } from "./common/slopeGround";
 import { COAST_LENGTH as L, coastTrack as track } from "./coast/coastTrack";
 
@@ -336,7 +337,7 @@ function roadOverlayTexture() {
   return t;
 }
 
-function Road() {
+function Road({ night }: { night: boolean }) {
   const { road, shoulders, rail } = useMemo(() => {
     const flat = (lift: number) => (_s: number, p: TrackPoint) => p.y + lift;
     return {
@@ -382,8 +383,11 @@ function Road() {
     tint: "#d8cdbb",
   });
   const overlay = useMemo(roadOverlayTexture, []);
+  const wet = useMemo(() => [asphalt], [asphalt]);
   return (
     <>
+      {/* After dark it has rained: the road is wet, with puddles. */}
+      <WetGround materials={wet} wet={night} />
       <mesh geometry={road} receiveShadow material={asphalt} />
       <mesh geometry={road} receiveShadow>
         <meshStandardMaterial
@@ -1327,7 +1331,7 @@ function World({
 }
 
 function CoastWorld({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, -0.5, EXPOSURE, night);
+  const sky = useSceneSky(SKY, -0.5, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track}>
@@ -1347,7 +1351,7 @@ function CoastWorld({ lightsOn, domeOn, night = false }: SceneProps) {
         shadow-camera-far={120}
       />
       <World sky={sky} sunLight={sun}>
-        <Road />
+        <Road night={night} />
         <RoadFurniture />
         <StreetLights night={night} />
         <Terrain />

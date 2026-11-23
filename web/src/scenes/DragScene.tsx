@@ -443,7 +443,7 @@ function Pass({ children, lightsOn }: { children: ReactNode; lightsOn: boolean }
 }
 
 function Strip({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, 1.1, EXPOSURE, night);
+  const sky = useSceneSky(SKY, 1.1, night);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <DriveProvider profile={race.heroProfile} roughness={0.6}>

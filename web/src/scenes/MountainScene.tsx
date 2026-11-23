@@ -332,7 +332,7 @@ function Range({ sky }: { sky: HdriSky }) {
 // ---- Scene ------------------------------------------------------------------------------
 
 function MountainWorld({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, -0.9, EXPOSURE, night);
+  const sky = useSceneSky(SKY, -0.9, night);
   const sun = useRef<DirectionalLight>(null);
   return (
     <DriveProvider profile={track} roughness={1.3}>

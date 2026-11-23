@@ -20,31 +20,8 @@ export interface HdriSky {
   sunPeak: number; // the sun's brightest pixel over the sky's average: thousands for a hard sun, tens for a hazy one
   envIntensity: number; // for the environment the clipped sky lights the car with
   horizon: Color; // linear HDR colour just above the horizon (for custom shaders' haze)
-  fog: Color; // the same colour as it appears on screen, for three's built-in fog
+  fog: Color; // for three's built-in fog: the horizon's linear colour (tone mapping comes after, in PostFX)
   backgroundIntensity?: number; // how bright the sky is drawn behind the scene (default 1)
-}
-
-// three applies built-in fog after tone mapping, so its colour has to be the
-// displayed value: run the horizon through the same ACES filmic curve and sRGB
-// encoding the renderer uses.
-function displayColour(c: Color, exposure: number) {
-  const e = exposure / 0.6;
-  const r = c.r * e, g = c.g * e, b = c.b * e;
-  const x = 0.59719 * r + 0.35458 * g + 0.04823 * b;
-  const y = 0.076 * r + 0.90834 * g + 0.01566 * b;
-  const z = 0.0284 * r + 0.13383 * g + 0.83777 * b;
-  const fit = (v: number) => (v * (v + 0.0245786) - 0.000090537) / (v * (0.983729 * v + 0.432951) + 0.238081);
-  const [fx, fy, fz] = [fit(x), fit(y), fit(z)];
-  const out = [
-    1.60475 * fx - 0.53108 * fy - 0.07367 * fz,
-    -0.10208 * fx + 1.10813 * fy - 0.00605 * fz,
-    -0.00327 * fx - 0.07276 * fy + 1.07602 * fz,
-  ].map((v) => {
-    const l = Math.min(1, Math.max(0, v));
-    return l <= 0.0031308 ? l * 12.92 : 1.055 * Math.pow(l, 1 / 2.4) - 0.055;
-  });
-  // Stored as-is: the fog mixes these numbers straight into the encoded output.
-  return new Color(out[0], out[1], out[2]);
 }
 
 // The sun is a few pixels thousands of times brighter than the sky, carrying
@@ -154,7 +131,7 @@ const analysed = new WeakMap<DataTexture, ReturnType<typeof analyse>>();
 // Loads an HDRI and turns it about the vertical so its sun sits at `sunAzimuth`
 // (radians from +Z toward +X, i.e. 0 = straight ahead of the car), or leaves
 // it as shot when `sunAzimuth` is null.
-export function useHdriSky(url: string, sunAzimuth: number | null, exposure: number): HdriSky {
+export function useHdriSky(url: string, sunAzimuth: number | null): HdriSky {
   const texture = useEnvironment({ files: url }) as DataTexture;
   return useMemo(() => {
     let a = analysed.get(texture);
@@ -172,7 +149,7 @@ export function useHdriSky(url: string, sunAzimuth: number | null, exposure: num
       sunPeak,
       envIntensity: Math.min(SKY_FILL_MAX, Math.max(1, SKY_TARGET / skyMean)),
       horizon,
-      fog: displayColour(horizon, exposure),
+      fog: horizon.clone(),
     };
-  }, [texture, sunAzimuth, exposure]);
+  }, [texture, sunAzimuth]);
 }

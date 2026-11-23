@@ -1,6 +1,7 @@
 import { lazy, type ComponentType } from "react";
 import ShowroomScene from "./ShowroomScene";
 import { CREDITS, type Credit } from "./credits";
+import type { PostSettings } from "./common/post/fx";
 
 export interface SceneProps {
   lightsOn: boolean;
@@ -15,16 +16,20 @@ export interface SceneDef {
   night: boolean; // night scenes always run with the car's lights on
   nightOption?: boolean; // offers a Night tickbox (see SceneProps.night)
   credits?: Credit[]; // third-party assets the scene loads
+  post?: PostSettings | false; // the shared post-processing's settings, or false for a scene with its own
 }
+
+// Driving scenes keep the car at the origin and stream the world past it.
+const DRIVING: PostSettings = { motionBlur: true };
 
 // Environments offered in the scene dropdown. The first one is the default.
 export const SCENES: SceneDef[] = [
   { id: "showroom", label: "Showroom", Component: ShowroomScene, night: false },
-  { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
-  { id: "mountain", label: "Mountain pass", Component: lazy(() => import("./MountainScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
-  { id: "desert", label: "Desert two-lane", Component: lazy(() => import("./DesertScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven] },
-  { id: "saltflats", label: "Salt flats", Component: lazy(() => import("./SaltFlatsScene")), night: false, credits: [CREDITS.polyHaven] },
-  { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, nightOption: true, credits: [CREDITS.mach1, CREDITS.polyHaven] },
+  { id: "coast", label: "Coastal highway", Component: lazy(() => import("./CoastScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven], post: DRIVING },
+  { id: "mountain", label: "Mountain pass", Component: lazy(() => import("./MountainScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven], post: DRIVING },
+  { id: "desert", label: "Desert two-lane", Component: lazy(() => import("./DesertScene")), night: false, nightOption: true, credits: [CREDITS.polyHaven], post: { motionBlur: true, heatHaze: 1 } },
+  { id: "saltflats", label: "Salt flats", Component: lazy(() => import("./SaltFlatsScene")), night: false, credits: [CREDITS.polyHaven], post: { heatHaze: 0.8 } },
+  { id: "drag", label: "Drag strip", Component: lazy(() => import("./DragScene")), night: false, nightOption: true, credits: [CREDITS.mach1, CREDITS.polyHaven], post: DRIVING },
   {
     id: "capitol",
     label: "Capitol Square",
@@ -32,6 +37,7 @@ export const SCENES: SceneDef[] = [
     night: false,
     nightOption: true,
     credits: [CREDITS.osm, CREDITS.elevation, CREDITS.polyHaven],
+    post: DRIVING,
   },
   {
     id: "carshow",
@@ -70,6 +76,7 @@ export const SCENES: SceneDef[] = [
     night: false,
     nightOption: true,
     credits: [CREDITS.mach1, CREDITS.charger, CREDITS.polyHaven],
+    post: DRIVING,
   },
-  { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true },
+  { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true, post: false },
 ];

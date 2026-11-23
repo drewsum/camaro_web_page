@@ -14,6 +14,7 @@ import GrassField from "./common/GrassField";
 import Optional from "./common/Optional";
 import Countryside, { type CountrysideProps } from "./common/Countryside";
 import { preloadPbr, usePbrMaterial } from "./common/pbr";
+import WetGround from "./common/WetGround";
 
 // A 1950s roadside filling station on a two-lane highway: the Camaro pulled
 // up at the pumps under a lit canopy, a two-bay service garage with its
@@ -24,7 +25,6 @@ import { preloadPbr, usePbrMaterial } from "./common/pbr";
 const SKY = polyHavenHdri("kloofendal_48d_partly_cloudy_puresky");
 const EXPOSURE = 0.85;
 const FIELD = 8000;
-const HAZE = "#9ea3b6";
 
 const ASPHALT = "asphalt_04";
 const CONCRETE = "brushed_concrete_03";
@@ -293,11 +293,14 @@ type Parts = ReturnType<typeof useParts>;
 
 // ---- Ground ------------------------------------------------------------------------
 
-function Ground() {
+function Ground({ night }: { night: boolean }) {
   const apron = usePbrMaterial(CONCRETE, { tile: 2, size: [80, 120], tint: "#cfd8e0", brightness: 1.55, roughness: 1.1 }); // cooled: the scan is brownish
   const road = usePbrMaterial(ASPHALT, { tile: 4, size: [8, 1600], normalScale: 0.8, brightness: 0.8 });
+  const wet = useMemo(() => [apron, road], [apron, road]);
   return (
     <>
+      {/* After dark it has rained: the lot and road are wet, with puddles. */}
+      <WetGround materials={wet} wet={night} />
       <mesh rotation-x={-Math.PI / 2} position={[-6, 0.012, -8]} material={apron} receiveShadow>
         <planeGeometry args={[80, 120]} />
       </mesh>
@@ -558,12 +561,12 @@ const LAMPS = [
 // ---- Scene ------------------------------------------------------------------------------
 
 function Station({ lightsOn, domeOn, night = false }: SceneProps) {
-  const sky = useSceneSky(SKY, 2.2, EXPOSURE, night);
+  const sky = useSceneSky(SKY, 2.2, night);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(60), [sky]);
   const parts = useParts(night);
   return (
     <>
-      <fogExp2 attach="fog" args={[night ? sky.fog : HAZE, 0.0018]} />
+      <fogExp2 attach="fog" args={[sky.fog, 0.0018]} />
       <SkyReflections sky={sky} ground="#3a3a34" />
       <GrassField size={FIELD} mown={false} behind />
       <Countryside config={COUNTRYSIDE} />
@@ -580,7 +583,7 @@ function Station({ lightsOn, domeOn, night = false }: SceneProps) {
         shadow-camera-bottom={-34}
         shadow-camera-far={160}
       />
-      <Ground />
+      <Ground night={night} />
       <Forecourt p={parts} />
       <Garage p={parts} />
       <PoleSign p={parts} />

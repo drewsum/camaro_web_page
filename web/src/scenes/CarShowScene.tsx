@@ -31,7 +31,6 @@ const FIELD = 8000; // metres across: out to the horizon, so no sky shows under 
 // The haze the far field fades into, matched by eye to this sky just above
 // the horizon on screen (the sky's own averaged horizon colour comes out much
 // whiter, which drew a bright line along the edge of the field).
-const HAZE = "#9ea3b6";
 
 // Farmland around the show field: hills, woods, a farm and a power line,
 // all kept 70 m clear of the cars and canopies.
@@ -136,13 +135,13 @@ const CAR_CENTER = new Vector3(0, 0.6, 0.4);
 const GREY_HAIR = "#b9b5ad";
 
 function Show({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(SKY, SUN_AZIMUTH, EXPOSURE);
+  const sky = useHdriSky(SKY, SUN_AZIMUTH);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
   return (
     <>
       {/* Exponential haze, so the far field fades into the sky over a soft
           band rather than a hard line where the fog finally reaches full. */}
-      <fogExp2 attach="fog" args={[HAZE, 0.0018]} />
+      <fogExp2 attach="fog" args={[sky.fog, 0.0018]} />
       <SkyReflections sky={sky} ground="#2c3a1a" />
       <GrassField size={FIELD} mown />
       <Countryside config={COUNTRYSIDE} />

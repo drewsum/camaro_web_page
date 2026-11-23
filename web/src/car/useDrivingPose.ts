@@ -1,9 +1,11 @@
 import { useLayoutEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Quaternion, Vector3 } from "three";
+import { Box3, Matrix4, Quaternion, Vector3 } from "three";
 import { applyLamps, applyPose, LAMPS_DRIVING, LAMPS_OFF, type CarPose, type CarRig } from "./carRig";
 import { driveState, useDrive, type DriveProfile } from "./driveClock";
 import { bodyMotion, CAMARO_CHASSIS, Suspension, type Chassis } from "./suspension";
+import { WHEELS } from "./carRig";
+import { fx, newCar, type FxCar } from "../scenes/common/post/fx";
 
 const REST: CarPose = { steer: 0, wheelSpin: 0, roll: 0, pitch: 0, heave: 0 };
 
@@ -20,6 +22,38 @@ function bumps(d: number, waves: [number, number, number][]) {
 
 const X_AXIS = new Vector3(1, 0, 0);
 const tmpQ = new Quaternion();
+const tmpM = new Matrix4();
+const prevPos = new Vector3();
+
+// The car's bounds in its own frame, measured once per rig.
+const boxes = new WeakMap<CarRig, Box3>();
+function boxOf(rig: CarRig) {
+  let box = boxes.get(rig);
+  if (!box) {
+    rig.root.updateWorldMatrix(true, true);
+    box = new Box3().setFromObject(rig.root).applyMatrix4(tmpM.copy(rig.root.matrixWorld).invert()).expandByScalar(0.05);
+    boxes.set(rig, box);
+  }
+  return box;
+}
+
+// Tells the post-processing's motion blur how the car and its wheels move
+// (see scenes/common/post/fx.ts).
+function publish(car: FxCar, rig: CarRig, speed: number, rearSlip: number, delta: number) {
+  const m = rig.root.matrixWorld;
+  prevPos.setFromMatrixPosition(tmpM.copy(car.inverse).invert());
+  car.inverse.copy(m).invert();
+  car.box.copy(boxOf(rig));
+  WHEELS.forEach((id, i) => rig.wheels[id].getWorldPosition(car.wheels[i]));
+  car.axis.set(1, 0, 0).transformDirection(m);
+  car.radius = rig.wheelRadius;
+  car.spin = [speed / rig.wheelRadius, (speed + rearSlip) / rig.wheelRadius];
+  car.travel.set(0, 0, 1).transformDirection(m).multiplyScalar(speed);
+  const pos = new Vector3().setFromMatrixPosition(m);
+  car.velocity.copy(pos).sub(prevPos).divideScalar(Math.max(delta, 1e-3));
+  if (car.velocity.lengthSq() > 2500) car.velocity.set(0, 0, 0); // a jump (first frame, a reset), not motion
+  fx.car = car;
+}
 
 // How far ahead of the rear axle the body's pivot sits, from the rig.
 function pivotOf(rig: CarRig) {
@@ -44,8 +78,9 @@ export function useDrivingPose(rig: CarRig, { lightsOn, chassis = CAMARO_CHASSIS
   const drive = useDrive();
   const suspension = useMemo(() => new Suspension(chassis), [chassis]);
   const geometry = useMemo(() => pivotOf(rig), [rig]);
+  const car = useMemo(() => newCar(), []);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!drive.moving) return;
     const t = clock.elapsedTime - drive.t0;
     const stateAt = (time: number) => (profile ? profile.state(time) : driveState(drive, time + drive.t0));
@@ -82,7 +117,16 @@ export function useDrivingPose(rig: CarRig, { lightsOn, chassis = CAMARO_CHASSIS
     // Climbing tips the nose up: rotate about the car's lateral axis.
     rig.root.quaternion.copy(rig.rootRest).premultiply(tmpQ.setFromAxisAngle(X_AXIS, -Math.atan(s.grade)));
     applyLamps(rig, { ...(lightsOn ? LAMPS_DRIVING : LAMPS_OFF), brake: s.braking ?? s.accel < -BRAKE_LIGHT_DECEL });
+    // Only the scene's own car (not one following another profile).
+    if (!profile) publish(car, rig, s.speed, ((s.spin ?? 0) - (stateAt(t - 1 / 60).spin ?? 0)) * 60, delta);
   });
+
+  useLayoutEffect(
+    () => () => {
+      if (fx.car === car) fx.car = null;
+    },
+    [car],
+  );
 
   // A layout effect, so the car is level again before the next scene's
   // <Center> measures it.

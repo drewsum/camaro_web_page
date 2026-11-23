@@ -431,7 +431,7 @@ function Course() {
 // ---- Scene ------------------------------------------------------------------------------
 
 function SaltFlatsWorld({ lightsOn, domeOn }: SceneProps) {
-  const sky = useHdriSky(SKY, -1.15, EXPOSURE);
+  const sky = useHdriSky(SKY, -1.15);
   return (
     <DriveProvider profile={speedRun} roughness={0.6}>
       <fog attach="fog" args={[sky.fog, FOG_NEAR, FOG_FAR]} />
