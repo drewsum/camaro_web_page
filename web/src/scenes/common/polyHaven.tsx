@@ -1,10 +1,11 @@
 import { use, useLayoutEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { GLTFLoader } from "three-stdlib"; // the one drei uses, so it is not bundled twice
 import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  DefaultLoadingManager,
   Frustum,
   Group,
   InstancedMesh,
@@ -13,7 +14,6 @@ import {
   Mesh,
   Sphere,
   Vector3,
-  type Loader,
   type Material,
 } from "three";
 import { fadedMaterial } from "./dither";
@@ -26,14 +26,27 @@ export function polyHavenModel(name: string) {
 }
 
 // The .gltf files reference textures/<file> beside themselves, but the CDN
-// serves those images from a parallel jpg/ tree.
-const polyHavenTextures = new LoadingManager();
-polyHavenTextures.setURLModifier((url) =>
+// serves those images from a parallel jpg/ tree. Only the URLs differ: the
+// downloads still count toward the page's loading bar (three's default
+// manager).
+const polyHavenManager = new LoadingManager();
+polyHavenManager.itemStart = (url) => DefaultLoadingManager.itemStart(url);
+polyHavenManager.itemEnd = (url) => DefaultLoadingManager.itemEnd(url);
+polyHavenManager.itemError = (url) => DefaultLoadingManager.itemError(url);
+polyHavenManager.setURLModifier((url) =>
   url.replace(/\/Models\/gltf\/(\w+)\/([^/]+)\/textures\//, "/Models/jpg/$1/$2/"),
 );
-const withPolyHavenPaths = (loader: Loader) => {
-  loader.manager = polyHavenTextures;
-};
+
+// A loader class of its own, because r3f keeps one loader per class for every
+// useLoader/useGLTF call. Pointing that shared GLTFLoader at this manager (as
+// this used to) also moved any model still downloading at the time, the car's
+// included: it started on the default manager but finished on this one, so
+// the loading bar never reached its total and sat on "Loading 97%".
+class PolyHavenGLTFLoader extends GLTFLoader {
+  constructor() {
+    super(polyHavenManager);
+  }
+}
 
 export interface ModelPart {
   geometry: BufferGeometry;
@@ -43,7 +56,7 @@ export interface ModelPart {
 // Flattens a glTF into geometry/material pairs with node transforms baked in,
 // ready to instance. `bounds` is the model's extent in its own units.
 export function useModelParts(url: string) {
-  const { scene } = useGLTF(url, false, false, withPolyHavenPaths);
+  const { scene } = useLoader(PolyHavenGLTFLoader, url);
   return useMemo(() => {
     scene.updateMatrixWorld(true);
     const parts: ModelPart[] = [];
