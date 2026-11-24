@@ -1,5 +1,5 @@
 // Third-party assets each scene loads at runtime, for the attribution line.
-// The CC BY models require it; the CC0 ones (Poly Haven, Quaternius) don't,
+// The CC BY models require it; the CC0 ones (Poly Haven) don't,
 // but are credited anyway.
 
 export interface Credit {
@@ -19,5 +19,4 @@ export const CREDITS = {
   polyHaven: { title: "Skies, plants and rocks", href: "https://polyhaven.com", author: "Poly Haven", license: "CC0" },
   osm: { title: "Map data", href: "https://www.openstreetmap.org/copyright", author: "OpenStreetMap contributors", license: "ODbL", licenseUrl: "https://opendatacommons.org/licenses/odbl/" },
   elevation: { title: "Elevation", href: "https://registry.opendata.aws/terrain-tiles/", author: "USGS 3DEP via AWS Terrain Tiles", license: "Public domain" },
-  quaternius: { title: "Ultimate Modular Men", href: "https://quaternius.com", author: "Quaternius", license: "CC0" },
 } satisfies Record<string, Credit>;

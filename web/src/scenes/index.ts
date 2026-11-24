@@ -44,7 +44,7 @@ export const SCENES: SceneDef[] = [
     label: "Car show",
     Component: lazy(() => import("./CarShowScene")),
     night: false,
-    credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.quaternius, CREDITS.polyHaven],
+    credits: [CREDITS.challenger, CREDITS.charger, CREDITS.mach1, CREDITS.polyHaven],
   },
   {
     id: "gasstation",

@@ -14,7 +14,7 @@ import Optional from "./common/Optional";
 import { ClassicCar } from "./common/classicCars";
 import MustangModel from "../components/MustangModel";
 import ChargerModel from "../components/ChargerModel";
-import Onlooker, { onlookerModel } from "./carshow/Onlooker";
+import Onlooker from "./carshow/Onlooker";
 import Countryside, { type CountrysideProps } from "./common/Countryside";
 
 // Parked on the grass at a summer car show among other muscle cars (a
@@ -131,9 +131,6 @@ const STRIPE = new Vector3(0, 0.9, 1.9);
 const QUARTER_R = new Vector3(-0.95, 0.7, -1.2);
 const CAR_CENTER = new Vector3(0, 0.6, 0.4);
 
-// Greyed and weathered: older guys in jeans, a jacket and a short-sleeved shirt.
-const GREY_HAIR = "#b9b5ad";
-
 function Show({ lightsOn, domeOn }: SceneProps) {
   const sky = useHdriSky(SKY, SUN_AZIMUTH);
   const sun = useMemo(() => sky.sun.clone().multiplyScalar(40), [sky]);
@@ -176,34 +173,34 @@ function Show({ lightsOn, domeOn }: SceneProps) {
         </group>
       </Optional>
 
-      <Optional>
-        <Onlooker
-          model={onlookerModel("Casual")}
-          position={[-2.1, 1.7]}
-          faceToward={CAR_CENTER}
-          pointAt={[HOOD, FRONT_WHEEL_R, STRIPE]}
-          recolor={{ Purple: "#8e2a24", Hair: GREY_HAIR, LightBlue: "#3d4f6b" }}
-          phase={0}
-        />
-        <Onlooker
-          model={onlookerModel("Casual2")}
-          position={[-1.2, 3.6]}
-          faceToward={CAR_CENTER}
-          pointAt={[GRILLE, HOOD, FRONT_WHEEL_R]}
-          recolor={{ Hair: GREY_HAIR, Eyebrows: GREY_HAIR, LightBrown: "#5a4632" }}
-          height={1.72}
-          phase={3.1}
-        />
-        <Onlooker
-          model={onlookerModel("Beach")}
-          position={[-2.2, -0.9]}
-          faceToward={CAR_CENTER}
-          pointAt={[QUARTER_R, FRONT_WHEEL_R]}
-          recolor={{ Hair: GREY_HAIR, Eyebrows: GREY_HAIR, Earrings: "#c99a7a", Red_Dark: "#2f5f7a" }}
-          height={1.8}
-          phase={5.7}
-        />
-      </Optional>
+      <Onlooker
+        position={[-2.1, 1.7]}
+        faceToward={CAR_CENTER}
+        pointAt={[HOOD, FRONT_WHEEL_R, STRIPE]}
+        shirt={["#9e1f1f", "#1b1b1b"]}
+        cap="#2f6b2f"
+        skin="#d9a98b"
+        phase={0}
+      />
+      <Onlooker
+        position={[-1.2, 3.6]}
+        faceToward={CAR_CENTER}
+        pointAt={[GRILLE, HOOD, FRONT_WHEEL_R]}
+        shirt="#8b8f94"
+        pants="#4a4237"
+        cap="#b72a2a"
+        skin="#c98e6d"
+        phase={3.1}
+      />
+      <Onlooker
+        position={[-2.2, -0.9]}
+        faceToward={CAR_CENTER}
+        pointAt={[QUARTER_R, FRONT_WHEEL_R]}
+        shirt={["#2a4f7a", "#1c2c3c"]}
+        cap="#f2f0ea"
+        skin="#e2b79a"
+        phase={5.7}
+      />
 
       <CarContactShadows position={[2, 0.006, 0]} opacity={0.5} scale={30} resolution={1024} blur={2} far={2} />
     </>
