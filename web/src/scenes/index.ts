@@ -78,5 +78,6 @@ export const SCENES: SceneDef[] = [
     credits: [CREDITS.mach1, CREDITS.charger, CREDITS.polyHaven],
     post: DRIVING,
   },
+  { id: "tvad", label: "1968 TV commercial", Component: lazy(() => import("./TvAdScene")), night: false, post: false },
   { id: "outrun", label: "Outrun grid", Component: lazy(() => import("./OutrunScene")), night: true, post: false },
 ];

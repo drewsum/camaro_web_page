@@ -16,7 +16,7 @@ How a model gets from Blender to a visitor's screen, in six steps:
 3. **Load:** the browser fetches the page and JS bundle; `index.html` preloads `camaro.glb`
    and the Draco decoder at the same time.
 4. **Scene:** the app shell (`web/src/App.tsx`) mounts the chosen scene. The showroom ships in
-   the main bundle; the other 12 scenes are lazy-loaded along with any extra car GLBs.
+   the main bundle; the other 13 scenes are lazy-loaded along with any extra car GLBs.
 5. **World:** outdoor scenes load HDRI skies, ground textures and props from Poly Haven (CC0).
    The image build fetches them (`web/scripts/polyhaven.mjs`, listed in
    `web/src/scenes/common/polyHavenAssets.json`), re-encodes textures as WebP and gzips the
