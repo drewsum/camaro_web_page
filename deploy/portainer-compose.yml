@@ -9,7 +9,7 @@
 # CAMARO_IMAGE overrides the image, e.g. to pin an older sha- tag to roll back.
 services:
   camaro-web:
-    image: ${CAMARO_IMAGE:-ghcr.io/drewsum/camaro-web:sha-2c0918f}
+    image: ${CAMARO_IMAGE:-ghcr.io/drewsum/camaro-web:sha-a33c29f}
     ports:
       - "${PORT:-8080}:80"
     restart: unless-stopped
