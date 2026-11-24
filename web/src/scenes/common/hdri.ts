@@ -1,14 +1,17 @@
 import { useMemo } from "react";
 import { useEnvironment } from "@react-three/drei";
+import assets from "./polyHavenAssets.json";
 import { Color, DataUtils, Euler, FloatType, HalfFloatType, Vector3, type DataTexture } from "three";
 
-// Real outdoor lighting from Poly Haven HDRIs (CC0), fetched at runtime from
-// their CDN rather than committed. The sun's direction and the horizon colour
-// are read out of the image itself, so the scene's sun light, shadows and fog
-// line up with whatever sky is loaded.
+// Real outdoor lighting from Poly Haven HDRIs (CC0), downloaded at build time
+// by scripts/polyhaven.mjs (list them in polyHavenAssets.json) and served
+// gzipped by the site itself. The sun's direction and the horizon colour are
+// read out of the image itself, so the scene's sun light, shadows and fog line
+// up with whatever sky is loaded.
 
-export function polyHavenHdri(name: string, res: "1k" | "2k" | "4k" = "2k") {
-  return `https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/${res}/${name}_${res}.hdr`;
+export function polyHavenHdri(name: string) {
+  if (!assets.hdris.includes(name)) throw new Error(`Add the HDRI ${name} to polyHavenAssets.json (then restart the dev server)`);
+  return `/ph/hdri/${name}_2k.hdr`;
 }
 
 export interface HdriSky {

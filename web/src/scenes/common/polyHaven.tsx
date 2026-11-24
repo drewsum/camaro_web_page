@@ -5,47 +5,38 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
-  DefaultLoadingManager,
   Frustum,
   Group,
   InstancedMesh,
-  LoadingManager,
   Matrix4,
   Mesh,
   Sphere,
   Vector3,
   type Material,
 } from "three";
+import assets from "./polyHavenAssets.json";
 import { fadedMaterial } from "./dither";
 import { MeshoptSimplifier } from "three/examples/jsm/libs/meshopt_simplifier.module.js";
 
-// CC0 models from Poly Haven, fetched from their CDN at runtime (1k textures).
+// CC0 models from Poly Haven (1k textures), downloaded at build time by
+// scripts/polyhaven.mjs (list them in polyHavenAssets.json) with their
+// textures as WebP beside the .gltf.
 
 export function polyHavenModel(name: string) {
-  return `https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/${name}/${name}_1k.gltf`;
+  if (!assets.models.includes(name)) throw new Error(`Add the model ${name} to polyHavenAssets.json (then restart the dev server)`);
+  return `/ph/models/${name}/${name}.gltf`;
 }
 
-// The .gltf files reference textures/<file> beside themselves, but the CDN
-// serves those images from a parallel jpg/ tree. Only the URLs differ: the
-// downloads still count toward the page's loading bar (three's default
-// manager).
-const polyHavenManager = new LoadingManager();
-polyHavenManager.itemStart = (url) => DefaultLoadingManager.itemStart(url);
-polyHavenManager.itemEnd = (url) => DefaultLoadingManager.itemEnd(url);
-polyHavenManager.itemError = (url) => DefaultLoadingManager.itemError(url);
-polyHavenManager.setURLModifier((url) =>
-  url.replace(/\/Models\/gltf\/(\w+)\/([^/]+)\/textures\//, "/Models/jpg/$1/$2/"),
-);
+// A loader class of its own rather than drei's useGLTF, which shares one
+// GLTFLoader with the car models. It loads on three's default manager, so the
+// downloads count toward the page's loading bar. (The CDN's layout once needed
+// a URL-rewriting manager here; moving the shared loader onto it left any car
+// model still downloading unfinished on the bar, stuck at "Loading 97%".)
+class PolyHavenGLTFLoader extends GLTFLoader {}
 
-// A loader class of its own, because r3f keeps one loader per class for every
-// useLoader/useGLTF call. Pointing that shared GLTFLoader at this manager (as
-// this used to) also moved any model still downloading at the time, the car's
-// included: it started on the default manager but finished on this one, so
-// the loading bar never reached its total and sat on "Loading 97%".
-class PolyHavenGLTFLoader extends GLTFLoader {
-  constructor() {
-    super(polyHavenManager);
-  }
+// Starts a model downloading before the component that uses it mounts.
+export function preloadPolyHavenModel(url: string) {
+  useLoader.preload(PolyHavenGLTFLoader, url);
 }
 
 export interface ModelPart {

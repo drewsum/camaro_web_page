@@ -1,0 +1,24 @@
+{
+  "textures": {
+    "asphalt_04": { "2k": ["diff", "nor_gl", "arm"] },
+    "asphalt_track": { "2k": ["diff", "nor_gl", "arm"] },
+    "brushed_concrete": { "2k": ["diff", "nor_gl", "arm"] },
+    "brushed_concrete_03": { "2k": ["diff", "nor_gl", "arm"] },
+    "concrete_wall_008": { "1k": ["diff", "nor_gl", "arm"] },
+    "dry_ground_rocks": { "1k": ["diff"] },
+    "gravel_floor_02": { "1k": ["diff", "nor_gl", "arm"], "2k": ["diff", "nor_gl", "arm"] },
+    "leafy_grass": { "2k": ["diff", "nor_gl", "arm"] },
+    "plaster_grey_04": { "1k": ["nor_gl"] },
+    "rock_face": { "1k": ["diff"] }
+  },
+  "hdris": [
+    "belfast_sunset_puresky",
+    "hilly_terrain_01_puresky",
+    "kloofendal_48d_partly_cloudy_puresky",
+    "kloppenheim_02_puresky",
+    "kloppenheim_06_puresky",
+    "mpumalanga_veld_puresky",
+    "syferfontein_6d_clear_puresky"
+  ],
+  "models": ["rock_07", "rock_09", "shrub_02", "shrub_03", "shrub_04"]
+}

@@ -5,6 +5,7 @@ import { SCENES } from "./scenes";
 import { PAGES } from "./pages";
 import { enginePlayer } from "./audio/enginePlayer";
 import PostFX from "./scenes/common/post/PostFX";
+import Precompile from "./scenes/common/Precompile";
 
 const SCENE_KEY = "camaro.scene";
 // Phones report 3 or more; past 2 the extra pixels cost far more than they show.
@@ -119,7 +120,9 @@ export default function App() {
             onFallback={() => setDpr(1)}
           />
           <Suspense fallback={null}>
-            <scene.Component key={scene.id} lightsOn={lights} domeOn={domeOn} night={night} />
+            <Precompile key={scene.id} offscreen={scene.post !== false}>
+              <scene.Component lightsOn={lights} domeOn={domeOn} night={night} />
+            </Precompile>
           </Suspense>
           {scene.post !== false && <PostFX settings={scene.post ?? {}} />}
         </Canvas>

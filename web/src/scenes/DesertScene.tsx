@@ -32,7 +32,7 @@ import { Forest, type ForestKind } from "./common/impostors";
 import { BlobShadows, type Blob } from "./common/blobShadows";
 import { tiledInstances } from "./common/tiles";
 import { mulberry32 } from "./common/periodic";
-import { crown } from "./capitol/Trees";
+import { crown } from "./common/treeShapes";
 import { leafTexture } from "./capitol/textures";
 import { FollowWorld, hash, Horizon, mod, newHere, RoadClearance, RoadKit, RoadSurface, smooth, TAU, type RoadStyle } from "./common/roadway";
 import { DESERT_LENGTH as L, desertTrack as track } from "./desert/desertTrack";

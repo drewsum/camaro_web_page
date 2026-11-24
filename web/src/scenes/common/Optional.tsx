@@ -1,12 +1,16 @@
 import { Component, Suspense, type ReactNode } from "react";
+import Precompile from "./Precompile";
 
-// Wraps scenery that's fetched from third-party CDNs at runtime. While it
+// Wraps scenery that loads on its own (extra models, plants). While it
 // loads the rest of the scene runs without it, and if a download fails the
-// scene carries on without that piece instead of breaking.
+// scene carries on without that piece instead of breaking. It appears once
+// its shaders are built (see Precompile), rather than freezing the scene.
 export default function Optional({ children }: { children: ReactNode }) {
   return (
     <SkipOnError>
-      <Suspense fallback={null}>{children}</Suspense>
+      <Suspense fallback={null}>
+        <Precompile>{children}</Precompile>
+      </Suspense>
     </SkipOnError>
   );
 }

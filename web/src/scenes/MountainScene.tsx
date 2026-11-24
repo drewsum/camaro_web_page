@@ -27,7 +27,7 @@ import SkyReflections from "./common/SkyReflections";
 import { GROUND_PERIOD, useSlopeGround } from "./common/slopeGround";
 import { Forest, type ForestKind } from "./common/impostors";
 import { BlobShadows, type Blob } from "./common/blobShadows";
-import { conifer, deciduous } from "./capitol/Trees";
+import { conifer, deciduous } from "./common/treeShapes";
 import { barkTexture, leafTexture } from "./capitol/textures";
 import { FollowWorld, hash, Horizon, mod, newHere, RoadClearance, RoadKit, RoadSurface, smooth, TAU, type RoadStyle } from "./common/roadway";
 import { MOUNTAIN_LENGTH as L, mountainTrack as track } from "./mountain/mountainTrack";

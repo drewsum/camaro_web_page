@@ -57,6 +57,7 @@ import {
   InstancedModel,
   LodInstancedModel,
   polyHavenModel,
+  preloadPolyHavenModel,
   useModelParts,
   type Level,
 } from "./common/polyHaven";
@@ -821,6 +822,9 @@ const SHRUBS = ["shrub_03", "shrub_03", "shrub_04", "shrub_02"].map(
   polyHavenModel,
 );
 const ROCKS = ["rock_07", "rock_09"].map(polyHavenModel);
+// Fetched from the start: Vegetation only mounts once the road and terrain
+// have loaded, and the loading bar waits for it too.
+new Set([...SHRUBS, ...ROCKS]).forEach(preloadPolyHavenModel);
 
 function Vegetation() {
   const shrubs = useMemo(

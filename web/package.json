@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/polyhaven.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/polyhaven.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "postinstall": "node scripts/copy-draco.mjs"

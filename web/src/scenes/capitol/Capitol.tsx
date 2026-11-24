@@ -53,7 +53,7 @@ const STONE = "#e7e2d7";
 // Fine tooling on the dressed stone: a scanned plaster's surface relief and
 // roughness (Poly Haven, CC0), laid over the drawn coursing and windows.
 const TOOLING = "plaster_grey_04"; // one scan covers 1.5 m
-preloadPbr(TOOLING, "1k");
+preloadPbr(TOOLING, "1k", ["normalMap"]); // only its relief is used
 
 const v2 = (x: number, y: number) => new Vector2(x, y);
 
@@ -436,7 +436,7 @@ function Floodlights() {
 
 export default function Capitol({ night = false }: { night?: boolean }) {
   const group = useRef<Group>(null);
-  const scan = usePbrTextures(TOOLING, "1k");
+  const scan = usePbrTextures(TOOLING, "1k", ["normalMap"]);
   const { parts, objects } = useMemo(() => {
     const { cx, cz, ground: g } = bounds();
     const S = CAPITOL_STOREY;

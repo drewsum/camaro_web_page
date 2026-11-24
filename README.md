@@ -4,7 +4,7 @@ Interactive 3D viewer for a 1968 Camaro SS model (React Three Fiber, served by n
 
 ## Layout
 
-[![How the site works: authoring, build and hosting, the visitor's browser, and external CDNs](docs/architecture.png)](https://drewsum.github.io/camaro_web_page/architecture.html)
+[![How the site works: authoring, build and hosting, the visitor's browser, and Poly Haven](docs/architecture.png)](https://drewsum.github.io/camaro_web_page/architecture.html)
 
 How a model gets from Blender to a visitor's screen, in six steps:
 
@@ -17,8 +17,10 @@ How a model gets from Blender to a visitor's screen, in six steps:
    and the Draco decoder at the same time.
 4. **Scene:** the app shell (`web/src/App.tsx`) mounts the chosen scene. The showroom ships in
    the main bundle; the other 12 scenes are lazy-loaded along with any extra car GLBs.
-5. **CDNs:** outdoor scenes fetch HDRI skies, ground textures and props from Poly Haven, and
-   some classic cars from GitHub, at runtime.
+5. **World:** outdoor scenes load HDRI skies, ground textures and props from Poly Haven (CC0).
+   The image build fetches them (`web/scripts/polyhaven.mjs`, listed in
+   `web/src/scenes/common/polyHavenAssets.json`), re-encodes textures as WebP and gzips the
+   rest, and nginx serves them under `/ph/`. `npm run dev` fetches them too, once.
 6. **Pages:** Overview, Photos, Engine Build and Engine Model open over the viewer via the URL
    hash. Hovering Engine Model prefetches its 8 MB GLB.
 

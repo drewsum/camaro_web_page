@@ -1,15 +1,30 @@
 import { useMemo } from "react";
 import { useTexture } from "@react-three/drei";
 import { MeshStandardMaterial, RepeatWrapping, SRGBColorSpace, Vector2, type Texture } from "three";
+import assets from "./polyHavenAssets.json";
 
-// Scanned CC0 surface textures from Poly Haven, fetched from their CDN at
-// runtime: colour, OpenGL normal, and the packed AO/roughness/metal map.
+// Scanned CC0 surface textures from Poly Haven: colour, OpenGL normal, and the
+// packed AO/roughness/metal map. scripts/polyhaven.mjs downloads the ones
+// listed in polyHavenAssets.json into public/ph/ as WebP, a quarter to a third
+// the size of Poly Haven's own near-lossless JPGs, and only the maps a scene
+// samples are fetched.
 
 export type PbrRes = "1k" | "2k" | "4k";
+export type PbrMap = "map" | "normalMap" | "arm";
 
-function urls(name: string, res: PbrRes) {
-  const base = `https://dl.polyhaven.org/file/ph-assets/Textures/jpg/${res}/${name}/${name}`;
-  return { map: `${base}_diff_${res}.jpg`, normalMap: `${base}_nor_gl_${res}.jpg`, arm: `${base}_arm_${res}.jpg` };
+const ALL: readonly PbrMap[] = ["map", "normalMap", "arm"];
+const SUFFIX: Record<PbrMap, string> = { map: "diff", normalMap: "nor_gl", arm: "arm" };
+const LISTED = assets.textures as Record<string, Partial<Record<PbrRes, string[]>>>;
+
+function urls<M extends PbrMap>(name: string, res: PbrRes, maps: readonly M[]) {
+  const out = {} as Record<M, string>;
+  for (const m of maps) {
+    if (!LISTED[name]?.[res]?.includes(SUFFIX[m])) {
+      throw new Error(`Add ${name} ${res} "${SUFFIX[m]}" to polyHavenAssets.json (then restart the dev server)`);
+    }
+    out[m] = `/ph/tex/${name}_${SUFFIX[m]}_${res}.webp`;
+  }
+  return out;
 }
 
 interface Options {
@@ -31,7 +46,7 @@ interface Options {
 // Lights or Dome light tickbox) built new materials, re-uploaded every surface
 // texture and leaked the old copies.
 export function usePbrMaterial(name: string, { res = "2k", tile, size, normalScale = 1, tint = "#ffffff", brightness = 1, roughness = 1 }: Options) {
-  const tex = useTexture(urls(name, res));
+  const tex = useTexture(urls(name, res, ALL));
   return useMemo(() => {
     const repeat = (t: Texture) => {
       const c = t.clone();
@@ -61,19 +76,22 @@ export function usePbrMaterial(name: string, { res = "2k", tile, size, normalSca
 
 // The raw textures, wrapping and at full anisotropy, for custom shaders that
 // sample them themselves (shared from drei's cache, so don't change repeat).
-export function usePbrTextures(name: string, res: PbrRes = "2k") {
-  const tex = useTexture(urls(name, res));
+// Pass `maps` to fetch only the ones the shader reads.
+export function usePbrTextures<M extends PbrMap = PbrMap>(name: string, res: PbrRes = "2k", maps: readonly M[] = ALL as readonly M[]) {
+  const tex = useTexture(urls(name, res, maps)) as Record<M, Texture>;
+  const list = maps.map((m) => tex[m]);
   return useMemo(() => {
-    for (const t of [tex.map, tex.normalMap, tex.arm]) {
+    for (const m of maps) {
+      const t = tex[m];
       t.wrapS = t.wrapT = RepeatWrapping;
       t.anisotropy = 16;
+      if (m === "map") t.colorSpace = SRGBColorSpace;
       t.needsUpdate = true;
     }
-    tex.map.colorSpace = SRGBColorSpace;
     return tex;
-  }, [tex.map, tex.normalMap, tex.arm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, list); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-export function preloadPbr(name: string, res: PbrRes = "2k") {
-  useTexture.preload(Object.values(urls(name, res)));
+export function preloadPbr(name: string, res: PbrRes = "2k", maps: readonly PbrMap[] = ALL) {
+  useTexture.preload(Object.values(urls(name, res, maps)));
 }

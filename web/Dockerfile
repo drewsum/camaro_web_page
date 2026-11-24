@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY scripts ./scripts
 RUN npm ci
+# Poly Haven textures, skies and models, fetched and shrunk once: this layer is
+# cached until the manifest or the scripts change.
+COPY src/scenes/common/polyHavenAssets.json ./src/scenes/common/
+RUN node scripts/polyhaven.mjs
 COPY . .
 RUN npm run build
 

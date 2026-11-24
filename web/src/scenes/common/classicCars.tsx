@@ -2,12 +2,17 @@ import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, Group, Mesh, Vector3 } from "three";
 import { CREDITS, type Credit } from "../credits";
-import { dropTransmission } from "../../components/CamaroModel";
+import { DRACO_URL, dropTransmission } from "../../components/CamaroModel";
 import { markCar } from "../../car/layers";
 
-// Other classic cars, loaded at runtime from public GitHub repos (pinned to a
-// commit) rather than committed here. Each is a Sketchfab export whose
-// license requires credit; see `credit`.
+// Other classic cars. Each is a Sketchfab export whose license requires
+// credit; see `credit`.
+//
+// challenger.glb is Omkar7637/OpenGL_Projects@91f960e's
+// 01-Windows/03-PP/Model_Loading/1970_dodge_challenger_rt/scene.gltf (16.5 MB,
+// once fetched from GitHub at runtime) made into a 3.4 MB GLB:
+//   npx @gltf-transform/cli@4 draco scene.gltf challenger.glb --quantize-position 14 --quantize-normal 12 --quantize-texcoord 12
+//   node scripts/optimize-glb.mjs public/models/challenger.glb
 
 export interface ClassicCarDef {
   url: string;
@@ -16,11 +21,9 @@ export interface ClassicCarDef {
   credit: Credit;
 }
 
-const raw = (repo: string, sha: string, path: string) => `https://raw.githubusercontent.com/${repo}/${sha}/${path}`;
-
 export const CLASSIC_CARS = {
   challenger: {
-    url: raw("Omkar7637/OpenGL_Projects", "91f960eae2218260a8d077ba9f04ed15ccc36504", "01-Windows/03-PP/Model_Loading/1970_dodge_challenger_rt/scene.gltf"),
+    url: "/models/challenger.glb",
     length: 4.86,
     yaw: 0,
     credit: CREDITS.challenger,
@@ -34,7 +37,7 @@ export type ClassicCarId = keyof typeof CLASSIC_CARS;
 // place several.
 export function useClassicCar(id: ClassicCarId) {
   const def: ClassicCarDef = CLASSIC_CARS[id];
-  const { scene } = useGLTF(def.url);
+  const { scene } = useGLTF(def.url, DRACO_URL);
   return useMemo(() => {
     const model = scene.clone(true);
     model.traverse((o) => {

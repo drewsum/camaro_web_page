@@ -17,9 +17,10 @@ export const GROUND_PERIOD = 200;
 const GRASS = "leafy_grass";
 const DIRT = "dry_ground_rocks";
 const ROCK = "rock_face";
-preloadPbr(GRASS);
-preloadPbr(DIRT, "1k");
-preloadPbr(ROCK, "1k");
+// The shader samples only the colour of each scan.
+preloadPbr(GRASS, "2k", ["map"]);
+preloadPbr(DIRT, "1k", ["map"]);
+preloadPbr(ROCK, "1k", ["map"]);
 
 export interface SlopeGroundOptions {
   dirt?: [number, number]; // steepness (1 - normal.y) where dirt fades in, and where it's full
@@ -87,9 +88,9 @@ const ground = /* glsl */ `
 // A MeshStandardMaterial for terrain with vertex colours (the grass colour)
 // and, optionally, a float attribute "rockiness" forcing rock where it's 1.
 export function useSlopeGround({ dirt = [0.12, 0.3], rock = [0.38, 0.6], rockTint = "#ffffff", dirtTint = "#ffffff", rockiness = false }: SlopeGroundOptions = {}) {
-  const grassTex = usePbrTextures(GRASS);
-  const dirtTex = usePbrTextures(DIRT, "1k");
-  const rockTex = usePbrTextures(ROCK, "1k");
+  const grassTex = usePbrTextures(GRASS, "2k", ["map"]);
+  const dirtTex = usePbrTextures(DIRT, "1k", ["map"]);
+  const rockTex = usePbrTextures(ROCK, "1k", ["map"]);
   return useMemo(() => {
     const offset = { value: new Vector3() };
     const material = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, side: DoubleSide });

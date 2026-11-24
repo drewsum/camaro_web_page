@@ -7,6 +7,8 @@ Thumbs.db
 web/node_modules/
 web/dist/
 web/public/draco/
+# Poly Haven assets, fetched by web/scripts/polyhaven.mjs
+web/public/ph/
 *.tsbuildinfo
 
 # Sketchfab download that scripts/build_mustang.py builds mustang.blend from

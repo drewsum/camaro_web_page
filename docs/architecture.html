@@ -170,7 +170,7 @@
   {
     "id": "actions",
     "title": "GitHub Actions",
-    "subtitle": "Builds the Vite app inside the Docker image.",
+    "subtitle": "Builds the Vite app inside the Docker image, with Poly Haven assets.",
     "icon": "🏗️",
     "x": 550,
     "y": 420,
@@ -192,7 +192,7 @@
   {
     "id": "nginx",
     "title": "nginx container",
-    "subtitle": "Serves dist/, models/, draco/ and audio.",
+    "subtitle": "Serves dist/, models/, draco/, ph/ and audio.",
     "icon": "🖥️",
     "x": 1510,
     "y": 420,
@@ -235,13 +235,13 @@
   },
   {
     "id": "cdns",
-    "title": "Third-party CDNs",
-    "subtitle": "Poly Haven HDRIs, textures, models; GitHub raw.",
+    "title": "Poly Haven",
+    "subtitle": "CC0 HDRI skies, ground textures, plant and rock models.",
     "icon": "🌐",
     "x": 1030,
     "y": 1060,
     "width": 310,
-    "badge": "Runtime fetch",
+    "badge": "Build-time fetch",
     "badgeClass": "bg-amber-50 text-amber-700 border-amber-200"
   }
 ];
@@ -449,30 +449,32 @@
   },
   {
     "id": "outdoor",
-    "label": "05 CDNs",
+    "label": "05 World",
     "title": "Fetch the world",
-    "subtitle": "Outdoor scenes pull skies, surfaces and props from third-party CDNs at runtime.",
+    "subtitle": "The image build downloads skies, surfaces and props from Poly Haven and shrinks them (WebP, gzip); outdoor scenes load them from nginx.",
     "activeLinks": [
       {
-        "from": "scene",
-        "to": "cdns",
-        "label": "HDRI, textures",
+        "from": "cdns",
+        "to": "actions",
+        "label": "At build",
         "color": "#d97706",
-        "srcPort": "bottomLeft",
-        "dstPort": "topLeft"
+        "srcPort": "left",
+        "dstPort": "bottom"
       },
       {
-        "from": "cdns",
+        "from": "nginx",
         "to": "scene",
-        "label": "Assets",
+        "label": "HDRI, textures",
         "color": "#059669",
-        "srcPort": "topRight",
-        "dstPort": "bottomRight"
+        "srcPort": "bottom",
+        "dstPort": "right"
       }
     ],
     "highlightNodes": [
-      "scene",
-      "cdns"
+      "cdns",
+      "actions",
+      "nginx",
+      "scene"
     ]
   },
   {

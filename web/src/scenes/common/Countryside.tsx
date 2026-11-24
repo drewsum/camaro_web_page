@@ -16,7 +16,7 @@ import { tiledInstances } from "./tiles";
 import { Forest, type ForestKind } from "./impostors";
 import { useSlopeGround } from "./slopeGround";
 import { BlobShadows, type Blob } from "./blobShadows";
-import { conifer, crown, deciduous } from "../capitol/Trees";
+import { conifer, crown, deciduous } from "./treeShapes";
 import { barkTexture, leafTexture } from "../capitol/textures";
 
 // Farmland around an otherwise empty field, so the ground doesn't run
