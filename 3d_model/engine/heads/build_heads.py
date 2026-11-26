@@ -540,7 +540,7 @@ END = dict(
                                                          # shelf height; .85" in from the end beyond the rail's exhaust side
     holes=((4.60, 0.45), (-1.60, 0.45), (-1.50, 2.80)), hole_r=0.156, hole_d=0.55,
     mark=dict(text="AFR", at=(1.60, 1.20), h=1.15, line=0.035, depth=0.030),         # centred outline-cut manufacturer mark
-    small=dict(text="345\nV2.30/1.88", at=(1.60, 0.42), h=0.20, depth=0.020),       # displacement and valve sizes
+    small=dict(text="345\nV2.30/1.88", at=(1.60, 0.50), h=0.18, depth=0.020),       # displacement and valve sizes, inset from the lower edge
 )
 
 def end_axes(s):
