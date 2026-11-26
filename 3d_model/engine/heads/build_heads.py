@@ -525,8 +525,8 @@ def tune(f, target, lo, hi, it=14):
 # down to the intake-deck corner. Above that edge the casting rolls back (as cast) to the foot of the valve-cover
 # flange, following the cover's rounded end in plan, so the intake face's end edge is that same curve. A small
 # chamfer round the deck and exhaust edges, three 3/8-16 accessory holes, one near each corner, and an engraving.
-# One casting serves both banks (the right head is the left turned round), so both ends carry it. Sizes [est],
-# scaled off the photos on the deck edge. The engraving is our own: the photo's is the maker's logo and part number.
+# One casting serves both banks (the right head is the left turned round), so both ends carry it. The end engraving
+# follows Drew's reference: a bold italic AFR mark with the displacement and valve sizes beneath it.
 END = dict(
     face=((-2.05, 0.0), (5.45, 0.0), (4.90, 1.00), (-1.90, 3.40)),   # (v, z), z from the block deck: exhaust-deck,
                                                          # intake-deck, the short edge up off the china wall [Drew's 3rd
@@ -539,13 +539,14 @@ END = dict(
     roll0=20.0, roll_top=3.40, roll_exh=0.85,            # roll-back: leaves the face at 20 deg, meets the flange foot at the
                                                          # shelf height; .85" in from the end beyond the rail's exhaust side
     holes=((4.60, 0.45), (-1.60, 0.45), (-1.50, 2.80)), hole_r=0.156, hole_d=0.55,
-    mark=dict(text="345", at=(-0.45, 1.60), h=1.25, line=0.035, depth=0.030),        # outline-cut lettering
-    small=dict(text="CNC\n2.30 - 1.88", at=(-1.15, 0.90), h=0.20, depth=0.020),     # solid-cut
+    mark=dict(text="AFR", at=(1.60, 1.20), h=1.15, line=0.035, depth=0.030),         # centred outline-cut manufacturer mark
+    small=dict(text="345\nV2.30/1.88", at=(1.60, 0.42), h=0.20, depth=0.020),       # displacement and valve sizes
 )
 
 def end_axes(s):
-    """Lettering axes (baseline, up) in (v, z) on the end whose face points along s*u, level as installed."""
-    return Vector((0.7071 * s, -0.7071 * s)), Vector((0.7071, 0.7071))
+    """Lettering axes (baseline, up) in (v, z), aligned to the long edge of the machined end face."""
+    a = math.radians(20.0)  # slope of the long machined face edge
+    return Vector((math.cos(a) * s, -math.sin(a) * s)), Vector((math.sin(a), math.cos(a)))
 
 def end_blocks(uf, ur, tmp):
     """Each end's casting behind the machined face: the face's outline for END["full"], then faired by a cosine
@@ -594,6 +595,13 @@ def end_sweep(uf, ur, tmp):
 def text_obj(name, body, h, offset, extrude, ue, s, at, tmp):
     """Lettering as a closed mesh: cap height h, centred on at (v, z), spanning u from ue-s*extrude to ue+s*extrude."""
     cu = bpy.data.curves.new(name, "FONT"); cu.body = "8"; cu.size = 1.0
+    if body == "AFR":
+        # The maker's logo uses a heavy italic sans. Use the matching system face where available;
+        # Blender's built-in font remains a fallback for portable/headless builds.
+        font_path = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", "arialbi.ttf")
+        if os.path.isfile(font_path):
+            font = next((f for f in bpy.data.fonts if f.filepath == font_path), None)
+            cu.font = font or bpy.data.fonts.load(font_path)
     ob = bpy.data.objects.new(name, cu); tmp.objects.link(ob)
     dg = bpy.context.evaluated_depsgraph_get(); me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
     cap = max(v.co.y for v in me.vertices) - min(v.co.y for v in me.vertices); bpy.data.meshes.remove(me)
@@ -619,6 +627,33 @@ def text_obj(name, body, h, offset, extrude, ue, s, at, tmp):
     o = bpy.data.objects.new(name, me); tmp.objects.link(o)
     return o
 
+def airflow_obj(name, ue, s, at, tmp):
+    """Five shallow tapered grooves crossing the A, cut into the machined end face."""
+    b, up = end_axes(s)
+    bm = bmesh.new()
+    # The short strokes fan slightly as they pass through the A, like the AFR airflow mark.
+    for i in range(5):
+        y0 = -0.20 + i * 0.10
+        y1 = y0 + (i - 2) * 0.018
+        x0, x1 = -1.68, -0.28
+        w0, w1 = 0.014, 0.011
+        path = [(x0, y0 - w0), (x0, y0 + w0), (x1, y1 + w1), (x1, y1 - w1)]
+        loops = []
+        for t in (-0.018, 0.045):
+            ring = []
+            for x, y in path:
+                q = Vector(at) + b * x + up * y
+                ring.append(bm.verts.new(Vector((ue + s * t, q.x, q.y)) * IN))
+            loops.append(ring)
+        bm.faces.new(loops[0]); bm.faces.new(list(reversed(loops[1])))
+        for j in range(len(path)):
+            bm.faces.new((loops[0][j], loops[0][(j + 1) % len(path)],
+                          loops[1][(j + 1) % len(path)], loops[1][j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new(name, me); tmp.objects.link(o)
+    return o
+
 def end_finish(head, tmp, uf, ur):
     """Chamfer round each end face, then the accessory holes and the engraving."""
     c, poly = END["chamfer"], [Vector((v, max(z, H0))) for v, z in END["face"]]
@@ -640,6 +675,7 @@ def end_finish(head, tmp, uf, ur):
         o = text_obj("eng_o", m["text"], m["h"], m["line"] / 2, e, ue + s * (e - m["depth"]), s, m["at"], tmp)
         i = text_obj("eng_i", m["text"], m["h"], -m["line"] / 2, e + 0.05, ue + s * (e - m["depth"]), s, m["at"], tmp)
         boolean(o, "DIFFERENCE", i); bpy.data.objects.remove(i, do_unlink=True)
+        if m["text"] == "AFR": airflow_obj("afr_airflow", ue, s, m["at"], tmp)
         m = END["small"]
         text_obj("eng_s", m["text"], m["h"], 0.0, e, ue + s * (e - m["depth"]), s, m["at"], tmp)
     boolean(head, "DIFFERENCE", tmp); clear(tmp)
