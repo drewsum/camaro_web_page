@@ -540,7 +540,7 @@ END = dict(
                                                          # shelf height; .85" in from the end beyond the rail's exhaust side
     holes=((4.60, 0.45), (-1.60, 0.45), (-1.50, 2.80)), hole_r=0.156, hole_d=0.55,
     mark=dict(text="AFR", at=(1.60, 1.20), h=1.15, line=0.035, depth=0.030),         # centred outline-cut manufacturer mark
-    small=dict(text="345\nV2.30/1.88", at=(1.60, 0.50), h=0.18, depth=0.020),       # displacement and valve sizes, inset from the lower edge
+    small=dict(text="345\nV2.30/1.88", at=(0.00, 0.45), h=0.18, depth=0.020),       # displacement and valve sizes, lower-left of the logo
 )
 
 def end_axes(s):
@@ -635,9 +635,12 @@ def airflow_obj(name, ue, s, at, tmp):
     for i in range(5):
         y0 = -0.20 + i * 0.10
         y1 = y0 + (i - 2) * 0.018
-        x0, x1 = -1.68, -0.28
+        x0, xbase, xtip = -1.68, -0.50, -0.32
         w0, w1 = 0.014, 0.011
-        path = [(x0, y0 - w0), (x0, y0 + w0), (x1, y1 + w1), (x1, y1 - w1)]
+        arrow_h = 0.055
+        path = [(x0, y0 - w0), (x0, y0 + w0), (xbase, y1 + w1),
+                (xbase, y1 + arrow_h), (xtip, y1),
+                (xbase, y1 - arrow_h), (xbase, y1 - w1)]
         loops = []
         for t in (-0.018, 0.045):
             ring = []
